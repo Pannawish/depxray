@@ -1,0 +1,22 @@
+{
+  "name": "react-dependency-graph",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Scan and visualize React project dependency graphs — usable as a library, CLI, VS Code extension, and AI agent tool.",
+  "workspaces": [
+    "packages/core",
+    "packages/cli",
+    "packages/vscode-extension"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces",
+    "test": "npm run test --workspaces --if-present",
+    "clean": "npm run clean --workspaces --if-present",
+    "lint": "eslint packages/*/src/**/*.ts"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "author": "",
+  "license": "MIT"
+}

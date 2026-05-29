@@ -1,0 +1,30 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+out/
+*.vsix
+
+# Coverage
+coverage/
+
+# IDE
+.vscode/
+!.vscode/launch.json
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.local
+
+# Turbo
+.turbo/
+
+# Misc
+*.log
+*.tgz

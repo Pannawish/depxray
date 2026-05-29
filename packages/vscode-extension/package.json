@@ -1,0 +1,93 @@
+{
+  "name": "react-dependency-graph",
+  "displayName": "React Dependency Graph",
+  "description": "Scan React projects, visualize import dependencies as an interactive graph, detect circular dependencies, and export graph data for AI coding agents.",
+  "version": "0.1.0",
+  "publisher": "rdg",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Visualization",
+    "Other"
+  ],
+  "keywords": [
+    "react",
+    "dependency",
+    "graph",
+    "imports",
+    "circular"
+  ],
+  "activationEvents": [],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "rdg.scan",
+        "title": "Scan Dependencies",
+        "category": "React Dependency Graph",
+        "icon": "$(search)"
+      },
+      {
+        "command": "rdg.showGraph",
+        "title": "Show Dependency Graph",
+        "category": "React Dependency Graph",
+        "icon": "$(type-hierarchy)"
+      },
+      {
+        "command": "rdg.exportJson",
+        "title": "Export Graph as JSON",
+        "category": "React Dependency Graph",
+        "icon": "$(export)"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "rdg-explorer",
+          "title": "React Dependencies",
+          "icon": "$(type-hierarchy)"
+        }
+      ]
+    },
+    "views": {
+      "rdg-explorer": [
+        {
+          "id": "rdg.dependencyTree",
+          "name": "Dependency Tree",
+          "contextualTitle": "React Dependency Graph"
+        }
+      ]
+    },
+    "menus": {
+      "view/title": [
+        {
+          "command": "rdg.scan",
+          "when": "view == rdg.dependencyTree",
+          "group": "navigation"
+        },
+        {
+          "command": "rdg.showGraph",
+          "when": "view == rdg.dependencyTree",
+          "group": "navigation"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "package": "vsce package --no-dependencies",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@rdg/core": "0.1.0"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.85.0",
+    "@types/node": "^20.0.0",
+    "typescript": "^5.4.0",
+    "@vscode/vsce": "^2.24.0"
+  },
+  "license": "MIT"
+}

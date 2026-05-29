@@ -1,0 +1,35 @@
+{
+  "name": "@rdg/cli",
+  "version": "0.1.0",
+  "description": "CLI tool for React Dependency Graph — scan React projects from the terminal or AI agents.",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "react-dependency-graph": "./dist/index.js",
+    "rdg": "./dist/index.js"
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "start": "node ./dist/index.js",
+    "test": "vitest run",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@rdg/core": "0.1.0",
+    "commander": "^12.1.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0",
+    "vitest": "^1.6.0",
+    "@types/node": "^20.0.0"
+  },
+  "keywords": [
+    "react",
+    "dependency-graph",
+    "cli",
+    "static-analysis"
+  ],
+  "license": "MIT"
+}
