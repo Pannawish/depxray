@@ -12,44 +12,44 @@
 
 ## ✨ Current Features
 
-- `rdg scan` opens a local browser session with structure and dependency modes available in one UI.
-- `rdg scan --json` emits a stable versioned graph payload for the selected mode.
-- `rdg scan --html` writes a standalone `.react-dependency-graph/` export with embedded data.
+- `npx react-dependency-graph scan` opens a local browser session with structure and dependency modes available in one UI.
+- `npx react-dependency-graph scan --json` emits a stable versioned graph payload for the selected mode.
+- `npx react-dependency-graph scan --html` writes a standalone `.react-dependency-graph/` export with embedded data.
 - Dependency mode highlights circular modules and supports type-only, dynamic, and circular-only filters.
 
 ## 🚀 Quick Start
 
 ```bash
-# Install dependencies and build all workspaces
-npm install
-npm run build
-
-# Open the browser UI for a project
-node packages/cli/dist/index.js scan /path/to/react-project
-
-# Start directly in dependency mode
-node packages/cli/dist/index.js scan /path/to/react-project --mode dependencies
-
-# Export a standalone HTML report
-node packages/cli/dist/index.js scan /path/to/react-project --html
-
-# Or use it as a library
-import { scanFileTree, buildStructureGraph } from '@rdg/core';
-const tree = await scanFileTree('./my-react-app');
-const graph = buildStructureGraph(tree);
+# After publish
+npx react-dependency-graph scan /path/to/react-project
+npx react-dependency-graph scan /path/to/react-project --mode dependencies
+npx react-dependency-graph scan /path/to/react-project --json
+npx react-dependency-graph scan /path/to/react-project --html
 ```
 
-## 🏗️ Development
+## 🏗️ Local Development
 
 ```bash
 # Build everything
+npm install
 npm run build
 
-# Run tests
-npm test
+# Run from this repo
+node packages/cli/dist/index.js scan /path/to/react-project
 
-# Watch mode for core development
-cd packages/core && npm run dev
+# Test the publishable package locally
+cd packages/cli
+npm pack
+npm exec --package=./react-dependency-graph-0.1.0.tgz -- react-dependency-graph scan /path/to/react-project
+```
+
+## 📚 Library Usage
+
+```typescript
+import { scanFileTree, buildStructureGraph } from '@rdg/core';
+
+const tree = await scanFileTree('./my-react-app');
+const graph = buildStructureGraph(tree);
 ```
 
 ## 📖 Documentation
@@ -61,7 +61,7 @@ See [DEVELOPMENT_PLAN.md](./DEVELOPMENT_PLAN.md) for the full architecture, road
 - The CLI build now bundles the compiled web UI into `packages/cli/dist/web-ui/`.
 - The built CLI entrypoint is bundled into a single `dist/index.js`, so published installs do not require a separate `@rdg/core` package at runtime.
 - Browser mode and static export no longer depend on `packages/web-ui/dist` at runtime when using the built CLI package.
-- The intended public package name is `react-dependency-graph`, which supports `npx react-dependency-graph`.
+- The public package name is `react-dependency-graph`, which supports `npx react-dependency-graph`.
 
 ## License
 
