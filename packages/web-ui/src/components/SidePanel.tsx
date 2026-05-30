@@ -1,7 +1,8 @@
-import type { StructureGraphNode } from '../types.js';
+import type { ExplorerGraphNode, GraphMode } from '../types.js';
 
 interface SidePanelProps {
-  node: StructureGraphNode | null;
+  node: ExplorerGraphNode | null;
+  mode: GraphMode;
   projectRoot: string;
   error: string | null;
 }
@@ -14,7 +15,7 @@ function getLayerPath(relativePath: string): string[] {
   return relativePath.split('/').filter(Boolean);
 }
 
-export function SidePanel({ node, projectRoot, error }: SidePanelProps) {
+export function SidePanel({ node, mode, projectRoot, error }: SidePanelProps) {
   if (!node) {
     return (
       <aside className="side-panel">
@@ -65,24 +66,38 @@ export function SidePanel({ node, projectRoot, error }: SidePanelProps) {
           <dd>{node.depth}</dd>
         </div>
         <div>
-          <dt>Children</dt>
-          <dd>{node.childCount}</dd>
+          <dt>{mode === 'dependencies' ? 'Outgoing imports' : 'Children'}</dt>
+          <dd>{mode === 'dependencies' ? (node.outDegree ?? 0) : node.childCount}</dd>
         </div>
         <div>
-          <dt>Descendants</dt>
-          <dd>{node.descendantCount}</dd>
+          <dt>{mode === 'dependencies' ? 'Incoming imports' : 'Descendants'}</dt>
+          <dd>{mode === 'dependencies' ? (node.inDegree ?? 0) : node.descendantCount}</dd>
         </div>
         <div>
           <dt>Extension</dt>
           <dd>{node.extension ?? 'directory'}</dd>
         </div>
+        {mode === 'dependencies' ? (
+          <div>
+            <dt>Circular</dt>
+            <dd>{node.isCircular ? 'yes' : 'no'}</dd>
+          </div>
+        ) : null}
+        {mode === 'dependencies' && node.componentName ? (
+          <div>
+            <dt>Component</dt>
+            <dd>{node.componentName}</dd>
+          </div>
+        ) : null}
         <div>
           <dt>Size</dt>
           <dd>{node.sizeBytes ? `${node.sizeBytes.toLocaleString()} bytes` : 'n/a'}</dd>
         </div>
       </dl>
       <p className="muted panel-footnote">
-        Directory nodes can be expanded or collapsed from the graph canvas.
+        {mode === 'structure'
+          ? 'Directory nodes can be expanded or collapsed from the graph canvas.'
+          : 'Dependency nodes are sized by import activity and highlighted when they participate in matches or cycles.'}
       </p>
       {error ? <p className="panel-warning">Using sample data: {error}</p> : null}
     </aside>

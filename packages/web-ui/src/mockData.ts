@@ -1,10 +1,16 @@
-import type { StructureGraphData } from './types.js';
+import type { ExplorerGraphData } from './types.js';
 
-export const sampleGraphData: StructureGraphData = {
+export const sampleGraphData: ExplorerGraphData = {
+  schemaVersion: '1.0.0',
+  mode: 'structure',
   projectRoot: '/example/react-dependency-graph',
   scannedAt: '2026-05-30T00:00:00.000Z',
   totalFiles: 7,
   totalDirs: 5,
+  totalImports: 11,
+  circularCount: 0,
+  generatedBy: 'react-dependency-graph@0.3.0',
+  errors: [],
   nodes: [
     {
       id: '/example/react-dependency-graph',
@@ -175,56 +181,67 @@ export const sampleGraphData: StructureGraphData = {
       id: '/example/react-dependency-graph->/example/react-dependency-graph/src',
       source: '/example/react-dependency-graph',
       target: '/example/react-dependency-graph/src',
+      kind: 'structure',
     },
     {
       id: '/example/react-dependency-graph->/example/react-dependency-graph/package.json',
       source: '/example/react-dependency-graph',
       target: '/example/react-dependency-graph/package.json',
+      kind: 'structure',
     },
     {
       id: '/example/react-dependency-graph->/example/react-dependency-graph/public',
       source: '/example/react-dependency-graph',
       target: '/example/react-dependency-graph/public',
+      kind: 'structure',
     },
     {
       id: '/example/react-dependency-graph/src->/example/react-dependency-graph/src/components',
       source: '/example/react-dependency-graph/src',
       target: '/example/react-dependency-graph/src/components',
+      kind: 'structure',
     },
     {
       id: '/example/react-dependency-graph/src->/example/react-dependency-graph/src/hooks',
       source: '/example/react-dependency-graph/src',
       target: '/example/react-dependency-graph/src/hooks',
+      kind: 'structure',
     },
     {
       id: '/example/react-dependency-graph/src->/example/react-dependency-graph/src/App.tsx',
       source: '/example/react-dependency-graph/src',
       target: '/example/react-dependency-graph/src/App.tsx',
+      kind: 'structure',
     },
     {
       id: '/example/react-dependency-graph/src/components->/example/react-dependency-graph/src/components/GraphView.tsx',
       source: '/example/react-dependency-graph/src/components',
       target: '/example/react-dependency-graph/src/components/GraphView.tsx',
+      kind: 'structure',
     },
     {
       id: '/example/react-dependency-graph/src/components->/example/react-dependency-graph/src/components/Toolbar.tsx',
       source: '/example/react-dependency-graph/src/components',
       target: '/example/react-dependency-graph/src/components/Toolbar.tsx',
+      kind: 'structure',
     },
     {
       id: '/example/react-dependency-graph/src/hooks->/example/react-dependency-graph/src/hooks/useGraphData.ts',
       source: '/example/react-dependency-graph/src/hooks',
       target: '/example/react-dependency-graph/src/hooks/useGraphData.ts',
+      kind: 'structure',
     },
     {
       id: '/example/react-dependency-graph/public->/example/react-dependency-graph/public/graph-data.json',
       source: '/example/react-dependency-graph/public',
       target: '/example/react-dependency-graph/public/graph-data.json',
+      kind: 'structure',
     },
     {
       id: '/example/react-dependency-graph/public->/example/react-dependency-graph/public/index.html',
       source: '/example/react-dependency-graph/public',
       target: '/example/react-dependency-graph/public/index.html',
+      kind: 'structure',
     },
   ],
 };

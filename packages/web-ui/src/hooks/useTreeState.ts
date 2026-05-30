@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import type { DepthFilter, StructureGraphData, StructureGraphNode } from '../types.js';
+import type { DepthFilter, ExplorerGraphData, ExplorerGraphNode } from '../types.js';
 
-function buildDefaultCollapsedIds(data: StructureGraphData | null): Set<string> {
+function buildDefaultCollapsedIds(data: ExplorerGraphData | null): Set<string> {
   if (!data) {
     return new Set();
   }
@@ -29,7 +29,7 @@ function collectAncestorIds(
 }
 
 function isVisible(
-  node: StructureGraphNode,
+  node: ExplorerGraphNode,
   parentById: Map<string, string>,
   collapsedIds: Set<string>,
   maxDepth: number,
@@ -50,7 +50,7 @@ function isVisible(
 }
 
 export function useTreeState(
-  data: StructureGraphData | null,
+  data: ExplorerGraphData | null,
   depthFilter: DepthFilter,
   searchTerm: string,
 ) {

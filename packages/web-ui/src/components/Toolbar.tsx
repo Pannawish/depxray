@@ -1,12 +1,15 @@
 import { SearchBox } from './SearchBox.js';
-import type { DepthFilter } from '../types.js';
+import type { DepthFilter, GraphMode } from '../types.js';
 
 interface ToolbarProps {
   totalFiles: number;
   totalDirs: number;
+  totalImports: number;
+  circularCount: number;
   visibleNodes: number;
   matchCount: number;
   collapsedCount: number;
+  mode: GraphMode;
   sourceLabel: string;
   depthFilter: DepthFilter;
   searchTerm: string;
@@ -22,9 +25,12 @@ interface ToolbarProps {
 export function Toolbar({
   totalFiles,
   totalDirs,
+  totalImports,
+  circularCount,
   visibleNodes,
   matchCount,
   collapsedCount,
+  mode,
   sourceLabel,
   depthFilter,
   searchTerm,
@@ -39,7 +45,9 @@ export function Toolbar({
   return (
     <header className="toolbar-shell">
       <div>
-        <p className="eyebrow">Local structure graph</p>
+        <p className="eyebrow">
+          {mode === 'structure' ? 'Local structure graph' : 'Dependency graph mode'}
+        </p>
         <h1>React Dependency Graph</h1>
         <p className="toolbar-hint">Press <kbd>F</kbd> to fit the view and <kbd>Esc</kbd> to deselect.</p>
       </div>
@@ -47,6 +55,8 @@ export function Toolbar({
       <div className="toolbar-stats">
         <span>{totalDirs} dirs</span>
         <span>{totalFiles} files</span>
+        {mode === 'dependencies' ? <span>{totalImports} imports</span> : null}
+        {mode === 'dependencies' ? <span>{circularCount} circular</span> : null}
         <span>{visibleNodes} visible</span>
         <span>{collapsedCount} collapsed</span>
         {searchTerm ? <span>{matchCount} matches</span> : null}

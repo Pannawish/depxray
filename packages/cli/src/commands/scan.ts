@@ -6,19 +6,47 @@ import { Command } from 'commander';
 import {
   buildStructureGraph,
   scanFileTree,
+  scanProject,
   type FileTreeNode,
+  type GraphEdge as DependencyGraphEdge,
+  type GraphNode as DependencyGraphNode,
+  type ScanError,
+  type ScanResult,
   type StructureGraph,
   type StructureGraphEdge,
   type StructureGraphNode,
 } from '@rdg/core';
 
-interface StructureGraphData {
+type GraphMode = 'structure' | 'dependencies';
+
+interface ExplorerGraphNode extends StructureGraphNode {
+  inDegree?: number;
+  outDegree?: number;
+  isCircular?: boolean;
+  componentName?: string;
+}
+
+interface ExplorerGraphEdge extends StructureGraphEdge {
+  kind: GraphMode;
+  importSpecifier?: string;
+  importedNames?: string[];
+  isTypeOnly?: boolean;
+  isDynamic?: boolean;
+}
+
+interface ExplorerGraphData {
+  schemaVersion: string;
+  mode: GraphMode;
   projectRoot: string;
   scannedAt: string;
   totalFiles: number;
   totalDirs: number;
-  nodes: StructureGraphNode[];
-  edges: StructureGraphEdge[];
+  totalImports: number;
+  circularCount: number;
+  generatedBy: string;
+  errors: ScanError[];
+  nodes: ExplorerGraphNode[];
+  edges: ExplorerGraphEdge[];
 }
 
 interface ScanCommandOptions {
@@ -28,8 +56,15 @@ interface ScanCommandOptions {
   ignore?: string[];
   depth?: string;
   port?: string;
+  mode?: string;
+  circular?: boolean;
+  aliases?: boolean;
+  extensions?: string[];
   open?: boolean;
 }
+
+const EXPORT_SCHEMA_VERSION = '1.0.0';
+const RDG_CLI_VERSION = '0.3.0';
 
 function parseDepth(value: string | undefined): number | 'all' {
   if (!value) {
@@ -61,18 +96,93 @@ function parsePort(value: string | undefined): number {
   return parsed;
 }
 
-function toStructureGraphData(graph: StructureGraph): StructureGraphData {
+function parseMode(value: string | undefined): GraphMode {
+  if (!value || value === 'structure') {
+    return 'structure';
+  }
+
+  if (value === 'dependencies') {
+    return 'dependencies';
+  }
+
+  throw new Error(`Invalid mode: ${value}. Use "structure" or "dependencies".`);
+}
+
+function getGeneratedBy(): string {
+  return `react-dependency-graph@${RDG_CLI_VERSION}`;
+}
+
+function toStructureGraphData(graph: StructureGraph): ExplorerGraphData {
+  const scannedAt = new Date().toISOString();
+  const totalFiles = graph.nodes.filter((node) => node.kind === 'file').length;
+  const totalDirs = graph.nodes.filter((node) => node.kind === 'directory').length;
+
   return {
+    schemaVersion: EXPORT_SCHEMA_VERSION,
+    mode: 'structure',
     projectRoot: graph.rootDir,
-    scannedAt: new Date().toISOString(),
-    totalFiles: graph.nodes.filter((node) => node.kind === 'file').length,
-    totalDirs: graph.nodes.filter((node) => node.kind === 'directory').length,
+    scannedAt,
+    totalFiles,
+    totalDirs,
+    totalImports: graph.edges.length,
+    circularCount: 0,
+    generatedBy: getGeneratedBy(),
+    errors: [],
     nodes: graph.nodes,
-    edges: graph.edges,
+    edges: graph.edges.map((edge) => ({
+      ...edge,
+      kind: 'structure',
+    })),
   };
 }
 
-function serializeStructureGraphData(data: StructureGraphData): string {
+function toDependencyGraphData(result: ScanResult): ExplorerGraphData {
+  const nodes: ExplorerGraphNode[] = result.graph.nodes.map((node) => ({
+    id: node.id,
+    label: path.basename(node.relativePath),
+    relativePath: node.relativePath,
+    absolutePath: node.id,
+    kind: 'file',
+    extension: node.extension,
+    depth: Math.max(1, node.relativePath.split('/').filter(Boolean).length),
+    collapsed: false,
+    hidden: false,
+    childCount: node.outDegree,
+    descendantCount: Math.max(node.inDegree, node.outDegree),
+    inDegree: node.inDegree,
+    outDegree: node.outDegree,
+    isCircular: node.isCircular,
+    ...(node.componentName ? { componentName: node.componentName } : {}),
+  }));
+
+  const edges: ExplorerGraphEdge[] = result.graph.edges.map((edge, index) => ({
+    id: `${edge.source}->${edge.target}-${index}`,
+    source: edge.source,
+    target: edge.target,
+    kind: 'dependencies',
+    importSpecifier: edge.importSpecifier,
+    importedNames: edge.importedNames,
+    isTypeOnly: edge.isTypeOnly,
+    isDynamic: edge.isDynamic,
+  }));
+
+  return {
+    schemaVersion: EXPORT_SCHEMA_VERSION,
+    mode: 'dependencies',
+    projectRoot: result.graph.rootDir,
+    scannedAt: result.graph.metadata.scannedAt,
+    totalFiles: result.totalFiles,
+    totalDirs: 0,
+    totalImports: result.totalImports,
+    circularCount: result.circularCount,
+    generatedBy: getGeneratedBy(),
+    errors: result.errors,
+    nodes,
+    edges,
+  };
+}
+
+function serializeGraphData(data: ExplorerGraphData): string {
   return JSON.stringify(data, null, 2);
 }
 
@@ -140,7 +250,7 @@ function normalizeInitialDepth(depth: number | 'all'): string {
 
 async function createStaticExport(
   outputDir: string,
-  graphData: StructureGraphData,
+  graphData: ExplorerGraphData,
   initialDepth: number | 'all',
 ): Promise<string> {
   const webUiDistDir = await requireWebUiDist();
@@ -148,7 +258,7 @@ async function createStaticExport(
   await ensureDirectory(outputDir);
   await fs.cp(webUiDistDir, outputDir, { recursive: true });
 
-  const graphDataJson = serializeStructureGraphData(graphData);
+  const graphDataJson = serializeGraphData(graphData);
   await fs.writeFile(
     path.join(outputDir, 'graph-data.json'),
     graphDataJson,
@@ -208,16 +318,16 @@ async function readStaticAsset(
   };
 }
 
-async function startStructureServer(
+async function startGraphServer(
   rootDir: string,
-  tree: FileTreeNode,
-  graphData: StructureGraphData,
+  tree: FileTreeNode | null,
+  graphData: ExplorerGraphData,
   port: number,
   initialDepth: number | 'all',
 ): Promise<void> {
   const distDir = await requireWebUiDist();
-  const treeJson = JSON.stringify(tree, null, 2);
-  const graphDataJson = serializeStructureGraphData(graphData);
+  const treeJson = tree ? JSON.stringify(tree, null, 2) : null;
+  const graphDataJson = serializeGraphData(graphData);
   const initialDepthValue = normalizeInitialDepth(initialDepth);
 
   const server = http.createServer(async (req, res) => {
@@ -232,6 +342,12 @@ async function startStructureServer(
       }
 
       if (requestPath === '/api/tree') {
+        if (!treeJson) {
+          res.writeHead(404, { 'content-type': 'text/plain; charset=utf-8' });
+          res.end('Tree data is only available in structure mode.');
+          return;
+        }
+
         res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' });
         res.end(treeJson);
         return;
@@ -286,18 +402,56 @@ async function startStructureServer(
   process.once('SIGTERM', shutdown);
 }
 
+async function buildGraphData(
+  rootDir: string,
+  options: ScanCommandOptions,
+): Promise<{ tree: FileTreeNode | null; graphData: ExplorerGraphData }> {
+  const mode = parseMode(options.mode);
+
+  if (mode === 'structure') {
+    const tree = await scanFileTree(rootDir, {
+      ignorePatterns: options.ignore,
+    });
+    const structureGraph = buildStructureGraph(tree);
+    return {
+      tree,
+      graphData: toStructureGraphData(structureGraph),
+    };
+  }
+
+  const result = await scanProject({
+    rootDir,
+    ignorePatterns: options.ignore,
+    detectCircular: options.circular !== false,
+    resolveAliases: options.aliases !== false,
+    extensions: options.extensions,
+  });
+
+  return {
+    tree: null,
+    graphData: toDependencyGraphData(result),
+  };
+}
+
 export function createScanCommand(): Command {
   const cmd = new Command('scan')
-    .description('Scan a project and open the structure graph in a local browser')
+    .description('Scan a project and open a structure or dependency graph in a local browser')
     .argument(
       '[dir]',
       'Project directory to scan (default: current directory)',
       '.',
     )
-    .option('--json', 'Print the structure graph JSON to stdout')
+    .option('--json', 'Print the graph JSON to stdout')
     .option('--html', 'Generate a static HTML export in .react-dependency-graph/')
     .option('-o, --output <file>', 'Write JSON output to a file instead of stdout')
+    .option('--mode <mode>', 'Graph mode: structure | dependencies', 'structure')
     .option('--ignore <patterns...>', 'Additional directory/file patterns to ignore')
+    .option('--no-circular', 'Skip circular dependency detection in dependency mode')
+    .option('--no-aliases', 'Skip tsconfig/jsconfig path alias resolution in dependency mode')
+    .option(
+      '--extensions <exts...>',
+      'File extensions to scan in dependency mode (default: .js .jsx .ts .tsx)',
+    )
     .option('--depth <depth>', 'Initial visible depth: 1, 2, 3, 4, or all', '2')
     .option('--port <port>', 'Port for the local browser server', '5178')
     .option('--no-open', 'Do not open the browser automatically')
@@ -318,14 +472,10 @@ export function createScanCommand(): Command {
         await verifyDirectory(rootDir);
         process.stderr.write(`Scanning ${rootDir}...\n`);
 
-        const tree = await scanFileTree(rootDir, {
-          ignorePatterns: rawOptions.ignore,
-        });
-        const structureGraph = buildStructureGraph(tree);
-        const graphData = toStructureGraphData(structureGraph);
+        const { tree, graphData } = await buildGraphData(rootDir, rawOptions);
 
         if (rawOptions.json) {
-          const output = serializeStructureGraphData(graphData);
+          const output = serializeGraphData(graphData);
           if (rawOptions.output) {
             const outputPath = path.resolve(rawOptions.output);
             await ensureDirectory(path.dirname(outputPath));
@@ -344,7 +494,7 @@ export function createScanCommand(): Command {
           return;
         }
 
-        await startStructureServer(rootDir, tree, graphData, port, initialDepth);
+        await startGraphServer(rootDir, tree, graphData, port, initialDepth);
         if (rawOptions.open !== false) {
           const url = `http://127.0.0.1:${port}?depth=${encodeURIComponent(normalizeInitialDepth(initialDepth))}`;
           await openBrowser(url);

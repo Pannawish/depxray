@@ -128,9 +128,12 @@ export default function App() {
         <Toolbar
           totalFiles={data?.totalFiles ?? 0}
           totalDirs={data?.totalDirs ?? 0}
+          totalImports={data?.totalImports ?? 0}
+          circularCount={data?.circularCount ?? 0}
           visibleNodes={visibleNodes.length}
           matchCount={searchMatchCount}
           collapsedCount={collapsedCount}
+          mode={data?.mode ?? 'structure'}
           sourceLabel={SOURCE_LABELS[source]}
           depthFilter={depthFilter}
           searchTerm={searchTerm}
@@ -170,6 +173,7 @@ export default function App() {
             </div>
 
             <GraphView
+              mode={data?.mode ?? 'structure'}
               nodes={visibleNodes}
               edges={visibleEdges}
               matchedNodeIds={matchedNodeIds}
@@ -183,6 +187,7 @@ export default function App() {
 
           <SidePanel
             node={selectedNode}
+            mode={data?.mode ?? 'structure'}
             projectRoot={data?.projectRoot ?? ''}
             error={error}
           />

@@ -1,8 +1,9 @@
 import type { NodeProps } from 'reactflow';
-import type { StructureGraphNode } from '../types.js';
+import type { ExplorerGraphNode, GraphMode } from '../types.js';
 
 interface CircleNodeData {
-  node: StructureGraphNode;
+  node: ExplorerGraphNode;
+  mode: GraphMode;
   selected: boolean;
   matched: boolean;
   emphasized: boolean;
@@ -11,9 +12,11 @@ interface CircleNodeData {
 }
 
 export function CircleNode({ data }: NodeProps<CircleNodeData>) {
-  const { node, selected, matched, emphasized, dimmed, onToggle } = data;
+  const { node, mode, selected, matched, emphasized, dimmed, onToggle } = data;
   const isDirectory = node.kind === 'directory';
-  const size = isDirectory
+  const size = mode === 'dependencies'
+    ? Math.min(112, 64 + ((node.inDegree ?? 0) + (node.outDegree ?? 0)) * 4)
+    : isDirectory
     ? Math.min(110, 76 + node.descendantCount * 2)
     : 58;
 
@@ -31,10 +34,14 @@ export function CircleNode({ data }: NodeProps<CircleNodeData>) {
       title={node.relativePath}
     >
       <span className="circle-node-icon">
-        {isDirectory ? 'D' : node.extension?.replace('.', '').slice(0, 3) ?? 'F'}
+        {mode === 'dependencies'
+          ? (node.extension?.replace('.', '').slice(0, 3) ?? 'dep')
+          : isDirectory
+            ? 'D'
+            : node.extension?.replace('.', '').slice(0, 3) ?? 'F'}
       </span>
       <span className="circle-node-label">{node.label}</span>
-      {isDirectory && node.childCount > 0 ? (
+      {mode === 'structure' && isDirectory && node.childCount > 0 ? (
         <button
           className="circle-node-toggle"
           onClick={(event) => {

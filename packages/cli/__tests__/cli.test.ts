@@ -40,9 +40,12 @@ describe('CLI Integration Tests', () => {
       
       expect(exitCode).toBe(0);
       const parsed = JSON.parse(stdout);
+      expect(parsed.schemaVersion).toBe('1.0.0');
+      expect(parsed.mode).toBe('structure');
       expect(parsed.projectRoot).toBe(SIMPLE_PROJECT);
       expect(parsed.totalFiles).toBe(8);
       expect(parsed.totalDirs).toBe(5);
+      expect(parsed.totalImports).toBe(12);
       expect(parsed.nodes.some((node: any) => node.relativePath === 'src')).toBe(true);
       expect(stderr).toContain(`Scanning ${SIMPLE_PROJECT}...`);
     });
@@ -74,6 +77,7 @@ describe('CLI Integration Tests', () => {
       expect(stderr).toContain(`Static export written to ${indexPath}`);
       expect(indexHtml).toContain('window.__GRAPH_DATA__ =');
       expect(indexHtml).toContain('window.__RDG_INITIAL_DEPTH__ = "3"');
+      expect(graphData.mode).toBe('structure');
       expect(graphData.totalFiles).toBe(8);
     });
 
@@ -84,6 +88,61 @@ describe('CLI Integration Tests', () => {
       const parsed = JSON.parse(stdout);
       expect(parsed.nodes.some((node: any) => node.relativePath.includes('pages'))).toBe(false);
       expect(parsed.totalFiles).toBe(7);
+    });
+
+    it('should output dependency JSON in dependency mode', async () => {
+      const { stdout, exitCode } = await execa('node', [
+        CLI_PATH,
+        'scan',
+        SIMPLE_PROJECT,
+        '--mode',
+        'dependencies',
+        '--json',
+      ]);
+
+      expect(exitCode).toBe(0);
+      const parsed = JSON.parse(stdout);
+      expect(parsed.mode).toBe('dependencies');
+      expect(parsed.totalFiles).toBe(7);
+      expect(parsed.totalImports).toBeGreaterThanOrEqual(8);
+      expect(parsed.totalDirs).toBe(0);
+      expect(parsed.nodes.some((node: any) => node.outDegree >= 1)).toBe(true);
+    });
+
+    it('should include circular dependency metadata in dependency mode', async () => {
+      const { stdout, exitCode } = await execa('node', [
+        CLI_PATH,
+        'scan',
+        CIRCULAR_PROJECT,
+        '--mode',
+        'dependencies',
+        '--json',
+      ]);
+
+      expect(exitCode).toBe(0);
+      const parsed = JSON.parse(stdout);
+      expect(parsed.mode).toBe('dependencies');
+      expect(parsed.circularCount).toBeGreaterThanOrEqual(2);
+      expect(parsed.nodes.some((node: any) => node.isCircular)).toBe(true);
+    });
+
+    it('should generate dependency-mode static HTML export', async () => {
+      const { exitCode } = await execa('node', [
+        CLI_PATH,
+        'scan',
+        SIMPLE_PROJECT,
+        '--mode',
+        'dependencies',
+        '--html',
+      ]);
+
+      expect(exitCode).toBe(0);
+      const outputDir = path.join(SIMPLE_PROJECT, '.react-dependency-graph');
+      const graphData = JSON.parse(
+        await fs.readFile(path.join(outputDir, 'graph-data.json'), 'utf-8'),
+      );
+      expect(graphData.mode).toBe('dependencies');
+      expect(graphData.totalImports).toBeGreaterThanOrEqual(8);
     });
 
   });

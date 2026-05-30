@@ -13,6 +13,7 @@
 //   npx react-dependency-graph scan --json                  # Print structure JSON
 //   npx react-dependency-graph scan --json --output graph.json
 //   npx react-dependency-graph scan --html                  # Static HTML export
+//   npx react-dependency-graph scan --mode dependencies     # Import graph mode
 //   npx react-dependency-graph scan --port 5180             # Custom server port
 //   npx react-dependency-graph inspect src/App.tsx           # Inspect one file
 //
@@ -35,7 +36,7 @@ const program = new Command();
 program
   .name('react-dependency-graph')
   .description(
-    'Scan React projects and generate structure graphs.\n\n' +
+    'Scan React projects and generate structure or dependency graphs.\n\n' +
       'Useful for understanding project structure in the browser, with the legacy inspect command\n' +
       'and providing structured data to AI coding agents (Claude, Codex, Antigravity).',
   )

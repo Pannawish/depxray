@@ -12,25 +12,31 @@ import ReactFlow, {
 import dagre from 'dagre';
 import 'reactflow/dist/style.css';
 import { CircleNode } from './CircleNode.js';
-import type { StructureGraphEdge, StructureGraphNode } from '../types.js';
+import type {
+  ExplorerGraphEdge,
+  ExplorerGraphNode,
+  GraphMode,
+} from '../types.js';
 
 const NODE_TYPES = {
   circle: CircleNode,
 };
 
-function layoutGraph(nodes: StructureGraphNode[], edges: StructureGraphEdge[]) {
+function layoutGraph(nodes: ExplorerGraphNode[], edges: ExplorerGraphEdge[], mode: GraphMode) {
   const graph = new dagre.graphlib.Graph();
   graph.setDefaultEdgeLabel(() => ({}));
   graph.setGraph({
-    rankdir: 'TB',
-    ranksep: 92,
-    nodesep: 40,
+    rankdir: mode === 'dependencies' ? 'LR' : 'TB',
+    ranksep: mode === 'dependencies' ? 104 : 92,
+    nodesep: mode === 'dependencies' ? 54 : 40,
     marginx: 40,
     marginy: 40,
   });
 
   for (const node of nodes) {
-    const size = node.kind === 'directory'
+    const size = mode === 'dependencies'
+      ? Math.min(112, 64 + ((node.inDegree ?? 0) + (node.outDegree ?? 0)) * 4)
+      : node.kind === 'directory'
       ? Math.min(110, 76 + node.descendantCount * 2)
       : 58;
     graph.setNode(node.id, { width: size, height: size });
@@ -46,8 +52,9 @@ function layoutGraph(nodes: StructureGraphNode[], edges: StructureGraphEdge[]) {
 }
 
 interface GraphViewProps {
-  nodes: StructureGraphNode[];
-  edges: StructureGraphEdge[];
+  mode: GraphMode;
+  nodes: ExplorerGraphNode[];
+  edges: ExplorerGraphEdge[];
   matchedNodeIds: Set<string>;
   emphasizedNodeIds: Set<string>;
   selectedNodeId: string | null;
@@ -57,6 +64,7 @@ interface GraphViewProps {
 }
 
 export function GraphView({
+  mode,
   nodes,
   edges,
   matchedNodeIds,
@@ -66,7 +74,7 @@ export function GraphView({
   onSelectNode,
   onToggleNode,
 }: GraphViewProps) {
-  const { graph } = layoutGraph(nodes, edges);
+  const { graph } = layoutGraph(nodes, edges, mode);
   const [flowInstance, setFlowInstance] = useState<ReactFlowInstance | null>(null);
 
   useEffect(() => {
@@ -82,7 +90,9 @@ export function GraphView({
 
   const flowNodes: Node[] = nodes.map((node) => {
     const position = graph.node(node.id);
-    const size = node.kind === 'directory'
+    const size = mode === 'dependencies'
+      ? Math.min(112, 64 + ((node.inDegree ?? 0) + (node.outDegree ?? 0)) * 4)
+      : node.kind === 'directory'
       ? Math.min(110, 76 + node.descendantCount * 2)
       : 58;
     const matched = matchedNodeIds.has(node.id);
@@ -96,6 +106,7 @@ export function GraphView({
       },
       data: {
         node,
+        mode,
         selected: node.id === selectedNodeId,
         matched,
         emphasized,
@@ -108,7 +119,17 @@ export function GraphView({
   const flowEdges: Edge[] = edges.map((edge) => {
     const emphasized = emphasizedNodeIds.has(edge.source)
       && emphasizedNodeIds.has(edge.target);
-    const stroke = emphasized ? '#26445e' : '#6f7f90';
+    const stroke = edge.kind === 'dependencies'
+      ? edge.isDynamic
+        ? '#da7c1b'
+        : edge.isTypeOnly
+          ? '#7b7aac'
+          : emphasized
+            ? '#26445e'
+            : '#6f7f90'
+      : emphasized
+        ? '#26445e'
+        : '#6f7f90';
 
     return {
       id: edge.id,
@@ -126,6 +147,7 @@ export function GraphView({
         stroke,
         strokeWidth: emphasized ? 1.8 : 1.35,
         opacity: matchedNodeIds.size > 0 && !emphasized ? 0.18 : 0.7,
+        strokeDasharray: edge.isTypeOnly ? '4 3' : undefined,
       },
     };
   });

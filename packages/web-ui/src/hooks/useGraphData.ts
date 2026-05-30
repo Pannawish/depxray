@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { sampleGraphData } from '../mockData.js';
-import type { StructureGraphData } from '../types.js';
+import type { ExplorerGraphData } from '../types.js';
 
 interface GraphDataState {
-  data: StructureGraphData | null;
+  data: ExplorerGraphData | null;
   loading: boolean;
   error: string | null;
   source: 'window' | 'http' | 'sample';
@@ -39,7 +39,7 @@ export function useGraphData(): GraphDataState {
           throw new Error(`Request failed with status ${response.status}`);
         }
 
-        const data = await response.json() as StructureGraphData;
+        const data = await response.json() as ExplorerGraphData;
         if (!cancelled) {
           setState({
             data,
