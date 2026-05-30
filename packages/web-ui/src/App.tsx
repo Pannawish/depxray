@@ -1,8 +1,8 @@
 import { startTransition, useDeferredValue, useEffect, useMemo, useState } from 'react';
 import { ExplorerToolbar } from './components/ExplorerToolbar.js';
 import { FileTreeView, type FileTreeRowData } from './components/FileTreeView.js';
-import { VisualTreePanel } from './components/VisualTreePanel.js';
-import { RelationshipPanel } from './components/RelationshipPanel.js';
+import { MillerColumnsPanel } from './components/MillerColumnsPanel.js';
+import { AiContextGenerator } from './components/AiContextGenerator.js';
 import { SelectionPanel } from './components/SelectionPanel.js';
 import { useGraphData } from './hooks/useGraphData.js';
 import { useRelationshipIndex } from './hooks/useRelationshipIndex.js';
@@ -274,6 +274,13 @@ export default function App() {
         />
 
         <div className="center-column">
+          <MillerColumnsPanel
+            node={selectedNode}
+            index={index}
+          />
+        </div>
+
+        <div className="right-column">
           <SelectionPanel
             node={selectedNode}
             index={index}
@@ -281,21 +288,11 @@ export default function App() {
             projectRoot={index.projectRoot}
             error={error}
           />
-          <VisualTreePanel
+          <AiContextGenerator
             node={selectedNode}
             index={index}
-            selectedNodeId={selectedNodeId}
-            onSelectNode={setSelectedNodeId}
           />
         </div>
-
-        <RelationshipPanel
-          node={selectedNode}
-          index={index}
-          folderSummary={folderSummary}
-          filters={dependencyFilters}
-          onSelectNode={setSelectedNodeId}
-        />
       </div>
     </main>
   );

@@ -1,15 +1,15 @@
 {
-  "name": "rdg-workspace",
+  "name": "react-dependency-graph",
   "private": true,
   "version": "0.1.0",
-  "description": "Scan React projects and explore structure and dependency graphs in the browser, CLI, or JSON exports for AI agents.",
+  "description": "Scan and visualize React project structure graphs — usable as a library, CLI, and AI agent tool.",
   "workspaces": [
     "packages/core",
     "packages/cli",
     "packages/web-ui"
   ],
   "scripts": {
-    "build": "npm run build --workspace @rdg/core && npm run build --workspace @rdg/web-ui && npm run build --workspace ./packages/cli",
+    "build": "npm run build --workspace @rdg/core && npm run build --workspace @rdg/web-ui && npm run build --workspace @rdg/cli",
     "test": "npm run test --workspaces --if-present",
     "clean": "npm run clean --workspaces --if-present",
     "lint": "eslint packages/*/src/**/*.ts"
@@ -17,6 +17,6 @@
   "engines": {
     "node": ">=18.0.0"
   },
-  "author": "",
+  "author": "pannawish.kri",
   "license": "MIT"
 }
