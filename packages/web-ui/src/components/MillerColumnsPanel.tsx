@@ -1,26 +1,23 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useEffect, useRef } from 'react';
 import type { ExplorerGraphNode } from '../types.js';
 import type { FileRelationshipIndex } from '../relationshipIndex.js';
 
 interface MillerColumnsPanelProps {
   node: ExplorerGraphNode | null;
   index: FileRelationshipIndex;
+  chain: string[];
+  onChainChange: (chain: string[]) => void;
+  onActiveNodeChange: (nodeId: string) => void;
 }
 
-export function MillerColumnsPanel({ node, index }: MillerColumnsPanelProps) {
-  // The chain of selected file IDs. 
-  // chain[0] is the base node selected in the main tree.
-  const [chain, setChain] = useState<string[]>([]);
+export function MillerColumnsPanel({
+  node,
+  index,
+  chain,
+  onChainChange,
+  onActiveNodeChange,
+}: MillerColumnsPanelProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-
-  // Reset chain when the root node changes
-  useEffect(() => {
-    if (node) {
-      setChain([node.id]);
-    } else {
-      setChain([]);
-    }
-  }, [node]);
 
   // Auto-scroll to the rightmost column when the chain grows
   useEffect(() => {
@@ -44,12 +41,11 @@ export function MillerColumnsPanel({ node, index }: MillerColumnsPanelProps) {
   }
 
   const handleItemClick = (columnIndex: number, targetId: string) => {
-    setChain(prev => {
-      // Truncate the chain up to this column, then add the new target
-      const newChain = prev.slice(0, columnIndex + 1);
-      newChain.push(targetId);
-      return newChain;
-    });
+    // Truncate the chain up to this column, then add the new target
+    const newChain = chain.slice(0, columnIndex + 1);
+    newChain.push(targetId);
+    onChainChange(newChain);
+    onActiveNodeChange(targetId);
   };
 
   const getFileIcon = (kind: 'file' | 'directory') => {

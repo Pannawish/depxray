@@ -547,6 +547,64 @@ button {
   padding: 40px;
 }
 
+/* Code Tabs Bar */
+.code-tabs-bar {
+  display: flex;
+  background: #11111b;
+  border-bottom: 1px solid #1e1e2e;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.code-tabs-bar::-webkit-scrollbar {
+  height: 4px;
+}
+
+.code-tabs-bar::-webkit-scrollbar-thumb {
+  background: #313244;
+  border-radius: 2px;
+}
+
+.code-tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border: none;
+  border-right: 1px solid #1e1e2e;
+  background: #13131f;
+  color: #7f849c;
+  cursor: pointer;
+  font-size: 0.78rem;
+  font-weight: 500;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.code-tab:hover {
+  background: #1b1b2a;
+  color: #cdd6f4;
+}
+
+.code-tab.active {
+  background: #181824;
+  color: #ffffff;
+  border-top: 2px solid var(--accent);
+  padding-top: 6px;
+  font-weight: 600;
+}
+
+.code-tab-icon {
+  font-size: 0.9rem;
+}
+
+.code-tab-name {
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .code-viewer-stats {
   font-size: 0.76rem;
   color: var(--accent);

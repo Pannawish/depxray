@@ -161,15 +161,31 @@ export default function App() {
   const [dependencyFilters, setDependencyFilters] = useState<DependencyFilters>(DEFAULT_DEPENDENCY_FILTERS);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  
+  const [millerChain, setMillerChain] = useState<string[]>([]);
+  const [activeCodeNodeId, setActiveCodeNodeId] = useState<string | null>(null);
+
   const deferredSearchTerm = useDeferredValue(searchTerm);
   const resolvedMode = availableModes.includes(activeMode) ? activeMode : (dataSet?.defaultMode ?? 'structure');
   const selectedNode = selectedNodeId ? (index.nodeById.get(selectedNodeId) ?? null) : null;
-  const folderSummary = selectedNode?.kind === 'directory'
-    ? getFolderSummary(selectedNode.id, index, dependencyFilters)
+  const activeCodeNode = activeCodeNodeId ? (index.nodeById.get(activeCodeNodeId) ?? null) : null;
+
+  const folderSummary = activeCodeNode?.kind === 'directory'
+    ? getFolderSummary(activeCodeNode.id, index, dependencyFilters)
     : null;
   const visibleRows = useMemo(() => (
     buildTreeRows(index, expandedIds, deferredSearchTerm, dependencyFilters)
   ), [deferredSearchTerm, dependencyFilters, expandedIds, index]);
+
+  useEffect(() => {
+    if (selectedNodeId) {
+      setMillerChain([selectedNodeId]);
+      setActiveCodeNodeId(selectedNodeId);
+    } else {
+      setMillerChain([]);
+      setActiveCodeNodeId(null);
+    }
+  }, [selectedNodeId]);
 
   useEffect(() => {
     setExpandedIds(buildInitialExpandedIds(index));
@@ -277,21 +293,27 @@ export default function App() {
           <MillerColumnsPanel
             node={selectedNode}
             index={index}
+            chain={millerChain}
+            onChainChange={setMillerChain}
+            onActiveNodeChange={setActiveCodeNodeId}
           />
         </div>
 
         <div className="right-column">
           <SelectionPanel
-            node={selectedNode}
+            node={activeCodeNode}
             index={index}
             folderSummary={folderSummary}
             projectRoot={index.projectRoot}
             error={error}
           />
           <FileCodeViewer
-            node={selectedNode}
+            node={activeCodeNode}
             index={index}
             onSelectNode={setSelectedNodeId}
+            eligibleTabs={millerChain}
+            activeTabId={activeCodeNodeId}
+            onTabSelect={setActiveCodeNodeId}
           />
         </div>
       </div>

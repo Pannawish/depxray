@@ -6,9 +6,19 @@ interface FileCodeViewerProps {
   node: ExplorerGraphNode | null;
   index: FileRelationshipIndex;
   onSelectNode: (nodeId: string) => void;
+  eligibleTabs: string[];
+  activeTabId: string | null;
+  onTabSelect: (tabId: string) => void;
 }
 
-export function FileCodeViewer({ node, index, onSelectNode }: FileCodeViewerProps) {
+export function FileCodeViewer({
+  node,
+  index,
+  onSelectNode,
+  eligibleTabs,
+  activeTabId,
+  onTabSelect,
+}: FileCodeViewerProps) {
   const [code, setCode] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -73,20 +83,6 @@ export function FileCodeViewer({ node, index, onSelectNode }: FileCodeViewerProp
     );
   }
 
-  if (node.kind === 'directory') {
-    return (
-      <section className="code-viewer-panel empty-state">
-        <div className="panel-header">
-          <p className="eyebrow">Folder</p>
-          <h2>{node.label}</h2>
-        </div>
-        <div className="code-viewer-content empty">
-          <p className="empty-copy">Select an individual file to view its code representation and dependency references.</p>
-        </div>
-      </section>
-    );
-  }
-
   // Get outgoing imports (dependencies)
   const outgoing = index.importsBySourceId.get(node.id) || [];
   // Get incoming dependents
@@ -118,104 +114,134 @@ export function FileCodeViewer({ node, index, onSelectNode }: FileCodeViewerProp
     }
   });
 
-  const getFileIcon = (kind: 'file' | 'directory') => {
-    return kind === 'directory' ? '📁' : '📄';
-  };
-
   return (
     <section className="code-viewer-panel">
       <div className="panel-header inline">
         <div>
-          <p className="eyebrow">Code Viewer</p>
+          <p className="eyebrow">{node.kind === 'directory' ? 'Folder' : 'Code Viewer'}</p>
           <h2>{node.label}</h2>
         </div>
         <span className="code-viewer-stats">
-          {outgoing.length} imports • {incoming.length} dependents
+          {node.kind === 'directory'
+            ? `${index.childrenByParentId.get(node.id)?.length || 0} items`
+            : `${outgoing.length} imports • ${incoming.length} dependents`}
         </span>
       </div>
 
+      {eligibleTabs.length > 1 && (
+        <div className="code-tabs-bar">
+          {eligibleTabs.map(tabId => {
+            const tabNode = index.nodeById.get(tabId) ?? index.structureNodeById.get(tabId);
+            if (!tabNode) return null;
+            const isActive = tabId === activeTabId;
+            return (
+              <button
+                key={tabId}
+                className={`code-tab ${isActive ? 'active' : ''}`}
+                onClick={() => onTabSelect(tabId)}
+                title={tabNode.relativePath}
+              >
+                <span className="code-tab-icon">{tabNode.kind === 'directory' ? '📁' : '📄'}</span>
+                <span className="code-tab-name">{tabNode.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
+
       <div className="code-viewer-body">
-        {/* Dependents Pill Badges */}
-        {incoming.length > 0 && (
-          <div className="dependents-bar">
-            <span className="bar-label">Imported by:</span>
-            <div className="dependents-list">
-              {incoming.map(edge => {
-                const srcNode = index.structureNodeById.get(edge.source);
-                if (!srcNode) return null;
-                return (
-                  <button 
-                    key={edge.source}
-                    className="dependent-badge"
-                    onClick={() => onSelectNode(edge.source)}
-                    title={srcNode.relativePath}
-                  >
-                    📄 {srcNode.label}
-                  </button>
-                );
-              })}
-            </div>
+        {node.kind === 'directory' ? (
+          <div className="code-state-msg directory-view">
+            <p className="title">Folder: {node.relativePath}</p>
+            <p className="desc">
+              Select a file tab above or explore the dependency columns to view source code.
+            </p>
           </div>
-        )}
-
-        {/* Loading state */}
-        {loading && (
-          <div className="code-state-msg loading">
-            <div className="spinner"></div>
-            <p>Fetching file contents...</p>
-          </div>
-        )}
-
-        {/* Error state */}
-        {error && (
-          <div className="code-state-msg error">
-            <p className="title">Could not load code</p>
-            <p className="desc">{error}</p>
-          </div>
-        )}
-
-        {/* Code display */}
-        {!loading && !error && code && (
-          <div className="code-editor-container">
-            <div className="code-editor-pre">
-              {lines.map((line, lineIdx) => {
-                const isImport = importLineMap.has(lineIdx);
-                const matchingEdge = importLineMap.get(lineIdx);
-                const isExport = /^[ \t]*export\b/.test(line);
-                
-                let lineClass = 'code-line';
-                if (isImport) lineClass += ' highlight-import';
-                if (isExport) lineClass += ' highlight-export';
-
-                const targetNode = matchingEdge ? index.structureNodeById.get(matchingEdge.target) : null;
-
-                return (
-                  <div key={lineIdx} className={lineClass}>
-                    <span className="line-num">{lineIdx + 1}</span>
-                    <span className="line-content">{line || ' '}</span>
-                    
-                    {/* Navigation badge for imports */}
-                    {isImport && targetNode && (
-                      <button
-                        className="code-nav-btn"
-                        onClick={() => onSelectNode(targetNode.id)}
-                        title={`Navigate to ${targetNode.relativePath}`}
+        ) : (
+          <>
+            {/* Dependents Pill Badges */}
+            {incoming.length > 0 && (
+              <div className="dependents-bar">
+                <span className="bar-label">Imported by:</span>
+                <div className="dependents-list">
+                  {incoming.map(edge => {
+                    const srcNode = index.structureNodeById.get(edge.source);
+                    if (!srcNode) return null;
+                    return (
+                      <button 
+                        key={edge.source}
+                        className="dependent-badge"
+                        onClick={() => onSelectNode(edge.source)}
+                        title={srcNode.relativePath}
                       >
-                        → Go to {targetNode.label}
+                        📄 {srcNode.label}
                       </button>
-                    )}
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
-                    {/* Badge for exports */}
-                    {isExport && (
-                      <span className="code-export-badge">
-                        Export
-                      </span>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+            {/* Loading state */}
+            {loading && (
+              <div className="code-state-msg loading">
+                <div className="spinner"></div>
+                <p>Fetching file contents...</p>
+              </div>
+            )}
+
+            {/* Error state */}
+            {error && (
+              <div className="code-state-msg error">
+                <p className="title">Could not load code</p>
+                <p className="desc">{error}</p>
+              </div>
+            )}
+
+            {/* Code display */}
+            {!loading && !error && code && (
+              <div className="code-editor-container">
+                <div className="code-editor-pre">
+                  {lines.map((line, lineIdx) => {
+                    const isImport = importLineMap.has(lineIdx);
+                    const matchingEdge = importLineMap.get(lineIdx);
+                    const isExport = /^[ \t]*export\b/.test(line);
+                    
+                    let lineClass = 'code-line';
+                    if (isImport) lineClass += ' highlight-import';
+                    if (isExport) lineClass += ' highlight-export';
+
+                    const targetNode = matchingEdge ? index.structureNodeById.get(matchingEdge.target) : null;
+
+                    return (
+                      <div key={lineIdx} className={lineClass}>
+                        <span className="line-num">{lineIdx + 1}</span>
+                        <span className="line-content">{line || ' '}</span>
+                        
+                        {/* Navigation badge for imports */}
+                        {isImport && targetNode && (
+                          <button
+                            className="code-nav-btn"
+                            onClick={() => onSelectNode(targetNode.id)}
+                            title={`Navigate to ${targetNode.relativePath}`}
+                          >
+                            → Go to {targetNode.label}
+                          </button>
+                        )}
+
+                        {/* Badge for exports */}
+                        {isExport && (
+                          <span className="code-export-badge">
+                            Export
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </>
         )}
       </div>
     </section>
