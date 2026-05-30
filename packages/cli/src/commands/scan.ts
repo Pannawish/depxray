@@ -392,6 +392,35 @@ async function startGraphServer(
         return;
       }
 
+      if (requestPath === '/api/file') {
+        const filePathParam = requestUrl.searchParams.get('path');
+        if (!filePathParam) {
+          res.writeHead(400, { 'content-type': 'text/plain; charset=utf-8' });
+          res.end('Missing path parameter');
+          return;
+        }
+
+        const resolvedPath = path.resolve(rootDir, filePathParam);
+        const relative = path.relative(rootDir, resolvedPath);
+        const isSafe = !relative.startsWith('..') && !path.isAbsolute(relative);
+
+        if (!isSafe) {
+          res.writeHead(403, { 'content-type': 'text/plain; charset=utf-8' });
+          res.end('Forbidden');
+          return;
+        }
+
+        try {
+          const content = await fs.readFile(resolvedPath, 'utf-8');
+          res.writeHead(200, { 'content-type': 'text/plain; charset=utf-8' });
+          res.end(content);
+        } catch (err) {
+          res.writeHead(404, { 'content-type': 'text/plain; charset=utf-8' });
+          res.end('File not found');
+        }
+        return;
+      }
+
       if (requestPath === '/' || requestPath === '/index.html') {
         const indexPath = path.join(distDir, 'index.html');
         const originalIndex = await fs.readFile(indexPath, 'utf-8');

@@ -2,7 +2,7 @@ import { startTransition, useDeferredValue, useEffect, useMemo, useState } from 
 import { ExplorerToolbar } from './components/ExplorerToolbar.js';
 import { FileTreeView, type FileTreeRowData } from './components/FileTreeView.js';
 import { MillerColumnsPanel } from './components/MillerColumnsPanel.js';
-import { AiContextGenerator } from './components/AiContextGenerator.js';
+import { FileCodeViewer } from './components/FileCodeViewer.js';
 import { SelectionPanel } from './components/SelectionPanel.js';
 import { useGraphData } from './hooks/useGraphData.js';
 import { useRelationshipIndex } from './hooks/useRelationshipIndex.js';
@@ -288,9 +288,10 @@ export default function App() {
             projectRoot={index.projectRoot}
             error={error}
           />
-          <AiContextGenerator
+          <FileCodeViewer
             node={selectedNode}
             index={index}
+            onSelectNode={setSelectedNodeId}
           />
         </div>
       </div>
