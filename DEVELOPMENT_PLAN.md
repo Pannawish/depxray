@@ -1,1091 +1,862 @@
-# React Dependency Graph — Development Plan
+# React Dependency Graph — New Development Plan
 
-## 1. Architecture Overview
-
-The project follows a **layered architecture** with a platform-agnostic core and thin platform-specific wrappers:
-
-```mermaid
-graph TB
-    subgraph "Platform Wrappers (thin)"
-        VSCode["VS Code Extension"]
-        CLI["CLI Tool"]
-        MCP["Claude MCP Server (future)"]
-        AG["Antigravity Plugin (future)"]
-    end
-
-    subgraph "Core Scanner (platform-agnostic)"
-        Scanner["scanProject()"]
-        Parser["parseImports()"]
-        Resolver["resolveImportPath()"]
-        Graph["buildGraph()"]
-        Circular["detectCircularDeps()"]
-        Export["exportJSON()"]
-    end
-
-    VSCode --> Scanner
-    CLI --> Scanner
-    MCP --> Scanner
-    AG --> Scanner
-    Scanner --> Parser
-    Scanner --> Resolver
-    Scanner --> Graph
-    Graph --> Circular
-    Graph --> Export
-```
-
-> [!IMPORTANT]
-> The core package has **zero dependencies** on VS Code, CLI frameworks, or any platform-specific API. It is a pure TypeScript library that takes a directory path and returns a dependency graph.
+> **Important Note**: This plan pivots the product direction. The existing `@rdg/core` dependency scanner and CLI are valuable and will be **kept as-is**. This plan adds a new first-class feature: the **Project Structure Graph**, served via a local browser — making it the new MVP entry point (`npx react-dependency-graph visualize`).
 
 ---
 
-## 2. Monorepo Folder Structure
+## 1. Updated Product Concept
+
+**React Dependency Graph** is a developer tool that helps you understand any React project visually — in your browser, with zero configuration.
+
+Run one command from any React project:
+```bash
+npx react-dependency-graph visualize
+```
+
+A browser opens at `http://localhost:5178` showing an **interactive Project Structure Graph**: all your folders and files laid out as circular nodes you can zoom, pan, search, and explore by depth.
+
+**Who it's for**: Developers onboarding to a new codebase, AI coding agents (Claude, Codex, Antigravity) that need structured project context, and architects reviewing project structure.
+
+---
+
+## 2. MVP Scope
+
+The MVP (`v0.1–v0.5`) delivers **Project Structure Graph** via a local browser:
+
+- ✅ Scan folder/file tree from project root (ignore `node_modules`, `.git`, `dist`, etc.)
+- ✅ Display as **circular nodes** with **short name labels**
+- ✅ Depth layer selector (1, 2, 3, 4, All)
+- ✅ Expand/collapse folder nodes
+- ✅ Click a node → side panel shows full path + details
+- ✅ Search for file/folder by name
+- ✅ Zoom, pan, fit view
+- ✅ Export structure as JSON
+- ✅ `npx react-dependency-graph visualize` → opens browser automatically
+- ✅ `npx react-dependency-graph export-html` → generates `.react-dependency-graph/index.html`
+
+---
+
+## 3. What Is NOT in MVP
+
+- ❌ Dependency graph (import analysis) — v0.7
+- ❌ VS Code extension — after v1.0
+- ❌ Circular dependency detection — v0.7
+- ❌ tsconfig path alias resolution — v0.7+
+- ❌ Full-stack flow tracing — post-v1.0
+- ❌ Claude MCP server — post-v1.0
+
+---
+
+## 4. Recommended Monorepo Architecture
+
+```
+react-dependency-graph/                ← Root workspace
+├── packages/
+│   ├── core/                          ← @rdg/core — pure TypeScript, zero UI deps
+│   ├── cli/                           ← @rdg/cli  — npx entry point
+│   ├── web-ui/                        ← @rdg/web-ui — React + React Flow app
+│   └── vscode-extension/              ← Future wrapper (already scaffolded)
+├── package.json                       ← npm workspaces root
+├── tsconfig.base.json
+└── .gitignore
+```
+
+**Key principle**: `@rdg/core` has **zero dependencies** on React, browser APIs, Express, or VS Code. It is a pure Node.js TypeScript library.
+
+---
+
+## 5. Folder Structure (Full)
 
 ```
 react-dependency-graph/
-├── package.json                      # Root workspace config
-├── tsconfig.base.json                # Shared TypeScript config
-├── turbo.json                        # Turborepo pipeline (optional)
-├── .gitignore
-├── .eslintrc.json
-├── README.md
-├── DEVELOPMENT_PLAN.md               # This plan (copy for reference)
+├── package.json
+├── tsconfig.base.json
 │
 ├── packages/
-│   ├── core/                         # @rdg/core — platform-agnostic scanner
+│   │
+│   ├── core/
 │   │   ├── package.json
 │   │   ├── tsconfig.json
 │   │   ├── vitest.config.ts
 │   │   └── src/
-│   │       ├── index.ts              # Public API barrel export
-│   │       ├── types.ts              # All shared TypeScript types
-│   │       ├── scanProject.ts        # Main entry: scan a project directory
-│   │       ├── parseImports.ts       # Parse import statements from a file
-│   │       ├── resolveImports.ts     # Resolve relative/alias import paths
-│   │       ├── buildGraph.ts         # Construct the dependency graph
-│   │       ├── detectCircularDeps.ts # Circular dependency detection (DFS)
-│   │       ├── configLoader.ts       # Load tsconfig/jsconfig path aliases
-│   │       ├── fileDiscovery.ts      # Walk filesystem, respect ignore patterns
-│   │       └── exportGraph.ts        # Serialize graph to JSON
+│   │       ├── index.ts              # Public API barrel
+│   │       ├── types.ts              # ALL shared types
+│   │       ├── scanFileTree.ts       # Scan folder/file hierarchy
+│   │       ├── filterTreeByDepth.ts  # Filter to N layers
+│   │       ├── buildGraph.ts         # Tree → graph nodes + edges
+│   │       ├── expandCollapse.ts     # Expand/collapse logic
+│   │       ├── exportGraph.ts        # Serialize to JSON
+│   │       └── scanDependencies.ts   # [v0.7] Import/dep scanner
 │   │
-│   ├── cli/                          # @rdg/cli — CLI wrapper
+│   ├── cli/
 │   │   ├── package.json
 │   │   ├── tsconfig.json
 │   │   └── src/
-│   │       ├── index.ts              # Entry point with shebang
-│   │       ├── commands/
-│   │       │   ├── scan.ts           # `scan` command handler
-│   │       │   └── inspect.ts        # `inspect <file>` command (future)
-│   │       └── formatters/
-│   │           ├── json.ts           # JSON output formatter
-│   │           ├── text.ts           # Human-readable text output
-│   │           └── dot.ts            # Graphviz DOT format (future)
+│   │       ├── index.ts              # CLI entry (shebang + commander)
+│   │       └── commands/
+│   │           ├── visualize.ts      # Start server + open browser
+│   │           ├── scanStructure.ts  # Scan + print JSON
+│   │           └── exportHtml.ts     # Generate static HTML
 │   │
-│   └── vscode-extension/            # react-dependency-graph (VS Code ext)
-│       ├── package.json              # Also the VS Code extension manifest
-│       ├── tsconfig.json
-│       ├── .vscodeignore
-│       ├── src/
-│       │   ├── extension.ts          # activate() / deactivate()
-│       │   ├── commands.ts           # Register VS Code commands
-│       │   ├── treeView/
-│       │   │   ├── DependencyTreeProvider.ts
-│       │   │   └── DependencyTreeItem.ts
-│       │   ├── webview/
-│       │   │   ├── WebviewPanel.ts   # Create/manage the webview panel
-│       │   │   └── messageHandler.ts # Handle webview ↔ extension messages
-│       │   └── utils/
-│       │       └── openFile.ts       # Open file in editor from graph click
-│       └── webview-ui/               # React app for the webview
-│           ├── package.json
-│           ├── vite.config.ts
-│           ├── index.html
-│           └── src/
-│               ├── App.tsx
-│               ├── components/
-│               │   └── DependencyGraph.tsx  # React Flow graph component
-│               └── hooks/
-│                   └── useVSCodeAPI.ts      # Communication with extension
+│   ├── web-ui/
+│   │   ├── package.json
+│   │   ├── vite.config.ts
+│   │   ├── index.html
+│   │   ├── tsconfig.json
+│   │   └── src/
+│   │       ├── main.tsx
+│   │       ├── App.tsx
+│   │       ├── types.ts              # Re-export from @rdg/core types
+│   │       ├── components/
+│   │       │   ├── GraphView.tsx     # React Flow canvas
+│   │       │   ├── CircleNode.tsx    # Custom circular node renderer
+│   │       │   ├── SidePanel.tsx     # Selected node details
+│   │       │   ├── Toolbar.tsx       # Depth selector, search, controls
+│   │       │   └── SearchBox.tsx
+│   │       └── hooks/
+│   │           ├── useGraphData.ts   # Fetch /api/graph-data
+│   │           └── useTreeState.ts   # Expand/collapse state
+│   │
+│   └── vscode-extension/             # Future — already scaffolded
+│
+└── .react-dependency-graph/          # Generated output dir (gitignored)
+    ├── index.html                    # Static HTML export
+    └── graph-data.json               # Embedded graph data
 ```
 
 ---
 
-## 3. Code Ownership by Package
-
-### Core Package (`@rdg/core`)
+## 6. Core Package Responsibilities (`@rdg/core`)
 
 | Module | Responsibility |
 |--------|---------------|
-| `types.ts` | All shared interfaces: `GraphNode`, `GraphEdge`, `DependencyGraph`, `ScanOptions`, `ScanResult` |
-| `fileDiscovery.ts` | Walk directory tree, filter by extensions, respect ignore patterns |
-| `parseImports.ts` | Use `@babel/parser` + `@babel/traverse` to extract import specifiers from AST |
-| `resolveImports.ts` | Resolve relative paths, handle `index.js` conventions, apply tsconfig aliases |
-| `configLoader.ts` | Read `tsconfig.json` / `jsconfig.json`, parse `compilerOptions.paths` and `baseUrl` |
-| `buildGraph.ts` | Build adjacency list from parsed imports, create `GraphNode[]` and `GraphEdge[]` |
-| `detectCircularDeps.ts` | DFS-based cycle detection, return all circular dependency chains |
-| `scanProject.ts` | Orchestrator: calls fileDiscovery → parseImports → resolveImports → buildGraph |
-| `exportGraph.ts` | Serialize `DependencyGraph` to JSON (with metadata like timestamp, project root) |
+| `types.ts` | All shared TypeScript interfaces |
+| `scanFileTree.ts` | Walk directory, build `FileTreeNode` tree, respect ignore patterns |
+| `filterTreeByDepth.ts` | Take full tree → return tree truncated at depth N |
+| `buildGraph.ts` | Convert `FileTreeNode` tree → `GraphNode[]` + `GraphEdge[]` for React Flow |
+| `expandCollapse.ts` | Toggle collapsed state on a node, return updated node list |
+| `exportGraph.ts` | Serialize graph to JSON |
+| `scanDependencies.ts` | [v0.7] Parse imports using `@babel/parser` |
 
-### CLI Package (`@rdg/cli`)
+---
 
-| Module | Responsibility |
-|--------|---------------|
-| `index.ts` | Parse CLI arguments (using `commander`), dispatch to command handlers |
-| `commands/scan.ts` | Call `@rdg/core`'s `scanProject()`, format and output result |
-| `formatters/*.ts` | Transform `ScanResult` into various output formats |
+## 7. CLI Package Responsibilities (`@rdg/cli`)
+
+| Command | Responsibility |
+|---------|---------------|
+| `visualize` | Scan project, start Express/sirv server, serve web-ui + graph data at `localhost:5178`, open browser |
+| `scan-structure` | Scan project + print JSON to stdout |
+| `export-html` | Build static HTML with embedded data into `.react-dependency-graph/index.html` |
+
+---
+
+## 8. Web UI Package Responsibilities (`@rdg/web-ui`)
+
+- **Standalone Vite + React app** served by the CLI's local server
+- Fetches graph data from `/api/graph-data` (served by CLI server)
+- In static export mode, reads data embedded in the HTML as `window.__GRAPH_DATA__`
+- Renders an interactive React Flow canvas with **circular nodes**
+- Components: `GraphView`, `CircleNode`, `SidePanel`, `Toolbar`, `SearchBox`
+
+---
+
+## 9. Future VS Code Extension Responsibilities
+
+The VS Code extension will:
+- Call `@rdg/core`'s `scanFileTree()` directly (no CLI subprocess)
+- Render the web-ui React app inside a VS Code Webview
+- Use `postMessage` to send graph data instead of HTTP fetch
+- Add commands to the VS Code Command Palette
+
+---
+
+## 10. Data Structures
+
+### File Tree Node
+```typescript
+/** A single node in the raw scanned file tree */
+export interface FileTreeNode {
+  /** Unique ID — absolute path */
+  id: string;
+  /** Short display name: "Button", "src", "package.json" */
+  name: string;
+  /** Full path relative to project root: "src/components/Button.tsx" */
+  relativePath: string;
+  /** Absolute path on disk */
+  absolutePath: string;
+  /** Type of node */
+  kind: 'file' | 'directory';
+  /** File extension (e.g. ".tsx") or null for directories */
+  extension: string | null;
+  /** Nesting depth from project root (root = 0) */
+  depth: number;
+  /** Children — only populated for directories */
+  children: FileTreeNode[];
+  /** File size in bytes (undefined for directories) */
+  sizeBytes?: number;
+}
+```
+
+### Graph Node (for React Flow)
+```typescript
+/** A node in the React Flow visualization */
+export interface GraphNode {
+  /** React Flow node ID (= FileTreeNode.id) */
+  id: string;
+  /** Short label shown on the circle */
+  label: string;
+  /** Full relative path — shown in tooltip/side panel only */
+  relativePath: string;
+  /** Absolute path */
+  absolutePath: string;
+  /** 'file' | 'directory' */
+  kind: 'file' | 'directory';
+  /** File extension or null */
+  extension: string | null;
+  /** Depth from root */
+  depth: number;
+  /** Whether this directory node is currently collapsed */
+  collapsed: boolean;
+  /** Whether this node is hidden (because ancestor is collapsed) */
+  hidden: boolean;
+  /** Number of direct children (for directories) */
+  childCount: number;
+  /** Total descendant count (for directories, recursive) */
+  descendantCount: number;
+}
+```
+
+### Graph Edge (for React Flow)
+```typescript
+/** A directed edge: parent → child in the file tree */
+export interface GraphEdge {
+  /** React Flow edge ID */
+  id: string;
+  /** Parent node ID */
+  source: string;
+  /** Child node ID */
+  target: string;
+}
+```
+
+### Visible Graph (what the UI renders)
+```typescript
+export interface VisibleGraph {
+  /** The depth limit currently applied */
+  maxDepth: number;
+  /** Nodes to render (hidden nodes excluded) */
+  nodes: GraphNode[];
+  /** Edges to render */
+  edges: GraphEdge[];
+  /** Project root path */
+  projectRoot: string;
+  /** Scan timestamp */
+  scannedAt: string;
+  /** Total file count (including hidden) */
+  totalFiles: number;
+  /** Total directory count */
+  totalDirs: number;
+}
+```
+
+### Selected Node Details
+```typescript
+export interface NodeDetails {
+  id: string;
+  name: string;
+  relativePath: string;
+  absolutePath: string;
+  kind: 'file' | 'directory';
+  extension: string | null;
+  depth: number;
+  sizeBytes?: number;
+  childCount?: number;
+  descendantCount?: number;
+  /** For files: what depth layer this file is at */
+  layerPath: string[];
+}
+```
+
+### Future Dependency Node & Edge
+```typescript
+/** [v0.7] Dependency graph node */
+export interface DependencyNode {
+  id: string;           // absolute path
+  relativePath: string;
+  extension: string;
+  inDegree: number;     // how many files import this
+  outDegree: number;    // how many files this imports
+  isCircular: boolean;
+}
+
+/** [v0.7] Dependency graph edge */
+export interface DependencyEdge {
+  id: string;
+  source: string;       // importer
+  target: string;       // imported
+  importSpecifier: string;
+  importedNames: string[];
+  isTypeOnly: boolean;
+  isDynamic: boolean;
+}
+```
+
+---
+
+## 11. Algorithm: Scanning Project Folder Structure
+
+```
+scanFileTree(rootDir, options):
+  1. Verify rootDir exists and is a directory (throw if not)
+  2. DEFAULT_IGNORE = ['node_modules', '.git', 'dist', 'build', 'out',
+                       'coverage', '.next', '.turbo', '.cache', '.react-dependency-graph']
+  3. ignoreSet = DEFAULT_IGNORE ∪ options.ignorePatterns
+  4. function walk(dir, depth):
+       entries = fs.readdirSync(dir, { withFileTypes: true })
+       result = []
+       for each entry in entries (sorted: dirs first, then files, alphabetically):
+         if entry.name in ignoreSet: SKIP
+         absolutePath = path.join(dir, entry.name)
+         relativePath = path.relative(rootDir, absolutePath)
+         node = {
+           id: absolutePath,
+           name: entry.name,                    ← short name only
+           relativePath,
+           absolutePath,
+           kind: entry.isDirectory() ? 'directory' : 'file',
+           extension: path.extname(entry.name) || null,
+           depth,
+           children: [],
+           sizeBytes: entry.isFile() ? fs.statSync(absolutePath).size : undefined,
+         }
+         if entry.isDirectory():
+           node.children = walk(absolutePath, depth + 1)
+         result.push(node)
+       return result
+  5. rootNode = {
+       id: rootDir,
+       name: path.basename(rootDir),
+       relativePath: '.',
+       absolutePath: rootDir,
+       kind: 'directory',
+       depth: 0,
+       children: walk(rootDir, 1),
+     }
+  6. return rootNode
+```
+
+---
+
+## 12. Algorithm: Filtering by Folder/File Hierarchy Depth
+
+```
+filterTreeByDepth(rootNode, maxDepth):
+  function truncate(node, currentDepth):
+    if currentDepth >= maxDepth AND node.kind === 'directory':
+      return { ...node, children: [] }   ← keep the dir node but no children
+    return {
+      ...node,
+      children: node.children.map(child => truncate(child, currentDepth + 1))
+    }
+  return truncate(rootNode, 0)
+```
+
+**Layer examples** (maxDepth = number of visible layers of *children*):
+- `maxDepth = 1`: only rootNode's direct children are shown
+- `maxDepth = 2`: children + grandchildren shown
+- `maxDepth = Infinity`: show everything
+
+---
+
+## 13. Algorithm: Expand/Collapse Folders
+
+Each directory `GraphNode` has a `collapsed: boolean` field.
+
+```
+toggleCollapse(nodeId, graphNodes):
+  target = graphNodes.find(n => n.id === nodeId)
+  if target.kind !== 'directory': return graphNodes (no-op)
+  
+  target.collapsed = !target.collapsed
+  
+  // Walk all nodes and set hidden = true if any ancestor is collapsed
+  for each node in graphNodes:
+    node.hidden = isAncestorCollapsed(node, graphNodes)
+  
+  return graphNodes
+
+isAncestorCollapsed(node, allNodes):
+  path = getAncestorPath(node, allNodes)  // [root, ..., parent]
+  return path.some(ancestor => ancestor.collapsed)
+```
+
+The React Flow graph simply filters out `hidden = true` nodes and their edges before rendering.
+
+---
+
+## 14. Algorithm: Generating Graph Nodes and Edges from File Tree
+
+```
+buildGraph(rootNode, maxDepth):
+  nodes = []
+  edges = []
+  
+  function visit(node, parentId):
+    graphNode = {
+      id: node.id,
+      label: node.name,            ← short name (see §15)
+      relativePath: node.relativePath,
+      absolutePath: node.absolutePath,
+      kind: node.kind,
+      extension: node.extension,
+      depth: node.depth,
+      collapsed: false,
+      hidden: false,
+      childCount: node.children.length,
+      descendantCount: countDescendants(node),
+    }
+    nodes.push(graphNode)
+    
+    if parentId !== null:
+      edges.push({
+        id: `${parentId}->${node.id}`,
+        source: parentId,
+        target: node.id,
+      })
+    
+    for each child of node.children:
+      visit(child, node.id)
+  
+  visit(filterTreeByDepth(rootNode, maxDepth), null)
+  return { nodes, edges }
+```
+
+---
+
+## 15. How to Create Short Display Labels from Full Paths
+
+The `name` field is set during scanning as `path.basename(absolutePath)` — always just the last segment:
+
+| Full Path | `path.basename(...)` → label |
+|-----------|------------------------------|
+| `src/components/Button.tsx` | `Button.tsx` |
+| `src/components/Button` | `Button` |
+| `src/hooks/useAuth.ts` | `useAuth.ts` |
+| `src` | `src` |
+| `package.json` | `package.json` |
+
+> The circle node renders only `name`. The full `relativePath` and `absolutePath` are stored in the node data and shown only in the side panel / tooltip.
+
+---
+
+## 16. Handling Duplicate File Names in Different Folders
+
+Since nodes are identified by their **absolute path** (not name), duplicate names (e.g., `index.tsx` in many folders) are handled transparently:
+
+- Each node has a unique `id` (absolute path)
+- The **label** on the circle shows just the name (can be duplicate — this is intentional, like a real file system)
+- When a user clicks a node, the **side panel** shows the full relative path, making it clear which file they selected
+- **Search** matches against `relativePath` (full path), not just `name`, so searching `components/index` shows only the right one
+
+---
+
+## 17. Visually Distinguishing Folders and Files (Both Circular)
+
+Both folders and files use **circular nodes** as requested, but with visual differences:
+
+| Attribute | Directory | File |
+|-----------|-----------|------|
+| Fill color | `#3b82f6` (blue) | `#10b981` (green/teal) |
+| Border | Dashed | Solid |
+| Size | Larger (80px) | Smaller (60px) |
+| Icon (inside circle) | 📁 folder emoji or SVG | Extension-based (`.tsx` → ⚛, `.ts` → T, `.json` → `{}`) |
+| Expand indicator | Shows `+N` when collapsed | N/A |
+
+---
+
+## 18. Keeping the Graph Readable for Large Projects
+
+For large projects (100+ files/folders), the graph can become overwhelming. Strategies:
+
+1. **Default depth = 2**: On first load, show only 2 levels deep — keeps the graph manageable
+2. **Collapsed by default**: Directories beyond depth 2 start collapsed
+3. **dagre layout**: Auto-layout positions nodes top-to-bottom by depth layer — logical and clean
+4. **Minimap**: React Flow's built-in minimap gives overview of large graphs
+5. **Fit view on load**: Auto-zooms to show all visible nodes
+6. **Depth selector**: User controls how much to show (1, 2, 3, 4, All)
+7. **Search + highlight**: Searching dims non-matching nodes instead of hiding them
+8. **Node size proportional to descendant count**: Root dir is biggest, deep files are smallest
+
+---
+
+## 19. Implementing Local Browser Visualization
+
+The `visualize` command:
+
+```
+1. Run scanFileTree(cwd) → full file tree
+2. Run filterTreeByDepth(tree, defaultDepth=2) → initial visible tree
+3. Run buildGraph(tree, 2) → { nodes, edges }
+4. Serialize to JSON: graphData = { nodes, edges, projectRoot, scannedAt, ... }
+5. Start HTTP server (Express or sirv):
+   - GET /           → serve web-ui/dist/index.html
+   - GET /assets/*   → serve web-ui/dist/assets/*
+   - GET /api/graph-data → return JSON.stringify(graphData)
+   - GET /api/tree   → return full raw file tree JSON
+6. console.log("✅ Opening http://localhost:5178")
+7. open("http://localhost:5178")   ← opens default browser
+8. Keep server alive (don't exit)
+9. Handle Ctrl+C gracefully
+```
+
+The web-ui React app fetches `/api/graph-data` on load and renders the graph. When the user changes the depth slider, it refetches `/api/tree` and recalculates client-side (no server round-trip needed for depth changes — tree is available).
+
+---
+
+## 20. How the CLI Passes Graph Data to the Web UI
+
+**Mode 1: Local server (default)**
+```
+CLI → Express server → GET /api/graph-data → { nodes, edges, ... }
+Web UI (React) → fetch('/api/graph-data') → setState(graphData) → render
+```
+
+When depth changes: the web-ui has the full tree from `/api/tree` cached in memory and calls `filterTreeByDepth()` + `buildGraph()` **client-side** in a web worker (no server round-trip).
+
+**Mode 2: Static HTML export**
+```
+CLI → reads web-ui/dist/index.html → injects:
+  <script>window.__GRAPH_DATA__ = { ...fullTree };</script>
+→ writes to .react-dependency-graph/index.html
+Web UI → checks if window.__GRAPH_DATA__ exists → uses it instead of fetch()
+```
+
+---
+
+## 21. Implementing Static HTML Export
+
+```
+export-html command:
+1. Scan project → full file tree + graph data
+2. Read web-ui/dist/index.html (pre-built bundle)
+3. Inject before </body>:
+   <script>window.__GRAPH_DATA__ = JSON.parse('...');</script>
+4. Create .react-dependency-graph/ directory (gitignored)
+5. Write modified HTML to .react-dependency-graph/index.html
+6. Copy web-ui/dist/assets/ → .react-dependency-graph/assets/
+7. Print: "✅ Exported to .react-dependency-graph/index.html"
+8. Optionally open the file in browser
+```
+
+The web-ui checks:
+```typescript
+const data = (window as any).__GRAPH_DATA__ 
+  ?? await fetch('/api/graph-data').then(r => r.json());
+```
+
+---
+
+## 22. How to Export Graph JSON
+
+Two approaches:
+
+**CLI flag:**
+```bash
+npx react-dependency-graph scan-structure --output structure.json
+```
+Writes to file. If no `--output`, prints to stdout (pipeline-friendly).
+
+**In-browser export button:**
+In the web-ui Toolbar, an "Export JSON" button triggers:
+```typescript
+const blob = new Blob([JSON.stringify(graphData, null, 2)], { type: 'application/json' });
+const url = URL.createObjectURL(blob);
+const a = document.createElement('a'); a.href = url; a.download = 'structure.json'; a.click();
+```
+
+---
+
+## 23. How to Test the Core Scanner Separately
+
+```bash
+cd packages/core
+npx vitest run
+```
+
+Test fixtures (small fake projects):
+```
+packages/core/__tests__/fixtures/
+├── simple-project/          ← flat structure
+│   ├── src/
+│   │   ├── App.tsx
+│   │   └── components/
+│   │       └── Button.tsx
+│   └── package.json
+└── deep-project/            ← 5+ levels deep
+```
+
+Test cases:
+- `scanFileTree` returns correct tree shape
+- `filterTreeByDepth(tree, 1)` returns only root children
+- `filterTreeByDepth(tree, 2)` returns two levels
+- `buildGraph` produces correct nodes and edges
+- `expandCollapse` correctly marks hidden nodes
+- Short names are derived correctly
+- Ignore patterns work
+
+---
+
+## 24. How to Test the CLI Locally
+
+```bash
+# From repo root, link globally
+cd packages/cli && npm link
+
+# Test all commands
+react-dependency-graph --help
+react-dependency-graph scan-structure
+react-dependency-graph scan-structure --output /tmp/test.json
+react-dependency-graph visualize           # opens browser
+react-dependency-graph export-html         # generates .react-dependency-graph/
+```
+
+Or without linking:
+```bash
+node packages/cli/dist/index.js visualize /path/to/test-project
+```
+
+Integration tests use `execa` to run the compiled CLI and assert stdout/exit code.
+
+---
+
+## 25. How to Test the Browser Visualization
+
+**Locally during development:**
+```bash
+# Terminal 1: start CLI server (serves /api/graph-data)
+react-dependency-graph visualize /path/to/test-project
+
+# Terminal 2: Vite dev server with proxy to CLI server
+cd packages/web-ui
+npm run dev      # vite proxies /api/* to localhost:5178
+```
+
+Browser opens at `http://localhost:5173` (Vite dev server port).
+
+**Vite proxy config:**
+```typescript
+// web-ui/vite.config.ts
+server: {
+  proxy: {
+    '/api': 'http://localhost:5178'
+  }
+}
+```
+
+This way, the React app in dev mode fetches real data from the CLI server.
+
+---
+
+## 26. How to Publish the Package to npm
+
+```bash
+# 1. Build everything
+npm run build --workspaces
+
+# 2. Set version in CLI package.json
+cd packages/cli && npm version 0.1.0
+
+# 3. Update package name to match desired npx command
+# packages/cli/package.json:
+{
+  "name": "react-dependency-graph",   ← this is what npx uses
+  "bin": {
+    "react-dependency-graph": "./dist/index.js",
+    "rdg": "./dist/index.js"
+  }
+}
+
+# 4. Publish
+npm publish --access public
+```
+
+> [!IMPORTANT]
+> The CLI package (`packages/cli`) needs to **bundle** the built web-ui assets inside it. The web-ui `dist/` should be copied into the CLI package before publishing so that `npx react-dependency-graph visualize` has the assets to serve.
+
+---
+
+## 27. How Users Run it with npx
+
+```bash
+# No installation needed — npx downloads and runs automatically
+npx react-dependency-graph visualize
+
+# Scan structure and print JSON
+npx react-dependency-graph scan-structure
+
+# Export static HTML
+npx react-dependency-graph export-html
+
+# Specify a project directory
+npx react-dependency-graph visualize /path/to/my-project
+
+# Short alias
+npx rdg visualize
+```
+
+---
+
+## 28. How This Supports Future Integrations
 
 ### VS Code Extension
-
-| Module | Responsibility |
-|--------|---------------|
-| `extension.ts` | `activate()` / `deactivate()` lifecycle — register commands, tree views, webview |
-| `commands.ts` | Bind VS Code command palette entries to core scanner actions |
-| `treeView/` | Implement `TreeDataProvider` to show dependency tree in sidebar |
-| `webview/` | Create webview panel, load React Flow UI, handle bidirectional messaging |
-| `webview-ui/` | Standalone React app: renders `ReactFlow` graph, posts messages to extension host |
-
----
-
-## 4. Data Structures
-
-```typescript
-// ─── Core Types ──────────────────────────────────────────
-
-/** A single file node in the dependency graph */
-export interface GraphNode {
-  /** Unique ID — the absolute file path */
-  id: string;
-  /** Path relative to project root (for display) */
-  relativePath: string;
-  /** File extension: .ts, .tsx, .js, .jsx */
-  extension: string;
-  /** Number of files that import this file */
-  inDegree: number;
-  /** Number of files this file imports */
-  outDegree: number;
-  /** Whether this file is part of a circular dependency */
-  isCircular: boolean;
-  /** Optional: detected component name (from default export) */
-  componentName?: string;
-}
-
-/** A directed edge: source imports target */
-export interface GraphEdge {
-  /** Absolute path of the importing file */
-  source: string;
-  /** Absolute path of the imported file */
-  target: string;
-  /** The original import specifier as written in code */
-  importSpecifier: string;
-  /** Named imports: ['useState', 'useEffect'] */
-  importedNames: string[];
-  /** Whether this is a type-only import */
-  isTypeOnly: boolean;
-}
-
-/** The full dependency graph */
-export interface DependencyGraph {
-  /** Project root directory */
-  rootDir: string;
-  /** All file nodes */
-  nodes: GraphNode[];
-  /** All import edges */
-  edges: GraphEdge[];
-  /** Detected circular dependency chains */
-  circularDependencies: CircularChain[];
-  /** Scan metadata */
-  metadata: ScanMetadata;
-}
-
-/** A circular dependency chain */
-export interface CircularChain {
-  /** Ordered list of file paths forming the cycle */
-  chain: string[];
-  /** Human-readable description */
-  description: string;
-}
-
-/** Scan configuration */
-export interface ScanOptions {
-  /** Project root directory to scan */
-  rootDir: string;
-  /** File extensions to include (default: ['.js', '.jsx', '.ts', '.tsx']) */
-  extensions?: string[];
-  /** Additional directories/patterns to ignore */
-  ignorePatterns?: string[];
-  /** Whether to detect circular dependencies (default: true) */
-  detectCircular?: boolean;
-  /** Whether to resolve path aliases from tsconfig (default: true) */
-  resolveAliases?: boolean;
-  /** Max depth for directory traversal (default: Infinity) */
-  maxDepth?: number;
-}
-
-/** Result returned by scanProject() */
-export interface ScanResult {
-  graph: DependencyGraph;
-  /** Total files scanned */
-  totalFiles: number;
-  /** Total import edges found */
-  totalImports: number;
-  /** Files that could not be parsed (with error reasons) */
-  errors: ScanError[];
-  /** Scan duration in milliseconds */
-  durationMs: number;
-}
-
-export interface ScanError {
-  filePath: string;
-  error: string;
-}
-
-export interface ScanMetadata {
-  scannedAt: string;         // ISO 8601 timestamp
-  scanDurationMs: number;
-  projectRoot: string;
-  totalFiles: number;
-  totalEdges: number;
-  circularCount: number;
-  rdgVersion: string;
-}
-```
-
----
-
-## 5. MVP Roadmap
-
-### v0.1 — Core Scanner (Foundation)
-
-**Goal**: Parse imports and build a dependency graph from a React project directory.
-
-| Task | Details |
-|------|---------|
-| Define all types in `types.ts` | `GraphNode`, `GraphEdge`, `DependencyGraph`, `ScanOptions`, `ScanResult` |
-| Implement `fileDiscovery.ts` | Recursive directory walk with `fs.readdir`/`fs.stat`, ignore `node_modules`, `dist`, `build`, `.next`, `coverage`, `.git` |
-| Implement `parseImports.ts` | Use `@babel/parser` with `typescript`, `jsx`, `decorators` plugins. Use `@babel/traverse` to visit `ImportDeclaration`, `ExportNamedDeclaration` (re-exports), and `CallExpression` for `require()` |
-| Implement `resolveImports.ts` | Resolve relative paths (`.`, `..`), try extensions (`.ts`, `.tsx`, `.js`, `.jsx`), try `/index.*` |
-| Implement `configLoader.ts` | Parse `tsconfig.json`/`jsconfig.json`, extract `baseUrl` + `paths`, build alias resolver |
-| Implement `buildGraph.ts` | Construct nodes and edges, calculate `inDegree`/`outDegree` |
-| Implement `scanProject.ts` | Orchestrate full pipeline |
-| Implement `exportGraph.ts` | JSON serialization with metadata |
-| Write unit tests | Test each module independently with vitest |
-
-**Deliverable**: `scanProject('/path/to/react-app')` returns a `ScanResult` with full graph data.
-
----
-
-### v0.2 — CLI Tool
-
-**Goal**: Make the scanner usable from the terminal (and by AI agents).
-
-| Task | Details |
-|------|---------|
-| Set up `commander` CLI framework | Define `scan` command with options |
-| Implement `--format` flag | `json` (default), `text` (human-readable summary) |
-| Implement `--output` flag | Write to file instead of stdout |
-| Implement `--entry` flag | Optional: scan from a specific entry file |
-| Implement `--ignore` flag | Additional ignore patterns |
-| Add `npx` support | Set `bin` field in `package.json` |
-| Write integration tests | Test CLI output formats |
-
-**Deliverable**: `npx react-dependency-graph scan --format json > deps.json`
-
----
-
-### v0.3 — VS Code Extension (Commands)
-
-**Goal**: Basic VS Code extension that runs the scanner via command palette.
-
-| Task | Details |
-|------|---------|
-| Scaffold VS Code extension | Use `yo code` or manual setup |
-| Register commands | `rdg.scan` — scan current workspace |
-| Show results | Output channel or information message with summary |
-| Status bar | Show scanning progress |
-
-**Deliverable**: Open VS Code → Cmd+Shift+P → "React Dependency Graph: Scan" → see results.
-
----
-
-### v0.4 — Tree View
-
-**Goal**: Show the dependency tree in VS Code sidebar.
-
-| Task | Details |
-|------|---------|
-| Implement `TreeDataProvider` | Display files as a tree, grouped by directory |
-| Show import count | Badge showing in/out degree |
-| Click to open file | `vscode.window.showTextDocument()` |
-| Refresh on file save | Watch for file changes |
-| Filter/search | Allow filtering the tree |
-
-**Deliverable**: Sidebar panel showing dependency tree with file navigation.
-
----
-
-### v0.5 — Webview Graph
-
-**Goal**: Interactive graph visualization using React Flow.
-
-| Task | Details |
-|------|---------|
-| Create React app for webview | Vite + React + React Flow |
-| Build webview panel manager | Load compiled React app into webview |
-| Implement message passing | Extension ↔ Webview via `postMessage` |
-| Graph layout | Use dagre or elkjs for automatic layout |
-| Node click → open file | Post message to extension, extension opens file |
-| Styling | Color-code by file type, highlight circular deps |
-| Zoom/pan controls | React Flow built-in controls |
-
-**Deliverable**: Beautiful interactive graph in VS Code with click-to-navigate.
-
----
-
-### v0.6 — Circular Dependency Detection
-
-**Goal**: Detect and highlight circular dependencies.
-
-| Task | Details |
-|------|---------|
-| Implement DFS cycle detection | Tarjan's algorithm or simple DFS with coloring |
-| Highlight in tree view | Warning icon on circular files |
-| Highlight in graph | Red edges for circular imports |
-| Diagnostics | VS Code problem panel warnings |
-| CLI warning output | Print circular chains to stderr |
-
-**Deliverable**: Circular deps detected, highlighted in all views, with actionable warnings.
-
----
-
-### v1.0 — Polished Release
-
-| Task | Details |
-|------|---------|
-| Polish UI | Consistent icons, colors, animations |
-| Performance | Handle 1000+ file projects efficiently |
-| Configuration | `.rdgrc.json` config file support |
-| Documentation | README, contributing guide, API docs |
-| Publish CLI to npm | `npm publish` with proper scope |
-| Publish VS Code extension | Package `.vsix`, publish to marketplace |
-| CI/CD | GitHub Actions for testing, building, publishing |
-
----
-
-## 6. How to Parse React/TypeScript Imports
-
-### Parser Setup
-
-```typescript
-import { parse } from '@babel/parser';
-import traverse from '@babel/traverse';
-
-function parseFile(code: string, filePath: string) {
-  const ast = parse(code, {
-    sourceType: 'module',
-    plugins: [
-      'typescript',        // Handle .ts/.tsx
-      'jsx',               // Handle JSX in .tsx/.jsx
-      'decorators-legacy', // Handle decorators (@Component, etc.)
-      'dynamicImport',     // Handle import() expressions
-      'classProperties',   // Handle class fields
-      'optionalChaining',  // Handle ?. syntax
-      'nullishCoalescingOperator',
-    ],
-  });
-
-  const imports: ImportInfo[] = [];
-
-  traverse(ast, {
-    // Static imports: import X from './Y'
-    ImportDeclaration(path) {
-      imports.push({
-        source: path.node.source.value,
-        specifiers: path.node.specifiers.map(s => s.local.name),
-        isTypeOnly: path.node.importKind === 'type',
-      });
-    },
-
-    // Re-exports: export { X } from './Y'
-    ExportNamedDeclaration(path) {
-      if (path.node.source) {
-        imports.push({
-          source: path.node.source.value,
-          specifiers: [],
-          isTypeOnly: path.node.exportKind === 'type',
-        });
-      }
-    },
-
-    // export * from './Y'
-    ExportAllDeclaration(path) {
-      imports.push({
-        source: path.node.source.value,
-        specifiers: ['*'],
-        isTypeOnly: false,
-      });
-    },
-
-    // Dynamic imports: const X = await import('./Y')
-    CallExpression(path) {
-      if (path.node.callee.type === 'Import' &&
-          path.node.arguments[0]?.type === 'StringLiteral') {
-        imports.push({
-          source: path.node.arguments[0].value,
-          specifiers: [],
-          isDynamic: true,
-          isTypeOnly: false,
-        });
-      }
-    },
-
-    // require(): const X = require('./Y')
-    CallExpression(path) {
-      if (path.node.callee.type === 'Identifier' &&
-          path.node.callee.name === 'require' &&
-          path.node.arguments[0]?.type === 'StringLiteral') {
-        imports.push({
-          source: path.node.arguments[0].value,
-          specifiers: [],
-          isTypeOnly: false,
-        });
-      }
-    },
-  });
-
-  return imports;
-}
-```
-
-### What Gets Detected
-
-| Import Style | Detected? |
-|---|---|
-| `import React from 'react'` | ✅ Yes (but skipped — external package) |
-| `import { useState } from 'react'` | ✅ Yes (skipped — external) |
-| `import Button from './Button'` | ✅ Yes — relative import |
-| `import { helper } from '../utils/helper'` | ✅ Yes — relative import |
-| `import type { Props } from './types'` | ✅ Yes — marked as `isTypeOnly` |
-| `export { default } from './Button'` | ✅ Yes — re-export |
-| `export * from './utils'` | ✅ Yes — barrel re-export |
-| `const X = await import('./lazy')` | ✅ Yes — dynamic import |
-| `const X = require('./legacy')` | ✅ Yes — CommonJS require |
-| `import styles from './Button.module.css'` | ✅ Yes — tracked as asset import |
-| `import '@/components/Button'` | ✅ Yes — alias resolved via tsconfig |
-
----
-
-## 7. How to Resolve Import Paths
-
-### Resolution Algorithm
-
-```
-resolveImport(importSpecifier, importingFile, projectRoot, aliases):
-  1. If specifier starts with '.' or '..':
-     → Resolve relative to importing file's directory
-     → Try exact match first
-     → Try appending extensions: .ts, .tsx, .js, .jsx
-     → Try appending /index.ts, /index.tsx, /index.js, /index.jsx
-     → Return resolved path or null
-
-  2. If specifier matches an alias pattern (e.g., '@/'):
-     → Replace alias prefix with mapped path
-     → Resolve as relative path (step 1)
-
-  3. If specifier doesn't start with '.' and isn't an alias:
-     → It's an external package (react, lodash, etc.)
-     → Skip — don't include in dependency graph
-
-  4. Return null if unresolvable (log as warning)
-```
-
-### Extension Resolution Order
-
-When a file imports `./Button`, the resolver tries:
-1. `./Button.ts`
-2. `./Button.tsx`
-3. `./Button.js`
-4. `./Button.jsx`
-5. `./Button/index.ts`
-6. `./Button/index.tsx`
-7. `./Button/index.js`
-8. `./Button/index.jsx`
-
----
-
-## 8. How to Handle Path Aliases (tsconfig.json)
-
-### Loading Aliases
-
-```typescript
-// configLoader.ts
-import * as path from 'path';
-import * as fs from 'fs';
-
-interface AliasMapping {
-  prefix: string;    // e.g., '@/*' → '@/'
-  paths: string[];   // e.g., ['./src/*'] → ['./src/']
-}
-
-function loadAliases(rootDir: string): AliasMapping[] {
-  // Try tsconfig.json first, then jsconfig.json
-  const configPaths = [
-    path.join(rootDir, 'tsconfig.json'),
-    path.join(rootDir, 'jsconfig.json'),
-  ];
-
-  for (const configPath of configPaths) {
-    if (!fs.existsSync(configPath)) continue;
-
-    const config = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
-    const { baseUrl = '.', paths = {} } = config.compilerOptions || {};
-    const absoluteBaseUrl = path.resolve(rootDir, baseUrl);
-
-    return Object.entries(paths).map(([pattern, targets]) => ({
-      prefix: pattern.replace('*', ''),
-      paths: (targets as string[]).map(t =>
-        path.resolve(absoluteBaseUrl, t.replace('*', ''))
-      ),
-    }));
-  }
-
-  return [];
-}
-```
-
-### Common tsconfig.json Patterns
-
-| tsconfig `paths` | Import | Resolves to |
-|---|---|---|
-| `"@/*": ["./src/*"]` | `import X from '@/components/Button'` | `<root>/src/components/Button.tsx` |
-| `"@components/*": ["./src/components/*"]` | `import X from '@components/Button'` | `<root>/src/components/Button.tsx` |
-| `"~/*": ["./src/*"]` | `import X from '~/utils/helpers'` | `<root>/src/utils/helpers.ts` |
-
----
-
-## 9. Ignore Patterns
-
-### Default Ignored Directories
-
-```typescript
-const DEFAULT_IGNORE_PATTERNS = [
-  'node_modules',
-  'dist',
-  'build',
-  '.next',
-  'coverage',
-  '.git',
-  '.cache',
-  '.turbo',
-  '__tests__',      // Optionally include tests
-  '*.test.*',       // Test files
-  '*.spec.*',       // Spec files
-  '*.stories.*',    // Storybook files
-  '*.d.ts',         // Declaration files
-];
-```
-
-### Implementation Strategy
-
-- Use `fast-glob` or manual recursive walk with early filtering
-- Check directory names during traversal (prune entire subtrees)
-- Support user-provided patterns via `ScanOptions.ignorePatterns`
-- Support `.rdgignore` file (like `.gitignore` syntax) in future versions
-
----
-
-## 10. VS Code Extension ↔ Webview Communication
-
-### Architecture
-
-```mermaid
-sequenceDiagram
-    participant User
-    participant Extension as Extension Host
-    participant Webview as Webview (React Flow)
-
-    User->>Extension: Cmd+Shift+P → "Scan"
-    Extension->>Extension: scanProject(workspaceRoot)
-    Extension->>Webview: postMessage({ type: 'graphData', data: scanResult })
-    Webview->>Webview: Render React Flow graph
-    User->>Webview: Click a node
-    Webview->>Extension: postMessage({ type: 'openFile', filePath: '...' })
-    Extension->>Extension: vscode.window.showTextDocument(uri)
-```
-
-### Message Protocol
-
-```typescript
-// Extension → Webview messages
-type ExtensionMessage =
-  | { type: 'graphData'; data: ScanResult }
-  | { type: 'scanProgress'; progress: number; message: string }
-  | { type: 'error'; message: string }
-  | { type: 'highlightNode'; nodeId: string }
-  | { type: 'theme'; isDark: boolean };
-
-// Webview → Extension messages
-type WebviewMessage =
-  | { type: 'openFile'; filePath: string; line?: number }
-  | { type: 'requestScan' }
-  | { type: 'exportGraph'; format: 'json' | 'png' }
-  | { type: 'ready' };  // Webview loaded and ready
-```
-
-### Extension Side (sending data to webview)
-
-```typescript
-// WebviewPanel.ts
-panel.webview.postMessage({
-  type: 'graphData',
-  data: scanResult,
-});
-```
-
-### Extension Side (receiving messages from webview)
-
-```typescript
-panel.webview.onDidReceiveMessage(async (message: WebviewMessage) => {
-  switch (message.type) {
-    case 'openFile':
-      const uri = vscode.Uri.file(message.filePath);
-      await vscode.window.showTextDocument(uri);
-      break;
-    case 'requestScan':
-      const result = await scanProject(workspaceRoot);
-      panel.webview.postMessage({ type: 'graphData', data: result });
-      break;
-    case 'exportGraph':
-      // Save graph to file
-      break;
-  }
-});
-```
-
-### Webview Side (React)
-
-```typescript
-// useVSCodeAPI.ts
-const vscode = acquireVsCodeApi();
-
-// Send message to extension
-function openFile(filePath: string) {
-  vscode.postMessage({ type: 'openFile', filePath });
-}
-
-// Receive messages from extension
-window.addEventListener('message', (event) => {
-  const message = event.data;
-  if (message.type === 'graphData') {
-    setGraphData(message.data);
-  }
-});
-```
-
----
-
-## 11. Opening Files from Graph Nodes
-
-When a user clicks a node in the React Flow graph:
-
-1. **Webview**: React Flow `onNodeClick` fires
-2. **Webview**: Posts message `{ type: 'openFile', filePath: node.data.absolutePath }`
-3. **Extension**: Receives message, calls `vscode.window.showTextDocument(vscode.Uri.file(filePath))`
-4. **VS Code**: Opens the file in the editor, focuses the tab
-
-```typescript
-// In the extension's message handler:
-case 'openFile': {
-  const doc = await vscode.workspace.openTextDocument(
-    vscode.Uri.file(message.filePath)
-  );
-  await vscode.window.showTextDocument(doc, {
-    viewColumn: vscode.ViewColumn.One,  // Open in main editor
-    preserveFocus: false,                // Focus the opened file
-  });
-  break;
-}
-```
-
----
-
-## 12. Exporting Graph JSON
-
-### JSON Output Format
-
-```json
-{
-  "version": "1.0.0",
-  "metadata": {
-    "scannedAt": "2026-05-30T05:24:00.000Z",
-    "scanDurationMs": 1234,
-    "projectRoot": "/path/to/project",
-    "totalFiles": 42,
-    "totalEdges": 87,
-    "circularCount": 2,
-    "rdgVersion": "0.1.0"
-  },
-  "nodes": [
-    {
-      "id": "/path/to/project/src/App.tsx",
-      "relativePath": "src/App.tsx",
-      "extension": ".tsx",
-      "inDegree": 1,
-      "outDegree": 5,
-      "isCircular": false
-    }
-  ],
-  "edges": [
-    {
-      "source": "src/App.tsx",
-      "target": "src/components/Header.tsx",
-      "importSpecifier": "./components/Header",
-      "importedNames": ["Header"],
-      "isTypeOnly": false
-    }
-  ],
-  "circularDependencies": [
-    {
-      "chain": ["src/A.tsx", "src/B.tsx", "src/A.tsx"],
-      "description": "A.tsx → B.tsx → A.tsx"
-    }
-  ]
-}
-```
-
-### Export Methods
-
-| Method | How |
-|---|---|
-| **CLI** | `npx react-dependency-graph scan --format json > graph.json` |
-| **CLI (--output)** | `npx react-dependency-graph scan --output graph.json` |
-| **VS Code Command** | Cmd+Shift+P → "RDG: Export Graph JSON" → save dialog |
-| **Webview Button** | Click export button → triggers save dialog via extension |
-| **Programmatic** | `import { exportGraphJSON } from '@rdg/core'` |
-
----
-
-## 13. Testing Strategy
-
-### Testing the Core Scanner (Separately from VS Code)
-
-```
-packages/core/
-├── src/
-│   └── ...
-├── __tests__/
-│   ├── fixtures/              # Fake React projects for testing
-│   │   ├── simple-project/
-│   │   │   ├── src/
-│   │   │   │   ├── App.tsx
-│   │   │   │   ├── Button.tsx
-│   │   │   │   └── utils.ts
-│   │   │   └── tsconfig.json
-│   │   ├── circular-project/  # Has circular deps
-│   │   └── alias-project/     # Has tsconfig path aliases
-│   ├── parseImports.test.ts
-│   ├── resolveImports.test.ts
-│   ├── buildGraph.test.ts
-│   ├── detectCircularDeps.test.ts
-│   ├── configLoader.test.ts
-│   └── scanProject.test.ts    # Integration tests
-```
-
-**Test runner**: Vitest (fast, TypeScript-native, compatible with Jest API)
-
+- Calls `@rdg/core`'s `scanFileTree()` directly (no HTTP)
+- Renders the same React components inside a VS Code Webview
+- Uses `postMessage` instead of `fetch('/api/graph-data')`
+
+### Antigravity IDE
+- Same as VS Code — calls `@rdg/core` directly, renders webview
+
+### Claude MCP Server
+- A future `@rdg/mcp` package wraps `@rdg/core` with MCP protocol
+- Claude calls `scan_structure()` tool → gets back JSON tree
+- Claude calls `get_node_details(filePath)` → gets file metadata
+
+### Codex-readable JSON Output
 ```bash
-# Run core tests only
-cd packages/core && npx vitest
-
-# Run all tests from root
-npx turbo test
+npx react-dependency-graph scan-structure --format json > structure.json
 ```
+Codex reads `structure.json` as context when working on the project.
 
-**Key test cases**:
-- Parse all import styles (static, dynamic, require, re-exports, type-only)
-- Resolve relative imports with various extension combinations
-- Resolve tsconfig path aliases
-- Detect circular dependencies correctly
-- Handle malformed files gracefully (don't crash)
-- Ignore `node_modules` and other excluded directories
-- Handle large projects without memory issues
-
-### Testing the CLI
-
-- Use `execa` or `child_process` to run CLI commands in tests
-- Assert JSON output matches expected structure
-- Test error cases (invalid directory, no React files)
-
-### Testing the VS Code Extension
-
-| Approach | What It Tests |
-|---|---|
-| **Unit tests** | Command handlers, tree data provider logic (mock VS Code API) |
-| **Integration tests** | Use `@vscode/test-electron` to run in a real VS Code instance |
-| **Manual testing** | Press F5 in VS Code to launch Extension Development Host |
-
-```bash
-# Test VS Code extension
-cd packages/vscode-extension
-npx vscode-test  # Runs in headless VS Code
-```
+### Full-Stack Flow Tracing (post-v1.0)
+- `@rdg/core` adds a `traceFlow(componentPath)` function
+- Follows import chain: React component → API call → backend route → model → DB table
+- Requires language-specific scanners for backend (Python, Node.js routes)
 
 ---
 
-## 14. Packaging the VS Code Extension
+## 29. Common Mistakes to Avoid
 
-### Steps to Create .vsix
-
-```bash
-# 1. Install vsce (VS Code Extension CLI)
-npm install -g @vscode/vsce
-
-# 2. Build the extension
-cd packages/vscode-extension
-npm run build         # Compile TypeScript
-npm run build:webview  # Build React webview app
-
-# 3. Package as .vsix
-vsce package --no-dependencies
-# Output: react-dependency-graph-0.1.0.vsix
-
-# 4. Install locally for testing
-code --install-extension react-dependency-graph-0.1.0.vsix
-
-# 5. Publish to marketplace (when ready)
-vsce publish
-```
-
-### Extension Manifest (package.json key fields)
-
-```json
-{
-  "name": "react-dependency-graph",
-  "displayName": "React Dependency Graph",
-  "publisher": "your-publisher-id",
-  "engines": { "vscode": "^1.85.0" },
-  "categories": ["Visualization", "Other"],
-  "activationEvents": ["onCommand:rdg.scan"],
-  "main": "./dist/extension.js",
-  "contributes": {
-    "commands": [
-      { "command": "rdg.scan", "title": "Scan Dependencies", "category": "React Dependency Graph" },
-      { "command": "rdg.exportJson", "title": "Export Graph JSON", "category": "React Dependency Graph" }
-    ],
-    "viewsContainers": {
-      "activitybar": [{ "id": "rdg", "title": "React Deps", "icon": "media/icon.svg" }]
-    },
-    "views": {
-      "rdg": [{ "id": "rdg.dependencyTree", "name": "Dependency Tree" }]
-    }
-  }
-}
-```
+| Mistake | Solution |
+|---------|---------|
+| Scanning `node_modules` | Always add to ignore list first |
+| Using absolute paths as React Flow node IDs | Use them but convert to relative for display |
+| Putting browser/React code in `@rdg/core` | Core = pure Node.js only |
+| Not handling `Ctrl+C` in the server | Use `process.on('SIGINT')` to cleanup |
+| Rebuilding web-ui on every `npx` run | Pre-build + bundle into the CLI package |
+| Calling `acquireVsCodeApi` outside VS Code | Use a mock fallback for browser mode |
+| React Flow freezing on 500+ nodes | Default to depth=2, lazy-load deeper nodes |
+| Publishing without bundling web-ui assets | Add a `prepublishOnly` script |
+| Having `.react-dependency-graph/` tracked in git | Add to `.gitignore` |
+| Forgetting to sort nodes (dirs first) | Always sort for predictable output |
 
 ---
 
-## 15. Future Integration: Antigravity IDE
+## 30. Beginner-Friendly Explanation of Each Part
 
-Since Antigravity IDE is built on similar extension APIs, the path to integration is:
+**`@rdg/core`** — "The brain". It reads your project folder, understands what files and folders exist, and turns that into a clean data structure (a tree). It doesn't know anything about browsers, React, or VS Code. Just pure logic.
 
-1. **Immediate**: The CLI tool works with any IDE that can run terminal commands
-2. **Near-term**: If Antigravity supports VS Code extensions, the same `.vsix` may work directly
-3. **Custom wrapper**: Create `packages/antigravity/` that wraps `@rdg/core` with Antigravity-specific APIs
-4. **MCP approach**: Use the Claude MCP server (below), which Antigravity can call
+**`@rdg/cli`** — "The command". When you type `npx react-dependency-graph visualize`, this is what runs. It asks the brain to scan your project, starts a small web server, and opens your browser.
 
----
+**`@rdg/web-ui`** — "The face". A React app that lives in your browser. It asks the server for the project data, then draws it as circles connected by lines. You can zoom in, click things, and explore.
 
-## 16. Future Integration: Claude MCP Server
+**The server** — A tiny local website running on your own computer (`localhost:5178`). It's not on the internet. It just lets the browser talk to the CLI.
 
-The Model Context Protocol (MCP) lets Claude access tools. Create `packages/mcp-server/`:
+**React Flow** — A library that makes it easy to draw connected diagrams (nodes and edges) in a React app. We use it to draw the circles.
 
-```typescript
-// MCP server exposing the scanner as a tool
-const server = new McpServer({
-  name: 'react-dependency-graph',
-  version: '1.0.0',
-});
-
-server.tool(
-  'scan_dependencies',
-  'Scan a React project and return its dependency graph',
-  { rootDir: z.string().describe('Path to the React project root') },
-  async ({ rootDir }) => {
-    const result = await scanProject({ rootDir });
-    return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
-  }
-);
-
-server.tool(
-  'get_file_dependencies',
-  'Get all dependencies of a specific file',
-  { filePath: z.string(), rootDir: z.string() },
-  async ({ filePath, rootDir }) => {
-    const result = await scanProject({ rootDir });
-    const deps = result.graph.edges
-      .filter(e => e.source === filePath)
-      .map(e => e.target);
-    return { content: [{ type: 'text', text: JSON.stringify(deps, null, 2) }] };
-  }
-);
-
-server.tool(
-  'find_circular_dependencies',
-  'Find all circular dependencies in a React project',
-  { rootDir: z.string() },
-  async ({ rootDir }) => {
-    const result = await scanProject({ rootDir, detectCircular: true });
-    return {
-      content: [{
-        type: 'text',
-        text: JSON.stringify(result.graph.circularDependencies, null, 2)
-      }]
-    };
-  }
-);
-```
+**dagre** — An algorithm that automatically figures out where to place each circle so they don't overlap and follow a nice top-to-bottom tree layout.
 
 ---
 
-## 17. Future Integration: Codex
+## Roadmap
 
-Codex can use tools that produce structured output. Integration approach:
+### v0.1 — Core File Tree Scanner
+- Implement `scanFileTree.ts` with ignore patterns
+- Implement `filterTreeByDepth.ts`
+- Implement `buildGraph.ts`
+- Define all types in `types.ts`
+- Unit tests with fixture projects
+- **Deliverable**: `scanFileTree('/path')` returns a `FileTreeNode` tree
 
-1. **CLI with JSON output**: Codex runs `npx react-dependency-graph scan --format json`
-2. **Structured output**: The JSON schema is well-documented, Codex can parse it
-3. **Piping**: `npx react-dependency-graph scan --format json | codex "analyze this dependency graph"`
+### v0.2 — CLI scan-structure Command
+- Set up `commander` CLI
+- `scan-structure [dir]` → prints JSON to stdout
+- `--output <file>` flag → writes to file
+- `--depth <n>` flag → filter by depth
+- **Deliverable**: `npx react-dependency-graph scan-structure > structure.json`
 
-No special adapter needed — the CLI + JSON format is the universal interface.
+### v0.3 — Local Browser Server (Basic)
+- Scaffold `@rdg/web-ui` with Vite + React
+- `visualize [dir]` command → starts Express server + opens browser
+- Basic React Flow graph (default nodes, no circles yet)
+- Fetches `/api/graph-data` from server
+- **Deliverable**: `npx react-dependency-graph visualize` → browser opens with graph
 
----
+### v0.4 — Circle Nodes + Depth Selector + Side Panel
+- Implement `CircleNode.tsx` custom React Flow node
+- Color-code: blue for dirs, green for files
+- Depth selector UI (1, 2, 3, 4, All) — recalculates graph client-side
+- Side panel: click node → show full path, size, child count
+- Short labels on circles, full path in side panel only
+- **Deliverable**: Beautiful circular node graph with depth control
 
-## 18. Common Mistakes to Avoid
+### v0.5 — Expand/Collapse + Search + Polish
+- Click directory node to expand/collapse its children
+- Search box: filter graph by file/folder name
+- Fit view on load, zoom controls, minimap
+- Keyboard shortcuts (F = fit, Esc = deselect)
+- **Deliverable**: Fully interactive structure graph
 
-> [!CAUTION]
-> **Critical mistakes that will waste hours**
+### v0.6 — Static HTML Export
+- `export-html [dir]` command
+- Generates `.react-dependency-graph/index.html` (standalone)
+- `window.__GRAPH_DATA__` injection strategy
+- Also writes `graph-data.json` alongside
+- **Deliverable**: `npx react-dependency-graph export-html`
 
-| # | Mistake | Why It's Bad | What To Do Instead |
-|---|---------|-------------|-------------------|
-| 1 | Putting VS Code imports in the core package | Core becomes untestable outside VS Code | **Never** import `vscode` in `packages/core/` |
-| 2 | Not handling `tsconfig.json` `extends` | Many projects use `extends: "@tsconfig/react"` | Recursively resolve `extends` chains |
-| 3 | Resolving only `.ts` files | Misses `.tsx`, `.jsx`, `.js` files | Always try all 4 extensions + `/index.*` |
-| 4 | Not handling re-exports (`export * from`) | Misses barrel files, undercounts dependencies | Treat re-exports as imports in the graph |
-| 5 | Crashing on parse errors | One malformed file kills the whole scan | Wrap parsing in try/catch, collect errors, continue |
-| 6 | Synchronous file I/O | Blocks Node.js event loop for large projects | Use `fs.promises` (async) everywhere in core |
-| 7 | Not normalizing paths | `./foo` and `foo` and `/abs/foo` are different strings | Always normalize to absolute paths with `path.resolve` |
-| 8 | Forgetting the webview CSP | VS Code blocks scripts in webview by default | Set proper Content Security Policy in webview HTML |
-| 9 | Bundling `node_modules` in `.vsix` | Extension becomes 50MB+ | Use esbuild/webpack to bundle the extension |
-| 10 | Not testing with real React projects | Fixture tests pass but real projects break | Test with `create-react-app`, Next.js, Vite projects |
-| 11 | Circular reference in JSON.stringify | If graph has circular object references | Use flat IDs (strings) for edges, not object references |
-| 12 | Ignoring dynamic imports | Misses code-split modules | Handle `import()` expressions in the AST traversal |
-| 13 | Case-sensitive path comparison on macOS | macOS filesystem is case-insensitive by default | Normalize paths to lowercase for comparison on macOS |
+### v0.7 — Dependency Graph Mode
+- Reuse existing `@rdg/core` dependency scanner (already built!)
+- `visualize --mode dependencies` command
+- Second view in web-ui: switch between Structure and Dependencies
+- Circular dependency highlighting
+- **Deliverable**: Full dependency graph in browser
 
----
-
-## 19. Beginner-Friendly Explanation of Each Part
-
-### What is a Monorepo?
-Think of it like a multi-room house instead of separate apartments. All your packages (`core`, `cli`, `vscode-extension`) live in one repository, share the same `node_modules`, and can reference each other directly. We use **npm workspaces** — you define `"workspaces": ["packages/*"]` in the root `package.json`, and npm links them automatically.
-
-### What is `@babel/parser`?
-It's a tool that reads JavaScript/TypeScript code and converts it into an **Abstract Syntax Tree (AST)** — a tree structure that represents the code. Think of it like parsing HTML into a DOM tree. We use it because regular expressions can't reliably parse JavaScript imports (they'll break on multi-line imports, comments, string literals, etc.).
-
-### What is `@babel/traverse`?
-After `@babel/parser` creates the AST tree, `@babel/traverse` lets you "walk" through it and find specific nodes. We use it to find all `ImportDeclaration` nodes (which represent `import ... from '...'` statements).
-
-### What is a Graph?
-A dependency graph has **nodes** (files) and **edges** (import relationships). If `App.tsx` imports `Button.tsx`, there's a directed edge from App → Button. This is the same concept as a social network graph (people = nodes, friendships = edges).
-
-### What is a VS Code Extension?
-It's a plugin that adds features to VS Code. Your extension has an `activate()` function that runs when VS Code loads it. You can add commands (things in Cmd+Shift+P), tree views (sidebar panels), and webviews (embedded web pages). The extension runs in a **Node.js process** (the "Extension Host"), separate from the VS Code UI.
-
-### What is a Webview?
-A webview is like an `<iframe>` inside VS Code. It's a sandboxed web page where you can render any HTML/CSS/JS. We use it to show an interactive graph using React Flow. The webview communicates with the extension via `postMessage` — like how `window.postMessage` works between iframes.
-
-### What is React Flow?
-It's a React library for building interactive node-based graphs. You give it an array of nodes (with positions) and edges (with source/target), and it renders a pannable, zoomable graph. Perfect for visualizing dependency trees.
-
-### What is a Tree View?
-A tree view is the collapsible list you see in VS Code's sidebar (like the file explorer). You implement a `TreeDataProvider` that tells VS Code what items to show and how they nest. Each item can have an icon, label, and click action.
-
-### What is MCP (Model Context Protocol)?
-MCP is a standard protocol that lets AI models (like Claude) use external tools. You create a "server" that exposes functions (like "scan dependencies"), and Claude can call those functions during a conversation. Think of it like a REST API but specifically designed for AI agents.
-
-### What is a Barrel File?
-A file (usually `index.ts`) that re-exports from multiple other files: `export { Button } from './Button'; export { Input } from './Input';`. It lets consumers import from one place: `import { Button, Input } from './components'`. Our scanner needs to follow these re-exports.
-
-### What is Circular Dependency?
-When file A imports file B, and file B imports file A (directly or through a chain). This can cause bugs in JavaScript because one of the files will get an incomplete version of the other during initialization. Our tool detects and warns about these.
+### v1.0 — Polished npm Package
+- `prepublishOnly` bundles web-ui into CLI
+- README with demo GIF
+- Stable JSON schema (versioned)
+- Performance tested on 1000+ file projects
+- Published to npm as `react-dependency-graph`
 
 ---
 
-## 20. Step-by-Step Implementation Plan
+## Proposed Changes (Scaffold to Build First)
 
-### Phase 1: Project Setup (Day 1)
+> [!IMPORTANT]
+> This plan reuses the existing `packages/core` and `packages/cli` structure but adds `packages/web-ui` as a new package. The existing dependency scanner code in `@rdg/core` stays — we just **add** the file tree scanner modules alongside it.
 
-1. Initialize the monorepo with npm workspaces
-2. Create root `package.json`, `tsconfig.base.json`, `.gitignore`
-3. Scaffold `packages/core/`, `packages/cli/`, `packages/vscode-extension/`
-4. Set up TypeScript configs that extend the base
-5. Install core dependencies: `@babel/parser`, `@babel/traverse`
-6. Verify the workspace links work: `npm install` from root
-
-### Phase 2: Core Scanner — v0.1 (Days 2–5)
-
-1. Define all types in `types.ts`
-2. Implement `fileDiscovery.ts` — recursive async directory walker
-3. Implement `configLoader.ts` — parse tsconfig paths
-4. Implement `parseImports.ts` — AST-based import extraction
-5. Implement `resolveImports.ts` — path resolution with aliases
-6. Implement `buildGraph.ts` — construct graph from parsed data
-7. Implement `scanProject.ts` — orchestrator function
-8. Implement `exportGraph.ts` — JSON serializer
-9. Write unit tests for each module
-10. Test against a real React project
-
-### Phase 3: CLI — v0.2 (Days 6–7)
-
-1. Set up `commander` with `scan` command
-2. Implement JSON and text formatters
-3. Add `--format`, `--output`, `--ignore` flags
-4. Configure `bin` field for `npx` support
-5. Test CLI output
-
-### Phase 4: VS Code Extension — v0.3–v0.5 (Days 8–14)
-
-1. Scaffold VS Code extension with manifest
-2. Implement `activate()` and register commands
-3. Implement Tree View data provider
-4. Set up Vite + React for the webview UI
-5. Implement React Flow graph component
-6. Set up message passing between extension and webview
-7. Implement node-click-to-open-file
-8. Style and polish the graph
-
-### Phase 5: Circular Detection — v0.6 (Day 15)
-
-1. Implement DFS cycle detection in core
-2. Add circular highlighting to tree view and graph
-3. Add CLI warnings for circular deps
-
-### Phase 6: Polish — v1.0 (Days 16–20)
-
-1. Performance optimization for large projects
-2. UI polish, icons, animations
-3. Documentation and README
-4. CI/CD setup
-5. Publish to npm and VS Code marketplace
+### [MODIFY] `packages/core/src/types.ts` — add FileTreeNode, GraphNode, GraphEdge (structure), VisibleGraph, NodeDetails
+### [NEW] `packages/core/src/scanFileTree.ts`
+### [NEW] `packages/core/src/filterTreeByDepth.ts`
+### [NEW] `packages/core/src/buildGraphFromTree.ts`
+### [NEW] `packages/core/src/expandCollapse.ts`
+### [NEW] `packages/cli/src/commands/visualize.ts`
+### [NEW] `packages/cli/src/commands/scanStructure.ts`
+### [NEW] `packages/cli/src/commands/exportHtml.ts`
+### [NEW] `packages/web-ui/` — full Vite + React package
+### [NEW] `packages/web-ui/src/components/CircleNode.tsx`
+### [NEW] `packages/web-ui/src/components/GraphView.tsx`
+### [NEW] `packages/web-ui/src/components/SidePanel.tsx`
+### [NEW] `packages/web-ui/src/components/Toolbar.tsx`
 
 ---
 
-## Verification Plan
+## Open Questions
 
-### Automated Tests
-- `npx vitest` in `packages/core/` — unit tests for all scanner modules
-- `npx vitest` in `packages/cli/` — CLI integration tests
-- `npx turbo test` from root — run all workspace tests
+> [!IMPORTANT]
+> **New project vs add to existing?** The new `web-ui` package is a separate browser app from the VS Code extension's `webview-ui`. Should we keep both? Recommendation: yes — `web-ui` is the standalone npm-served app; `webview-ui` is VS Code only.
 
-### Manual Verification
-- Test the scanner against a real `create-react-app` project
-- Test the scanner against a Next.js project with path aliases
-- Test CLI output in terminal: `npx @rdg/cli scan --format json`
-- Launch VS Code extension development host (F5) and test all commands
-- Verify webview graph renders and node clicks open files
+> [!NOTE]
+> **Port number**: I plan to use `5178` as the default server port (easily configurable with `--port`). This avoids conflicts with common dev servers (Vite: 5173, CRA: 3000, Next.js: 3000). OK?
+
+> [!NOTE]
+> **Package name**: The npm package name will be `react-dependency-graph` (no scope). If this is taken on npm, we'll use `@rdg/react-dependency-graph` or similar. Should I check availability?
