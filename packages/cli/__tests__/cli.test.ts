@@ -15,7 +15,7 @@ describe('CLI Integration Tests', () => {
       await fs.rm(path.join(__dirname, 'test-output.json'), { force: true });
     } catch {}
     try {
-      await fs.rm(path.join(SIMPLE_PROJECT, '.react-dependency-graph'), {
+      await fs.rm(path.join(SIMPLE_PROJECT, '.depxray'), {
         recursive: true,
         force: true,
       });
@@ -27,7 +27,7 @@ describe('CLI Integration Tests', () => {
       await fs.rm(path.join(__dirname, 'test-output.json'), { force: true });
     } catch {}
     try {
-      await fs.rm(path.join(SIMPLE_PROJECT, '.react-dependency-graph'), {
+      await fs.rm(path.join(SIMPLE_PROJECT, '.depxray'), {
         recursive: true,
         force: true,
       });
@@ -74,7 +74,7 @@ describe('CLI Integration Tests', () => {
       const { stderr, exitCode } = await execa('node', [CLI_PATH, 'scan', SIMPLE_PROJECT, '--html', '--depth', '3']);
       
       expect(exitCode).toBe(0);
-      const outputDir = path.join(SIMPLE_PROJECT, '.react-dependency-graph');
+      const outputDir = path.join(SIMPLE_PROJECT, '.depxray');
       const indexPath = path.join(outputDir, 'index.html');
       const graphDataPath = path.join(outputDir, 'graph-data.json');
       const indexHtml = await fs.readFile(indexPath, 'utf-8');
@@ -146,7 +146,7 @@ describe('CLI Integration Tests', () => {
       ]);
 
       expect(exitCode).toBe(0);
-      const outputDir = path.join(SIMPLE_PROJECT, '.react-dependency-graph');
+      const outputDir = path.join(SIMPLE_PROJECT, '.depxray');
       const graphData = JSON.parse(
         await fs.readFile(path.join(outputDir, 'graph-data.json'), 'utf-8'),
       );
@@ -205,7 +205,7 @@ describe('CLI Integration Tests', () => {
       const { stdout, exitCode } = await execa('node', [CLI_PATH, '--help']);
       
       expect(exitCode).toBe(0);
-      expect(stdout).toContain('Usage: react-dependency-graph');
+      expect(stdout).toContain('Usage: depxray');
       expect(stdout).toContain('scan [options]');
       expect(stdout).toContain('inspect [options]');
     });

@@ -398,7 +398,7 @@ export const DEFAULT_IGNORE_PATTERNS: string[] = [
   '.git',
   '.cache',
   '.turbo',
-  '.react-dependency-graph',
+  '.depxray',
   '__mocks__',
 ];
 

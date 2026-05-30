@@ -118,7 +118,7 @@ function parseMode(value: string | undefined): GraphMode {
 }
 
 function getGeneratedBy(): string {
-  return `react-dependency-graph@${RDG_CLI_VERSION}`;
+  return `depxray@${RDG_CLI_VERSION}`;
 }
 
 function toStructureGraphData(graph: StructureGraph): ExplorerGraphData {
@@ -541,7 +541,7 @@ export function createScanCommand(): Command {
       '.',
     )
     .option('--json', 'Print the graph JSON to stdout')
-    .option('--html', 'Generate a static HTML export in .react-dependency-graph/')
+    .option('--html', 'Generate a static HTML export in .depxray/')
     .option('-o, --output <file>', 'Write JSON output to a file instead of stdout')
     .option('--mode <mode>', 'Graph mode: structure | dependencies', 'structure')
     .option('--ignore <patterns...>', 'Additional directory/file patterns to ignore')
@@ -587,7 +587,7 @@ export function createScanCommand(): Command {
 
         if (rawOptions.html) {
           const { graphSet } = await buildGraphSet(rootDir, rawOptions);
-          const outputDir = path.join(rootDir, '.react-dependency-graph');
+          const outputDir = path.join(rootDir, '.depxray');
           const indexPath = await createStaticExport(outputDir, graphSet, initialDepth);
           process.stderr.write(`Static export written to ${indexPath}\n`);
           return;

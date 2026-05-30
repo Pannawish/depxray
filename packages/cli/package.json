@@ -1,11 +1,11 @@
 {
-  "name": "react-dependency-graph",
+  "name": "depxray",
   "version": "0.1.0",
   "description": "Browser-first CLI for exploring React project structure and dependency graphs, with JSON and static HTML export.",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "bin": {
-    "react-dependency-graph": "./dist/index.js",
+    "depxray": "./dist/index.js",
     "rdg": "./dist/index.js"
   },
   "files": [

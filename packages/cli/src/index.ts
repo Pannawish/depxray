@@ -1,20 +1,20 @@
 // ============================================================================
-// React Dependency Graph — CLI Entry Point
+// depxray — CLI Entry Point
 // ============================================================================
 //
 // Commands:
-//   scan [dir]           Scan a React project and open its structure graph
+//   scan [dir]           Scan a project and open its structure graph
 //   inspect <file>       Inspect a single file's dependencies
 //
 // Usage:
-//   npx react-dependency-graph scan                         # Open local browser UI
-//   npx react-dependency-graph scan ./my-app                # Scan specific dir
-//   npx react-dependency-graph scan --json                  # Print structure JSON
-//   npx react-dependency-graph scan --json --output graph.json
-//   npx react-dependency-graph scan --html                  # Static HTML export
-//   npx react-dependency-graph scan --mode dependencies     # Import graph mode
-//   npx react-dependency-graph scan --port 5180             # Custom server port
-//   npx react-dependency-graph inspect src/App.tsx           # Inspect one file
+//   npx depxray scan                         # Open local browser UI
+//   npx depxray scan ./my-app                # Scan specific dir
+//   npx depxray scan --json                  # Print structure JSON
+//   npx depxray scan --json --output graph.json
+//   npx depxray scan --html                  # Static HTML export
+//   npx depxray scan --mode dependencies     # Import graph mode
+//   npx depxray scan --port 5180             # Custom server port
+//   npx depxray inspect src/App.tsx          # Inspect one file
 //
 // Short alias:
 //   npx rdg scan
@@ -33,9 +33,9 @@ import { createInspectCommand } from './commands/inspect.js';
 const program = new Command();
 
 program
-  .name('react-dependency-graph')
+  .name('depxray')
   .description(
-    'Scan React projects and generate structure or dependency graphs.\n\n' +
+    'Scan projects and generate structure or dependency graphs.\n\n' +
       'Useful for understanding project structure in the browser, with the legacy inspect command\n' +
       'and providing structured data to AI coding agents (Claude, Codex, Antigravity).',
   )
