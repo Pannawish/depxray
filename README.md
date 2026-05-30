@@ -1,6 +1,6 @@
 # ⚛️ depxray
 
-> A browser-first static analyzer and interactive explorer for JavaScript and TypeScript codebases, with first-class React support. Map imports, discover circular dependencies, and visualize your code structure with zero configuration.
+> A static analyzer and interactive explorer for JavaScript and TypeScript codebases, with support for React projects. Map imports, discover circular dependencies, and visualize your code structure from the command line or in the browser.
 
 [![GitHub Repo](https://img.shields.io/badge/GitHub-Pannawish%2Fdepxray-blue?logo=github)](https://github.com/Pannawish/depxray)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -8,20 +8,20 @@
 
 ---
 
-`depxray` is a highly-optimized developer tool that scans JavaScript and TypeScript codebases for physical structure and module import graphs. It serves an interactive local dashboard to explore files, view import/export relationships, detect circular dependencies, and inspect file contents side-by-side.
+`depxray` is a developer tool for scanning JavaScript and TypeScript codebases and exploring their structure and module import graphs. It serves an interactive local dashboard to browse files, inspect import and export relationships, detect circular dependencies, and read file contents side-by-side.
 
-It also supports CLI-only execution, producing clean versioned JSON output tailored for **AI Coding Agents** (such as Claude, Codex, and Antigravity) or fully static standalone HTML exports.
+It also supports CLI-only execution, with versioned JSON output for **AI coding agents** (such as Claude, Codex, and Antigravity) and standalone HTML exports.
 
 ---
 
 ## 📦 Monorepo Architecture
 
-This project is built as a highly modular TypeScript monorepo with three core workspaces:
+This project is organized as a TypeScript monorepo with three core workspaces:
 
 | Workspace | Package Name | Role | Status |
 |:---|:---|:---|:---|
 | [`packages/core`](./packages/core) | `@depxray/core` | Core platform-agnostic scanner. Uses TypeScript AST compiler APIs to extract imports, map dependencies, and detect circular loops. | ✅ Core Engine |
-| [`packages/web-ui`](./packages/web-ui) | `@depxray/web-ui` | High-fidelity React dashboard built with Custom HSL themes, React Flow, dynamic layouts, and an interactive file code viewer. | ✅ Rich visual client |
+| [`packages/web-ui`](./packages/web-ui) | `@depxray/web-ui` | React dashboard built with React Flow, multiple layouts, and an interactive file code viewer. | ✅ Visual client |
 | [`packages/cli`](./packages/cli) | `depxray` | Publicly publishable binary bundle. It compiles all packages into a single-file, zero-dependency engine with the static Web UI fully embedded inside. | ✅ Single-file CLI |
 
 ---
@@ -29,14 +29,14 @@ This project is built as a highly modular TypeScript monorepo with three core wo
 ## ✨ Features
 
 - 📂 **Dual Visual Modes**:
-  - **Structure Mode**: A spatial explorer representing directories and files as nested columns with file details, sizing metrics, and an inline code viewer.
+  - **Structure Mode**: A structure explorer that represents directories and files as nested columns with file details, sizing metrics, and an inline code viewer.
   - **Dependency Mode**: An interactive module graph visualization (powered by React Flow) mapping how files import one another.
-- 🔴 **Circular Loop Detection**: Instantly scans and highlights circular dependency chains in your code with high-contrast UI alerts.
-- ⇄ **Fully Customizable Workspace Layout**:
+- 🔴 **Circular Loop Detection**: Scans for and highlights circular dependency chains in your code.
+- ⇄ **Customizable Workspace Layout**:
   - **Horizontal Column Swapping**: Toggle or drag-and-drop the left Project Explorer and right panel columns to match your visual preference.
-  - **Vertical Panel Swapping**: Flip the Selection Details panel and the Source Code viewer vertically using active header grab-handles (`⋮⋮`) or low-profile swap buttons (`⇅`).
-  - **Fluid Sizing Splitters**: Drag and scale panels dynamically with elegant, HSL-glowing accent resizing bars.
-- 🔍 **Interactive Code Viewer**: Read full-screen code directly inside the graph explorer with beautiful syntax highlighting.
+  - **Vertical Panel Swapping**: Flip the Selection Details panel and the Source Code viewer vertically using header grab-handles (`⋮⋮`) or swap buttons (`⇅`).
+  - **Fluid Sizing Splitters**: Resize panels dynamically with draggable splitters.
+- 🔍 **Interactive Code Viewer**: Read code directly inside the graph explorer with syntax highlighting.
 - ⚡ **AI-Agent and CLI Friendly**: Outputs raw, versioned JSON graphs to standard output or outputs standalone zero-dependency static HTML bundles (`--html`) to host anywhere.
 
 ---
@@ -61,7 +61,7 @@ npx depxray scan /path/to/project --mode dependencies
 
 ### 1. `scan` Command
 
-Analyze a project directory and spin up a browser server or export data.
+Analyze a project directory and start a local browser server or export data.
 
 ```bash
 npx depxray scan [dir] [options]
@@ -75,14 +75,14 @@ npx depxray scan [dir] [options]
 |:---|:---|
 | `--json` | Print the parsed graph JSON directly to `stdout`. |
 | `-o, --output <file>` | Write JSON output to a file instead of `stdout` (requires `--json`). |
-| `--html` | Generate a fully standalone HTML/JS dashboard bundle inside `.depxray/`. |
+| `--html` | Generate a standalone HTML/JS dashboard bundle inside `.depxray/`. |
 | `--mode <mode>` | Graph startup mode: `structure` or `dependencies` (default: `structure`). |
 | `--ignore <patterns...>` | Additional file/directory glob patterns to exclude from scanning. |
 | `--no-circular` | Deactivate circular dependency parsing in dependency mode (increases performance). |
 | `--no-aliases` | Deactivate standard `tsconfig`/`jsconfig` path alias resolution. |
 | `--extensions <exts...>` | File extensions to analyze in dependency mode (default: `.js`, `.jsx`, `.ts`, `.tsx`). |
 | `--depth <depth>` | Default directory expand depth: `1`, `2`, `3`, `4`, or `all` (default: `2`). |
-| `--port <port>` | Custom HTTP port to host the interactive local dashboard on (default: `5178`). |
+| `--port <port>` | Custom HTTP port for the local dashboard (default: `5178`). |
 | `--no-open` | Start the local server without auto-opening the default web browser. |
 
 #### Examples
@@ -102,7 +102,7 @@ npx depxray scan --html
 
 ### 2. `inspect` Command
 
-Inspect import/export relationships for a single file. Perfect for quick CLI debugging or feeding specific context to AI assistants.
+Inspect import/export relationships for a single file. Useful for quick CLI debugging or for passing focused context to AI assistants.
 
 ```bash
 npx depxray inspect <file> [options]
@@ -178,9 +178,9 @@ node packages/cli/dist/index.js scan /path/to/project
 
 ## 📦 Packaging & Performance Notes
 
-- **Zero-Dependency at Runtime**: The CLI (`depxray`) is bundled into a single file `dist/index.js` using `esbuild`. It includes all `@depxray/core` parser logic directly, so users do not need a separate download at runtime.
-- **Embedded Web Assets**: The compiled HTML, CSS, and JS assets of `@depxray/web-ui` are fully bundled into `packages/cli/dist/web-ui/` during the build process, meaning the browser server serves entirely from disk and requires **no internet connection** or third-party CDN fetch.
-- **Tree-Shaken & Minified**: Code size remains extremely small (~1.9 MB including full icons and UI assets), enabling extremely fast `npx` execution.
+- **Zero Runtime Dependencies**: The CLI (`depxray`) is bundled into a single file `dist/index.js` using `esbuild`. It includes the `@depxray/core` parser logic directly, so users do not need a separate runtime package.
+- **Embedded Web Assets**: The compiled HTML, CSS, and JS assets of `@depxray/web-ui` are bundled into `packages/cli/dist/web-ui/` during the build process, so the browser server serves them directly from disk without relying on third-party CDNs.
+- **Tree-Shaken & Minified**: The published bundle stays relatively small (~1.9 MB including UI assets), which helps keep `npx` execution lightweight.
 
 ---
 
