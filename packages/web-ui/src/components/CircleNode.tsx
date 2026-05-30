@@ -5,12 +5,13 @@ interface CircleNodeData {
   node: StructureGraphNode;
   selected: boolean;
   matched: boolean;
+  emphasized: boolean;
   dimmed: boolean;
   onToggle: (nodeId: string) => void;
 }
 
 export function CircleNode({ data }: NodeProps<CircleNodeData>) {
-  const { node, selected, matched, dimmed, onToggle } = data;
+  const { node, selected, matched, emphasized, dimmed, onToggle } = data;
   const isDirectory = node.kind === 'directory';
   const size = isDirectory
     ? Math.min(110, 76 + node.descendantCount * 2)
@@ -23,6 +24,7 @@ export function CircleNode({ data }: NodeProps<CircleNodeData>) {
         isDirectory ? 'directory' : 'file',
         selected ? 'selected' : '',
         matched ? 'matched' : '',
+        emphasized ? 'emphasized' : '',
         dimmed ? 'dimmed' : '',
       ].filter(Boolean).join(' ')}
       style={{ width: size, height: size }}

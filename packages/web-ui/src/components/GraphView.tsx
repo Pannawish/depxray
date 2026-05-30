@@ -1,9 +1,11 @@
+import { useEffect, useState } from 'react';
 import ReactFlow, {
   Background,
   BackgroundVariant,
   Controls,
   MarkerType,
   MiniMap,
+  type ReactFlowInstance,
   type Edge,
   type Node,
 } from 'reactflow';
@@ -47,7 +49,9 @@ interface GraphViewProps {
   nodes: StructureGraphNode[];
   edges: StructureGraphEdge[];
   matchedNodeIds: Set<string>;
+  emphasizedNodeIds: Set<string>;
   selectedNodeId: string | null;
+  fitViewNonce: number;
   onSelectNode: (nodeId: string) => void;
   onToggleNode: (nodeId: string) => void;
 }
@@ -56,11 +60,25 @@ export function GraphView({
   nodes,
   edges,
   matchedNodeIds,
+  emphasizedNodeIds,
   selectedNodeId,
+  fitViewNonce,
   onSelectNode,
   onToggleNode,
 }: GraphViewProps) {
   const { graph } = layoutGraph(nodes, edges);
+  const [flowInstance, setFlowInstance] = useState<ReactFlowInstance | null>(null);
+
+  useEffect(() => {
+    if (!flowInstance) {
+      return;
+    }
+
+    void flowInstance.fitView({
+      padding: 0.2,
+      duration: 280,
+    });
+  }, [fitViewNonce, flowInstance]);
 
   const flowNodes: Node[] = nodes.map((node) => {
     const position = graph.node(node.id);
@@ -68,6 +86,7 @@ export function GraphView({
       ? Math.min(110, 76 + node.descendantCount * 2)
       : 58;
     const matched = matchedNodeIds.has(node.id);
+    const emphasized = emphasizedNodeIds.has(node.id);
     return {
       id: node.id,
       type: 'circle',
@@ -79,30 +98,37 @@ export function GraphView({
         node,
         selected: node.id === selectedNodeId,
         matched,
-        dimmed: matchedNodeIds.size > 0 && !matched,
+        emphasized,
+        dimmed: matchedNodeIds.size > 0 && !emphasized,
         onToggle: onToggleNode,
       },
     };
   });
 
-  const flowEdges: Edge[] = edges.map((edge) => ({
-    id: edge.id,
-    source: edge.source,
-    target: edge.target,
-    type: 'smoothstep',
-    animated: false,
-    markerEnd: {
-      type: MarkerType.ArrowClosed,
-      width: 18,
-      height: 18,
-      color: '#6f7f90',
-    },
-    style: {
-      stroke: '#6f7f90',
-      strokeWidth: 1.35,
-      opacity: 0.7,
-    },
-  }));
+  const flowEdges: Edge[] = edges.map((edge) => {
+    const emphasized = emphasizedNodeIds.has(edge.source)
+      && emphasizedNodeIds.has(edge.target);
+    const stroke = emphasized ? '#26445e' : '#6f7f90';
+
+    return {
+      id: edge.id,
+      source: edge.source,
+      target: edge.target,
+      type: 'smoothstep',
+      animated: false,
+      markerEnd: {
+        type: MarkerType.ArrowClosed,
+        width: 18,
+        height: 18,
+        color: stroke,
+      },
+      style: {
+        stroke,
+        strokeWidth: emphasized ? 1.8 : 1.35,
+        opacity: matchedNodeIds.size > 0 && !emphasized ? 0.18 : 0.7,
+      },
+    };
+  });
 
   return (
     <div className="graph-shell">
@@ -114,6 +140,7 @@ export function GraphView({
         fitViewOptions={{ padding: 0.2 }}
         minZoom={0.1}
         maxZoom={2}
+        onInit={setFlowInstance}
         onNodeClick={(_, node) => onSelectNode(node.id)}
       >
         <Background
@@ -129,9 +156,11 @@ export function GraphView({
           nodeColor={(node) => (
             node.id === selectedNodeId
               ? '#13293d'
-              : matchedNodeIds.size > 0 && !matchedNodeIds.has(node.id)
+              : matchedNodeIds.size > 0 && !emphasizedNodeIds.has(node.id)
                 ? '#c5ced3'
-                : '#3d8bfd'
+                : matchedNodeIds.has(node.id)
+                  ? '#ef8a16'
+                  : '#3d8bfd'
           )}
           maskColor="rgba(250, 244, 233, 0.62)"
         />

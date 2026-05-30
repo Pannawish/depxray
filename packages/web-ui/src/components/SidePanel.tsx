@@ -6,6 +6,14 @@ interface SidePanelProps {
   error: string | null;
 }
 
+function getLayerPath(relativePath: string): string[] {
+  if (relativePath === '.') {
+    return ['.'];
+  }
+
+  return relativePath.split('/').filter(Boolean);
+}
+
 export function SidePanel({ node, projectRoot, error }: SidePanelProps) {
   if (!node) {
     return (
@@ -20,10 +28,25 @@ export function SidePanel({ node, projectRoot, error }: SidePanelProps) {
     );
   }
 
+  const layerPath = getLayerPath(node.relativePath);
+
   return (
     <aside className="side-panel">
       <p className="eyebrow">{node.kind === 'directory' ? 'Directory' : 'File'}</p>
       <h2>{node.label}</h2>
+      <div className="detail-badges">
+        <span>{node.kind}</span>
+        <span>depth {node.depth}</span>
+        {node.kind === 'directory' ? (
+          <span>{node.collapsed ? 'collapsed' : 'expanded'}</span>
+        ) : null}
+        {node.extension ? <span>{node.extension}</span> : null}
+      </div>
+      <div className="layer-path">
+        {layerPath.map((segment, index) => (
+          <span key={`${segment}-${index}`}>{segment}</span>
+        ))}
+      </div>
       <dl className="detail-list">
         <div>
           <dt>Relative path</dt>
@@ -58,6 +81,9 @@ export function SidePanel({ node, projectRoot, error }: SidePanelProps) {
           <dd>{node.sizeBytes ? `${node.sizeBytes.toLocaleString()} bytes` : 'n/a'}</dd>
         </div>
       </dl>
+      <p className="muted panel-footnote">
+        Directory nodes can be expanded or collapsed from the graph canvas.
+      </p>
       {error ? <p className="panel-warning">Using sample data: {error}</p> : null}
     </aside>
   );

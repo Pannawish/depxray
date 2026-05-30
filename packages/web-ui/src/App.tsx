@@ -35,13 +35,21 @@ export default function App() {
   const [depthFilter, setDepthFilter] = useState<DepthFilter>(() => readInitialDepth());
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const [fitViewNonce, setFitViewNonce] = useState(0);
   const deferredSearchTerm = useDeferredValue(searchTerm);
 
   const {
     visibleNodes,
     visibleEdges,
     matchedNodeIds,
+    emphasizedNodeIds,
+    searchMatchCount,
+    collapsedCount,
+    firstMatchedVisibleNodeId,
     toggleCollapsed,
+    expandAll,
+    collapseAll,
+    resetCollapsed,
   } = useTreeState(data, depthFilter, deferredSearchTerm);
 
   useEffect(() => {
@@ -55,6 +63,47 @@ export default function App() {
       setSelectedNodeId(visibleNodes[0]?.id ?? null);
     }
   }, [selectedNodeId, visibleNodes]);
+
+  useEffect(() => {
+    if (!deferredSearchTerm || !firstMatchedVisibleNodeId) {
+      return;
+    }
+
+    if (!selectedNodeId || !matchedNodeIds.has(selectedNodeId)) {
+      setSelectedNodeId(firstMatchedVisibleNodeId);
+    }
+  }, [
+    deferredSearchTerm,
+    firstMatchedVisibleNodeId,
+    matchedNodeIds,
+    selectedNodeId,
+  ]);
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      const isField = target instanceof HTMLInputElement
+        || target instanceof HTMLTextAreaElement
+        || target instanceof HTMLSelectElement;
+
+      if (event.key === 'Escape') {
+        setSelectedNodeId(null);
+        return;
+      }
+
+      if (isField) {
+        return;
+      }
+
+      if (event.key.toLowerCase() === 'f') {
+        event.preventDefault();
+        setFitViewNonce((value) => value + 1);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   const selectedNode = visibleNodes.find((node) => node.id === selectedNodeId) ?? null;
 
@@ -79,6 +128,9 @@ export default function App() {
         <Toolbar
           totalFiles={data?.totalFiles ?? 0}
           totalDirs={data?.totalDirs ?? 0}
+          visibleNodes={visibleNodes.length}
+          matchCount={searchMatchCount}
+          collapsedCount={collapsedCount}
           sourceLabel={SOURCE_LABELS[source]}
           depthFilter={depthFilter}
           searchTerm={searchTerm}
@@ -87,6 +139,19 @@ export default function App() {
           }}
           onSearchChange={(nextSearch) => {
             startTransition(() => setSearchTerm(nextSearch));
+          }}
+          onClearSearch={() => {
+            startTransition(() => setSearchTerm(''));
+          }}
+          onFitView={() => setFitViewNonce((value) => value + 1)}
+          onExpandAll={() => {
+            startTransition(() => expandAll());
+          }}
+          onCollapseAll={() => {
+            startTransition(() => collapseAll());
+          }}
+          onResetCollapsed={() => {
+            startTransition(() => resetCollapsed());
           }}
         />
 
@@ -108,7 +173,9 @@ export default function App() {
               nodes={visibleNodes}
               edges={visibleEdges}
               matchedNodeIds={matchedNodeIds}
+              emphasizedNodeIds={emphasizedNodeIds}
               selectedNodeId={selectedNodeId}
+              fitViewNonce={fitViewNonce}
               onSelectNode={setSelectedNodeId}
               onToggleNode={toggleCollapsed}
             />

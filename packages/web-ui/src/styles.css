@@ -100,6 +100,24 @@ select {
   letter-spacing: -0.03em;
 }
 
+.toolbar-hint {
+  margin: 8px 0 0;
+  color: #6f7b85;
+  font-size: 0.9rem;
+}
+
+kbd {
+  display: inline-block;
+  min-width: 1.6em;
+  padding: 0.12rem 0.4rem;
+  border-radius: 8px;
+  background: rgba(19, 41, 61, 0.08);
+  border: 1px solid rgba(19, 41, 61, 0.12);
+  font-family: inherit;
+  font-size: 0.84em;
+  text-align: center;
+}
+
 .toolbar-stats {
   display: flex;
   gap: 10px;
@@ -145,6 +163,47 @@ select {
   border: 1px solid rgba(19, 41, 61, 0.1);
   background: rgba(255, 255, 255, 0.72);
   color: #13293d;
+}
+
+.search-input-shell {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.search-input-shell input {
+  flex: 1;
+}
+
+.search-clear-button,
+.toolbar-button {
+  padding: 10px 14px;
+  border: 1px solid rgba(19, 41, 61, 0.1);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.74);
+  color: #13293d;
+  cursor: pointer;
+  transition:
+    transform 140ms ease,
+    background 140ms ease,
+    border-color 140ms ease;
+}
+
+.search-clear-button:hover,
+.toolbar-button:hover {
+  transform: translateY(-1px);
+  background: rgba(255, 255, 255, 0.96);
+  border-color: rgba(19, 41, 61, 0.2);
+}
+
+.toolbar-button.subtle {
+  color: #52606b;
+}
+
+.toolbar-action-group {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .content-grid {
@@ -202,6 +261,23 @@ select {
   margin: 18px 0 0;
 }
 
+.detail-badges,
+.layer-path {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+}
+
+.detail-badges span,
+.layer-path span {
+  padding: 7px 10px;
+  border-radius: 999px;
+  background: rgba(19, 41, 61, 0.06);
+  color: #4f5d69;
+  font-size: 0.84rem;
+}
+
 .detail-list div {
   padding-top: 12px;
   border-top: 1px solid rgba(19, 41, 61, 0.08);
@@ -224,6 +300,10 @@ select {
   padding: 12px 14px;
   border-radius: 16px;
   background: rgba(255, 166, 77, 0.12);
+}
+
+.panel-footnote {
+  margin: 18px 0 0;
 }
 
 .loading-state {
@@ -271,8 +351,12 @@ select {
   box-shadow: 0 16px 28px rgba(19, 41, 61, 0.14);
 }
 
+.circle-node.emphasized {
+  border-color: rgba(239, 138, 22, 0.55);
+}
+
 .circle-node.matched {
-  box-shadow: 0 0 0 6px rgba(61, 139, 253, 0.12);
+  box-shadow: 0 0 0 6px rgba(239, 138, 22, 0.16);
 }
 
 .circle-node.dimmed {
@@ -328,5 +412,10 @@ select {
 
   .graph-panel {
     min-height: 65vh;
+  }
+
+  .search-input-shell,
+  .toolbar-action-group {
+    width: 100%;
   }
 }
