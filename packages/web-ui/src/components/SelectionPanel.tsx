@@ -100,14 +100,21 @@ export function SelectionPanel({
             <h2>{node.label}</h2>
           </div>
         </div>
-        <button 
-          className="swap-layout-btn"
-          onClick={onSwap}
-          title="Swap places with Code Viewer"
-          type="button"
-        >
-          ⇄
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          {!isDirectory && (
+            <span className="code-viewer-stats">
+              {imports.length} imports • {importedBy.length} dependents
+            </span>
+          )}
+          <button 
+            className="swap-layout-btn"
+            onClick={onSwap}
+            title="Swap places with Code Viewer"
+            type="button"
+          >
+            ⇄
+          </button>
+        </div>
       </div>
 
       <div className="badge-row">
@@ -116,6 +123,30 @@ export function SelectionPanel({
         {node.extension ? <span>{node.extension}</span> : null}
         {node.isCircular ? <span className="danger">circular</span> : null}
       </div>
+
+      {node.isCircular && (
+        <div 
+          className="circular-alert-banner"
+          style={{
+            margin: '12px 16px 4px 16px',
+            padding: '10px 14px',
+            borderRadius: '6px',
+            background: 'var(--danger-soft)',
+            color: 'var(--danger)',
+            border: '1px solid rgba(179, 58, 50, 0.2)',
+            fontSize: '0.82rem',
+            fontWeight: 500,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px'
+          }}
+        >
+          <span style={{ fontSize: '1rem' }}>⚠️</span>
+          <div>
+            <strong>Circular Dependency Alert:</strong> This file is part of a circular import chain.
+          </div>
+        </div>
+      )}
 
       <dl className="detail-list">
         <DetailRow label="Relative path" value={node.relativePath} />
