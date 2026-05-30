@@ -6,21 +6,32 @@
 
 | Package | Description | Status |
 |---------|-------------|--------|
-| `@rdg/core` | Platform-agnostic structure and dependency scanner | 🏗️ v0.1 |
-| `@rdg/cli` | Browser-first CLI for structure graphs and exports | 🏗️ v0.3 |
-| `@rdg/web-ui` | Standalone React Flow UI served by the CLI | 🏗️ v0.2 |
+| `@rdg/core` | Platform-agnostic structure and dependency scanner | ✅ structure + dependency modes |
+| `@rdg/cli` | Browser-first CLI for graph exploration, JSON, and static export | ✅ dual-mode session |
+| `@rdg/web-ui` | Standalone React Flow UI bundled into the CLI build | ✅ structure + dependency views |
+
+## ✨ Current Features
+
+- `rdg scan` opens a local browser session with structure and dependency modes available in one UI.
+- `rdg scan --json` emits a stable versioned graph payload for the selected mode.
+- `rdg scan --html` writes a standalone `.react-dependency-graph/` export with embedded data.
+- Dependency mode highlights circular modules and supports type-only, dynamic, and circular-only filters.
 
 ## 🚀 Quick Start
 
 ```bash
-# Install dependencies
+# Install dependencies and build all workspaces
 npm install
-
-# Build all packages
 npm run build
 
-# Run the CLI
-cd packages/cli && node dist/index.js scan /path/to/react-project
+# Open the browser UI for a project
+node packages/cli/dist/index.js scan /path/to/react-project
+
+# Start directly in dependency mode
+node packages/cli/dist/index.js scan /path/to/react-project --mode dependencies
+
+# Export a standalone HTML report
+node packages/cli/dist/index.js scan /path/to/react-project --html
 
 # Or use it as a library
 import { scanFileTree, buildStructureGraph } from '@rdg/core';
@@ -31,9 +42,6 @@ const graph = buildStructureGraph(tree);
 ## 🏗️ Development
 
 ```bash
-# Install all workspace dependencies
-npm install
-
 # Build everything
 npm run build
 
@@ -47,6 +55,11 @@ cd packages/core && npm run dev
 ## 📖 Documentation
 
 See [DEVELOPMENT_PLAN.md](./DEVELOPMENT_PLAN.md) for the full architecture, roadmap, and implementation guide.
+
+## 📦 Packaging Notes
+
+- The CLI build now bundles the compiled web UI into `packages/cli/dist/web-ui/`.
+- Browser mode and static export no longer depend on `packages/web-ui/dist` at runtime when using the built CLI package.
 
 ## License
 

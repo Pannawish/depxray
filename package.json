@@ -9,7 +9,7 @@
     "packages/web-ui"
   ],
   "scripts": {
-    "build": "npm run build --workspaces",
+    "build": "npm run build --workspace @rdg/core && npm run build --workspace @rdg/web-ui && npm run build --workspace @rdg/cli",
     "test": "npm run test --workspaces --if-present",
     "clean": "npm run clean --workspaces --if-present",
     "lint": "eslint packages/*/src/**/*.ts"

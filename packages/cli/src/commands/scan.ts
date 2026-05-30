@@ -1,4 +1,5 @@
 import { spawn } from 'node:child_process';
+import { statSync } from 'node:fs';
 import * as fs from 'node:fs/promises';
 import * as http from 'node:http';
 import * as path from 'node:path';
@@ -214,7 +215,23 @@ async function verifyDirectory(rootDir: string): Promise<void> {
 }
 
 function getWebUiDistDir(): string {
-  return path.resolve(__dirname, '../../../web-ui/dist');
+  const candidateDirs = [
+    path.resolve(__dirname, '../../web-ui'),
+    path.resolve(__dirname, '../../../web-ui/dist'),
+  ];
+
+  for (const candidateDir of candidateDirs) {
+    try {
+      const stat = statSync(candidateDir);
+      if (stat.isDirectory()) {
+        return candidateDir;
+      }
+    } catch {
+      continue;
+    }
+  }
+
+  return candidateDirs[0];
 }
 
 async function requireWebUiDist(): Promise<string> {

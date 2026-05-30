@@ -12,11 +12,13 @@
     "dist"
   ],
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && node ./scripts/bundle-web-ui.mjs",
+    "bundle:web-ui": "node ./scripts/bundle-web-ui.mjs",
     "dev": "tsc --watch",
     "start": "node ./dist/index.js",
     "test": "vitest run",
-    "clean": "rm -rf dist"
+    "clean": "rm -rf dist",
+    "prepublishOnly": "npm run build"
   },
   "dependencies": {
     "@rdg/core": "0.1.0",
