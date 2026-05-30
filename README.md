@@ -11,7 +11,7 @@
 `depxray` is designed to solve a universal pain point: **understanding complex JavaScript and TypeScript codebases.** Whether you are a human developer onboarding to a massive legacy project, or an AI coding agent (like Claude, Codex, or Antigravity) needing to map relationships to make safe edits, `depxray` provides instant, high-fidelity codebase transparency.
 
 It functions as:
-1. **An interactive local dashboard:** High-fidelity web application built with React Flow to explore directories, trace module import graphs, inspect individual file metrics, and view source code side-by-side.
+1. **An interactive local dashboard:** High-fidelity web application built with a unified file tree explorer and a Miller Columns dependency tracer to explore directories, trace module import graphs, inspect individual file metrics, and view source code side-by-side.
 2. **A machine-parseable CLI utility:** Print versioned JSON structures of your codebase directly to `stdout` to pipe into scripts or inject into an LLM's system prompt context.
 3. **A zero-dependency standalone HTML bundle:** Package your codebase's entire visualization into a single HTML file you can host on Vercel, Netlify, or share with team members.
 
@@ -46,23 +46,23 @@ depxray scan
 When you run `npx depxray scan`, the embedded local HTTP server spins up and automatically opens a highly responsive, custom-engineered visual interface in your default browser.
 
 ```
-┌─────────────────────────────────────────────────────────────────────────┐
-│  depxray Dashboard                                                      │
-├───────────────────────┬─────────────────────────────────────────────────┤
-│ [Project Explorer]    │ [Visual Panel]                                  │
-│                       │                                                 │
-│ 📁 src                │   ● Structure Mode (Nested Columns)             │
-│   📁 components       │     OR                                          │
-│     📄 Button.tsx     │   ● Dependency Mode (Interactive React Flow)    │
-│     📄 Icon.tsx       │                                                 │
-├───────────────────────┴─────────────────────────────────────────────────┤
-│ [Selection Details]     | [Source Code Viewer with Syntax Highlighting] │
-└─────────────────────────────────────────────────────────────────────────┘
+┌───────────────────────────┬───────────────────────────┬───────────────────────────┐
+│ [Project Explorer]        │ [Dependency Explorer]     │ [Details & Viewer]        │
+│                           │                           │                           │
+│ 📁 src                    │ 📄 App.tsx                │ 📄 App.tsx                │
+│   📁 components           │   📥 Imports:             │   Imports: 7 files        │
+│     📄 Button.tsx         │     → Button.tsx          │   Dependents: 1 file      │
+│     📄 Icon.tsx           │   📤 Dependents:          │   Size: 18 KB             │
+│   📄 App.tsx              │     ← main.tsx            │   Code: import ...        │
+└───────────────────────────┴───────────────────────────┴───────────────────────────┘
 ```
 
-### 1. Dual Visual Modes
-*   **Structure Mode (Nested Tree Explorer):** Displays directories and files as expandable nested columns. It provides inline visibility into file sizing metrics, descendant counts, nesting depth, and folder structures. Perfect for building an initial mental model of physical project layout.
-*   **Dependency Mode (Interactive React Flow Graph):** A visual directed-network graph mapping file imports. Nodes represent your files; directed edges represent import statements. You can click files, trace incoming imports (who uses this file?), trace outgoing imports (what does this file use?), and let the layout automatically untangle complex systems.
+### Unified Three-Column Workspace
+Unlike tools that force you to switch between disjointed screens, `depxray` integrates both structure and dependency tracing into a single, cohesive sidebar-to-sidebar environment:
+
+1.  **Project Explorer (Left Column):** Interactive codebase structure tree representation. Expand directories, inspect file nesting levels, and select files to inspect.
+2.  **Dependency Explorer (Center Column):** Interactive **Miller Columns** panel designed for tracing dependency flows. Select a file on the left, and dynamically traverse its outgoing **Imports** or incoming **Dependents** column-by-column across your codebase with instant click-to-traverse action.
+3.  **Details & Code Viewer (Right Column):** Displays specific metadata for the selected file or folder (size, descendant counts, circular dependencies) alongside a syntax-highlighted inline code previewer.
 
 ### 2. Circular Dependency Discovery
 Spaghetti dependencies lead to fragile code. `depxray` implements a cycle detection algorithm that:
@@ -309,7 +309,7 @@ This project is organized as a high-performance TypeScript monorepo with three c
 graph TD
     subgraph Packages
         Core["@depxray/core<br>(AST Parser & Scanner)"]
-        WebUI["@depxray/web-ui<br>(React & React Flow Dashboard)"]
+        WebUI["@depxray/web-ui<br>(React & Miller Columns Dashboard)"]
         CLI["depxray<br>(Zero-Dependency Binary CLI)"]
     end
 
@@ -322,7 +322,7 @@ graph TD
 | Workspace | Package Name | Directory | Role & Description |
 |:---|:---|:---|:---|
 | **Core Parser** | `@depxray/core` | [`packages/core`](./packages/core) | Core platform-agnostic scanner. Uses TypeScript AST compiler APIs to extract imports, map dependencies, and detect circular loops. |
-| **Web Dashboard** | `@depxray/web-ui` | [`packages/web-ui`](./packages/web-ui) | Interactive React dashboard built with React Flow, multiple workspace layouts, and file code visualizer. |
+| **Web Dashboard** | `@depxray/web-ui` | [`packages/web-ui`](./packages/web-ui) | Interactive React dashboard built with Miller Columns, multiple workspace layouts, and file code visualizer. |
 | **Binary CLI** | `depxray` | [`packages/cli`](./packages/cli) | Single-file binary distribution including the fully embedded Web UI. |
 
 ### Published Build and Packaging Pipeline
