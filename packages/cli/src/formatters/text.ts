@@ -10,7 +10,7 @@
 //   - Parse errors
 // ============================================================================
 
-import type { ScanResult } from '@rdg/core';
+import type { ScanResult } from '@depxray/core';
 
 /**
  * Format a ScanResult as a human-readable text report.

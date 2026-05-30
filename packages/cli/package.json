@@ -5,8 +5,7 @@
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "bin": {
-    "depxray": "./dist/index.js",
-    "rdg": "./dist/index.js"
+    "depxray": "./dist/index.js"
   },
   "files": [
     "dist"
@@ -24,7 +23,7 @@
     "prepublishOnly": "npm run build"
   },
   "devDependencies": {
-    "@rdg/core": "0.1.0",
+    "@depxray/core": "0.1.0",
     "@types/node": "^20.0.0",
     "commander": "^12.1.0",
     "esbuild": "^0.21.5",

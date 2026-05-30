@@ -1,5 +1,5 @@
 {
-  "name": "@rdg/web-ui",
+  "name": "@depxray/web-ui",
   "version": "0.2.0",
   "private": true,
   "type": "module",
@@ -11,7 +11,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@rdg/core": "0.1.0",
+    "@depxray/core": "0.1.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },

@@ -13,7 +13,7 @@ function makeMeta(): ScanMetadata {
     totalFiles: 0,
     totalEdges: 0,
     circularCount: 0,
-    rdgVersion: '0.1.0',
+    depxrayVersion: '0.1.0',
   };
 }
 

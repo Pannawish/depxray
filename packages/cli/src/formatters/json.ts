@@ -6,8 +6,8 @@
 // and downstream tooling.
 // ============================================================================
 
-import { exportGraphJSON } from '@rdg/core';
-import type { ScanResult } from '@rdg/core';
+import { exportGraphJSON } from '@depxray/core';
+import type { ScanResult } from '@depxray/core';
 
 /**
  * Format a ScanResult as JSON.

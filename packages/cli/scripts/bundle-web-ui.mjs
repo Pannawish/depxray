@@ -15,7 +15,7 @@ async function ensureWebUiBuild() {
     }
   } catch {
     throw new Error(
-      `Web UI build not found at ${webUiDistDir}. Run "npm run build --workspace @rdg/web-ui" first.`,
+      `Web UI build not found at ${webUiDistDir}. Run "npm run build --workspace @depxray/web-ui" first.`,
     );
   }
 }

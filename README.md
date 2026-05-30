@@ -8,7 +8,7 @@
 
 ---
 
-`depxray` (available via the shortcut `rdg` or `npx depxray`) is a highly-optimized developer tool that scans your codebase's physical structure and module import graphs. It serves a stunning, interactive local dashboard to explore files, view import/export relationships, detect circular dependencies, and inspect file contents side-by-side.
+`depxray` is a highly-optimized developer tool that scans your codebase's physical structure and module import graphs. It serves a stunning, interactive local dashboard to explore files, view import/export relationships, detect circular dependencies, and inspect file contents side-by-side.
 
 It also supports CLI-only execution, producing clean versioned JSON output tailored for **AI Coding Agents** (such as Claude, Codex, and Antigravity) or fully static standalone HTML exports.
 
@@ -20,9 +20,9 @@ This project is built as a highly modular TypeScript monorepo with three core wo
 
 | Workspace | Package Name | Role | Status |
 |:---|:---|:---|:---|
-| [`packages/core`](file:///Users/peto/Documents/RDG/packages/core) | `@rdg/core` | Core platform-agnostic scanner. Uses TypeScript AST compiler APIs to extract imports, map dependencies, and detect circular loops. | ✅ Core Engine |
-| [`packages/web-ui`](file:///Users/peto/Documents/RDG/packages/web-ui) | `@rdg/web-ui` | High-fidelity React dashboard built with Custom HSL themes, React Flow, dynamic layouts, and an interactive file code viewer. | ✅ Rich visual client |
-| [`packages/cli`](file:///Users/peto/Documents/RDG/packages/cli) | `depxray` | Publicly publishable binary bundle. It compiles all packages into a single-file, zero-dependency engine with the static Web UI fully embedded inside. | ✅ Single-file CLI |
+| [`packages/core`](./packages/core) | `@depxray/core` | Core platform-agnostic scanner. Uses TypeScript AST compiler APIs to extract imports, map dependencies, and detect circular loops. | ✅ Core Engine |
+| [`packages/web-ui`](./packages/web-ui) | `@depxray/web-ui` | High-fidelity React dashboard built with Custom HSL themes, React Flow, dynamic layouts, and an interactive file code viewer. | ✅ Rich visual client |
+| [`packages/cli`](./packages/cli) | `depxray` | Publicly publishable binary bundle. It compiles all packages into a single-file, zero-dependency engine with the static Web UI fully embedded inside. | ✅ Single-file CLI |
 
 ---
 
@@ -49,14 +49,13 @@ Ensure you have **Node.js >= 18** installed.
 # Run the scanner in the current directory and open the browser dashboard
 npx depxray scan
 
-# Use the short binary alias 'rdg'
-npx rdg scan
+npx depxray scan
 
 # Scan a specific target project
-npx rdg scan /path/to/project
+npx depxray scan /path/to/project
 
 # Launch directly in Dependency Graph mode instead of Structure tree mode
-npx rdg scan /path/to/project --mode dependencies
+npx depxray scan /path/to/project --mode dependencies
 ```
 
 ---
@@ -68,7 +67,7 @@ npx rdg scan /path/to/project --mode dependencies
 Analyze a project directory and spin up a browser server or export data.
 
 ```bash
-npx rdg scan [dir] [options]
+npx depxray scan [dir] [options]
 ```
 
 #### Arguments
@@ -93,13 +92,13 @@ npx rdg scan [dir] [options]
 
 ```bash
 # Export the entire import dependency graph to a JSON file
-npx rdg scan /path/to/project --json --mode dependencies --output dep-graph.json
+npx depxray scan /path/to/project --json --mode dependencies --output dep-graph.json
 
 # Exclude specific vendor directories and custom files
-npx rdg scan --ignore "**/vendor/**" "**/*.spec.ts"
+npx depxray scan --ignore "**/vendor/**" "**/*.spec.ts"
 
 # Generate a static dashboard folder you can host on Netlify/Vercel or share with your team
-npx rdg scan --html
+npx depxray scan --html
 ```
 
 ---
@@ -109,7 +108,7 @@ npx rdg scan --html
 Inspect import/export relationships for a single file. Perfect for quick CLI debugging or feeding specific context to AI assistants.
 
 ```bash
-npx rdg inspect <file> [options]
+npx depxray inspect <file> [options]
 ```
 
 #### Arguments
@@ -124,7 +123,7 @@ npx rdg inspect <file> [options]
 #### Output Example (Text)
 
 ```bash
-$ npx rdg inspect src/components/Button.tsx
+$ npx depxray inspect src/components/Button.tsx
 
   📄 src/components/Button.tsx
      Extension: .tsx
@@ -168,8 +167,8 @@ node packages/cli/dist/index.js scan /path/to/react-project
 
 - Build individual workspaces:
   ```bash
-  npm run build --workspace @rdg/core
-  npm run build --workspace @rdg/web-ui
+  npm run build --workspace @depxray/core
+  npm run build --workspace @depxray/web-ui
   npm run build --workspace depxray
   ```
 - Run the visual client locally with hot-reloading:
@@ -182,8 +181,8 @@ node packages/cli/dist/index.js scan /path/to/react-project
 
 ## 📦 Packaging & Performance Notes
 
-- **Zero-Dependency at Runtime**: The CLI (`depxray`) is bundled into a single file `dist/index.js` using `esbuild`. It includes all `@rdg/core` parser logic directly, so users do not need a separate download at runtime.
-- **Embedded Web Assets**: The compiled HTML, CSS, and JS assets of `@rdg/web-ui` are fully bundled into `packages/cli/dist/web-ui/` during the build process, meaning the browser server serves entirely from disk and requires **no internet connection** or third-party CDN fetch.
+- **Zero-Dependency at Runtime**: The CLI (`depxray`) is bundled into a single file `dist/index.js` using `esbuild`. It includes all `@depxray/core` parser logic directly, so users do not need a separate download at runtime.
+- **Embedded Web Assets**: The compiled HTML, CSS, and JS assets of `@depxray/web-ui` are fully bundled into `packages/cli/dist/web-ui/` during the build process, meaning the browser server serves entirely from disk and requires **no internet connection** or third-party CDN fetch.
 - **Tree-Shaken & Minified**: Code size remains extremely small (~1.9 MB including full icons and UI assets), enabling extremely fast `npx` execution.
 
 ---

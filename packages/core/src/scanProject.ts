@@ -34,12 +34,12 @@ import { detectCircularDeps } from './detectCircularDeps.js';
 import { loadAliases } from './configLoader.js';
 
 // Read version from package.json at build time
-const RDG_VERSION = '0.1.0';
+const DEPXRAY_VERSION = '0.1.0';
 
 /**
  * Scan a React project and build its dependency graph.
  *
- * This is the main entry point for the `@rdg/core` package. It performs a
+ * This is the main entry point for the `@depxray/core` package. It performs a
  * complete scan of the given project directory, parsing all React/TypeScript
  * files and building a graph of their import relationships.
  *
@@ -48,7 +48,7 @@ const RDG_VERSION = '0.1.0';
  *
  * @example
  * ```typescript
- * import { scanProject } from '@rdg/core';
+ * import { scanProject } from '@depxray/core';
  *
  * const result = await scanProject({
  *   rootDir: '/path/to/my-react-app',
@@ -127,7 +127,7 @@ export async function scanProject(options: ScanOptions): Promise<ScanResult> {
       totalFiles: 0,
       totalEdges: 0,
       circularCount: 0,
-      rdgVersion: RDG_VERSION,
+      depxrayVersion: DEPXRAY_VERSION,
     };
 
     return {
@@ -203,7 +203,7 @@ export async function scanProject(options: ScanOptions): Promise<ScanResult> {
     totalFiles: filePaths.length,
     totalEdges: 0, // Will be updated after buildGraph
     circularCount: 0, // Will be updated after detectCircularDeps
-    rdgVersion: RDG_VERSION,
+    depxrayVersion: DEPXRAY_VERSION,
   };
 
   let graph = buildGraph(fileImportsMap, resolvedRoot, metadata);

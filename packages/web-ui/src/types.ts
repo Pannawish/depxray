@@ -3,14 +3,14 @@ import type {
   GraphNode as DependencyGraphNode,
   StructureGraphEdge,
   StructureGraphNode,
-} from '@rdg/core';
+} from '@depxray/core';
 
 export type {
   DependencyGraphEdge,
   DependencyGraphNode,
   StructureGraphEdge,
   StructureGraphNode,
-} from '@rdg/core';
+} from '@depxray/core';
 
 export type DepthFilter = 1 | 2 | 3 | 4 | 'all';
 export type GraphMode = 'structure' | 'dependencies';
@@ -65,7 +65,7 @@ declare global {
   interface Window {
     __GRAPH_DATA__?: ExplorerGraphData;
     __GRAPH_DATA_SET__?: ExplorerGraphSet;
-    __RDG_INITIAL_DEPTH__?: DepthFilter;
-    __RDG_INITIAL_MODE__?: GraphMode;
+    __DEPXRAY_INITIAL_DEPTH__?: DepthFilter;
+    __DEPXRAY_INITIAL_MODE__?: GraphMode;
   }
 }

@@ -14,7 +14,7 @@ import {
   type StructureGraph,
   type StructureGraphEdge,
   type StructureGraphNode,
-} from '@rdg/core';
+} from '@depxray/core';
 
 type GraphMode = 'structure' | 'dependencies';
 
@@ -73,7 +73,7 @@ interface ScanCommandOptions {
 }
 
 const EXPORT_SCHEMA_VERSION = '1.0.0';
-const RDG_CLI_VERSION = '0.1.0';
+const DEPXRAY_CLI_VERSION = '0.1.0';
 
 function parseDepth(value: string | undefined): number | 'all' {
   if (!value) {
@@ -118,7 +118,7 @@ function parseMode(value: string | undefined): GraphMode {
 }
 
 function getGeneratedBy(): string {
-  return `depxray@${RDG_CLI_VERSION}`;
+  return `depxray@${DEPXRAY_CLI_VERSION}`;
 }
 
 function toStructureGraphData(graph: StructureGraph): ExplorerGraphData {
@@ -245,7 +245,7 @@ async function requireWebUiDist(): Promise<string> {
     }
   } catch {
     throw new Error(
-      `Web UI build not found at ${distDir}. Run "npm run build --workspace @rdg/web-ui" first.`,
+      `Web UI build not found at ${distDir}. Run "npm run build --workspace @depxray/web-ui" first.`,
     );
   }
 
@@ -300,7 +300,7 @@ async function createStaticExport(
   const originalIndex = await fs.readFile(indexPath, 'utf-8');
   const injectedIndex = originalIndex.replace(
     '</body>',
-    `    <script>window.__GRAPH_DATA_SET__ = ${graphSetJson}; window.__RDG_INITIAL_DEPTH__ = ${JSON.stringify(normalizeInitialDepth(initialDepth))}; window.__RDG_INITIAL_MODE__ = ${JSON.stringify(graphSet.defaultMode)};</script>\n  </body>`,
+    `    <script>window.__GRAPH_DATA_SET__ = ${graphSetJson}; window.__DEPXRAY_INITIAL_DEPTH__ = ${JSON.stringify(normalizeInitialDepth(initialDepth))}; window.__DEPXRAY_INITIAL_MODE__ = ${JSON.stringify(graphSet.defaultMode)};</script>\n  </body>`,
   );
   await fs.writeFile(indexPath, injectedIndex, 'utf-8');
 
@@ -426,7 +426,7 @@ async function startGraphServer(
         const originalIndex = await fs.readFile(indexPath, 'utf-8');
         const indexHtml = originalIndex.replace(
           '</body>',
-          `    <script>window.__RDG_INITIAL_DEPTH__ = ${JSON.stringify(initialDepthValue)}; window.__RDG_INITIAL_MODE__ = ${JSON.stringify(graphSet.defaultMode)};</script>\n  </body>`,
+          `    <script>window.__DEPXRAY_INITIAL_DEPTH__ = ${JSON.stringify(initialDepthValue)}; window.__DEPXRAY_INITIAL_MODE__ = ${JSON.stringify(graphSet.defaultMode)};</script>\n  </body>`,
         );
         res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
         res.end(indexHtml);

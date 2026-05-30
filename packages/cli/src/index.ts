@@ -16,13 +16,9 @@
 //   npx depxray scan --port 5180             # Custom server port
 //   npx depxray inspect src/App.tsx          # Inspect one file
 //
-// Short alias:
-//   npx rdg scan
-//   npx rdg inspect src/App.tsx
-//
 // For AI agents:
-//   npx rdg scan --json > structure.json
-//   npx rdg inspect src/App.tsx --format json
+//   npx depxray scan --json > structure.json
+//   npx depxray inspect src/App.tsx --format json
 //
 // ============================================================================
 

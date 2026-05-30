@@ -330,8 +330,8 @@ export interface ScanMetadata {
   /** Number of circular dependency chains detected */
   circularCount: number;
 
-  /** Version of @rdg/core that produced this graph */
-  rdgVersion: string;
+  /** Version of @depxray/core that produced this graph */
+  depxrayVersion: string;
 }
 
 // ─── Internal Types (used within core, but exported for extensibility) ─────

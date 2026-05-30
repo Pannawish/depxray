@@ -5,14 +5,14 @@
 // Useful for AI agents that need to understand a single file's context.
 //
 // Usage:
-//   rdg inspect src/App.tsx
-//   rdg inspect src/App.tsx --format json
+//   depxray inspect src/App.tsx
+//   depxray inspect src/App.tsx --format json
 // ============================================================================
 
 import { Command } from 'commander';
 import * as path from 'path';
 import * as fs from 'fs/promises';
-import { scanProject } from '@rdg/core';
+import { scanProject } from '@depxray/core';
 
 export function createInspectCommand(): Command {
   const cmd = new Command('inspect')

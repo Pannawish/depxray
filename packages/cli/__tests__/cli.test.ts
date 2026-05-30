@@ -35,10 +35,10 @@ describe('CLI Integration Tests', () => {
   });
 
   describe('scan command', () => {
-    it('should bundle the CLI without a runtime @rdg/core dependency', async () => {
+    it('should bundle the CLI without a runtime @depxray/core dependency', async () => {
       const builtEntry = await fs.readFile(CLI_PATH, 'utf-8');
-      expect(builtEntry).not.toContain('require("@rdg/core")');
-      expect(builtEntry).not.toContain("require('@rdg/core')");
+      expect(builtEntry).not.toContain('require("@depxray/core")');
+      expect(builtEntry).not.toContain("require('@depxray/core')");
     });
 
     it('should output structure JSON with --json', async () => {
@@ -82,8 +82,8 @@ describe('CLI Integration Tests', () => {
       
       expect(stderr).toContain(`Static export written to ${indexPath}`);
       expect(indexHtml).toContain('window.__GRAPH_DATA_SET__ =');
-      expect(indexHtml).toContain('window.__RDG_INITIAL_DEPTH__ = "3"');
-      expect(indexHtml).toContain('window.__RDG_INITIAL_MODE__ = "structure"');
+      expect(indexHtml).toContain('window.__DEPXRAY_INITIAL_DEPTH__ = "3"');
+      expect(indexHtml).toContain('window.__DEPXRAY_INITIAL_MODE__ = "structure"');
       expect(graphData.defaultMode).toBe('structure');
       expect(graphData.availableModes).toEqual(['structure', 'dependencies']);
       expect(graphData.graphs.structure.totalFiles).toBe(8);

@@ -2,13 +2,13 @@
 // DOT Formatter — Graphviz DOT format for the dependency graph
 // ============================================================================
 // Produces output that can be piped to `dot` for SVG/PNG rendering:
-//   rdg scan --format dot | dot -Tsvg -o graph.svg
-//   rdg scan --format dot | dot -Tpng -o graph.png
+//   depxray scan --format dot | dot -Tsvg -o graph.svg
+//   depxray scan --format dot | dot -Tpng -o graph.png
 //
 // Also viewable in online Graphviz editors like https://dreampuf.github.io/GraphvizOnline
 // ============================================================================
 
-import type { ScanResult } from '@rdg/core';
+import type { ScanResult } from '@depxray/core';
 
 /**
  * Escape a string for use in DOT labels.
@@ -43,8 +43,8 @@ function getNodeColor(extension: string): string {
  *
  * @example
  * ```bash
- * rdg scan --format dot | dot -Tsvg -o deps.svg
- * rdg scan --format dot | dot -Tpng -o deps.png
+ * depxray scan --format dot | dot -Tsvg -o deps.svg
+ * depxray scan --format dot | dot -Tpng -o deps.png
  * ```
  */
 export function formatAsDot(result: ScanResult): string {

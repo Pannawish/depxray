@@ -1,5 +1,5 @@
 // ============================================================================
-// @rdg/core — Public API
+// @depxray/core — Public API
 // ============================================================================
 // Barrel export file. Everything exported here is the public API of the
 // core scanner package. Keep this minimal and intentional.
