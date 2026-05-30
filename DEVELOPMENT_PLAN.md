@@ -52,7 +52,7 @@ The MVP (`v0.1–v0.5`) delivers **Project Structure Graph** via a local browser
 react-dependency-graph/                ← Root workspace
 ├── packages/
 │   ├── core/                          ← @rdg/core — pure TypeScript, zero UI deps
-│   ├── cli/                           ← @rdg/cli  — npx entry point
+│   ├── cli/                           ← react-dependency-graph — npx entry point
 │   ├── web-ui/                        ← @rdg/web-ui — React + React Flow app
 ├── package.json                       ← npm workspaces root
 ├── tsconfig.base.json
@@ -134,7 +134,7 @@ react-dependency-graph/
 
 ---
 
-## 7. CLI Package Responsibilities (`@rdg/cli`)
+## 7. CLI Package Responsibilities (`react-dependency-graph`)
 
 All functionality is exposed through a **single `scan` command** with flags:
 
@@ -743,7 +743,7 @@ Codex reads `structure.json` as context when working on the project.
 
 **`@rdg/core`** — "The brain". It reads your project folder, understands what files and folders exist, and turns that into a clean data structure (a tree). It doesn't know anything about browsers or React. Just pure logic.
 
-**`@rdg/cli`** — "The command". When you type `npx rdg scan`, this is what runs. It asks the brain to scan your project, starts a small web server, and opens your browser.
+**`react-dependency-graph`** — "The command". When you type `npx react-dependency-graph scan`, this is what runs. It asks the brain to scan your project, starts a small web server, and opens your browser.
 
 **`@rdg/web-ui`** — "The face". A React app that lives in your browser. It asks the server for the project data, then draws it as circles connected by lines. You can zoom in, click things, and explore.
 

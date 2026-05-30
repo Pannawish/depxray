@@ -7,7 +7,7 @@
 | Package | Description | Status |
 |---------|-------------|--------|
 | `@rdg/core` | Platform-agnostic structure and dependency scanner | ✅ structure + dependency modes |
-| `@rdg/cli` | Browser-first CLI for graph exploration, JSON, and static export | ✅ dual-mode session |
+| `react-dependency-graph` | Browser-first CLI for graph exploration, JSON, and static export | ✅ dual-mode session |
 | `@rdg/web-ui` | Standalone React Flow UI bundled into the CLI build | ✅ structure + dependency views |
 
 ## ✨ Current Features
