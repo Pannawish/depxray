@@ -6,6 +6,7 @@
   "workspaces": [
     "packages/core",
     "packages/cli",
+    "packages/web-ui",
     "packages/vscode-extension"
   ],
   "scripts": {
