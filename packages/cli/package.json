@@ -1,6 +1,6 @@
 {
   "name": "depxray",
-  "version": "0.1.0",
+  "version": "0.3.0",
   "description": "Browser-first CLI for exploring JavaScript and TypeScript project structure and dependency graphs, with JSON and static HTML export.",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -23,7 +23,7 @@
     "prepublishOnly": "npm run build"
   },
   "devDependencies": {
-    "@depxray/core": "0.1.0",
+    "@depxray/core": "0.3.0",
     "@types/node": "^20.0.0",
     "commander": "^12.1.0",
     "esbuild": "^0.21.5",

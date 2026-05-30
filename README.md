@@ -4,7 +4,7 @@
 
 [![GitHub Repo](https://img.shields.io/badge/GitHub-Pannawish%2Fdepxray-blue?logo=github)](https://github.com/Pannawish/depxray)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![NPM Version](https://img.shields.io/badge/npm-0.1.0-red)](https://www.npmjs.com/package/depxray)
+[![NPM Version](https://img.shields.io/badge/npm-0.3.0-red)](https://www.npmjs.com/package/depxray)
 
 ---
 

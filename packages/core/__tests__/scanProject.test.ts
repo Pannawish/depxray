@@ -180,7 +180,7 @@ describe('scanProject — integration', () => {
     expect(parsed.version).toBe('1.0.0');
     expect(parsed.nodes.length).toBe(result.totalFiles);
     expect(parsed.edges.length).toBe(result.totalImports);
-    expect(parsed.metadata.depxrayVersion).toBe('0.1.0');
+    expect(parsed.metadata.depxrayVersion).toBe('0.3.0');
   });
 
   // ─── Error handling ──────────────────────────────────────────────────
@@ -213,6 +213,6 @@ describe('scanProject — integration', () => {
     expect(result.graph.metadata.projectRoot).toBe(
       path.resolve(SIMPLE_PROJECT),
     );
-    expect(result.graph.metadata.depxrayVersion).toBe('0.1.0');
+    expect(result.graph.metadata.depxrayVersion).toBe('0.3.0');
   });
 });

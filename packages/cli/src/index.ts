@@ -35,7 +35,7 @@ program
       'Useful for understanding project structure in the browser, with the legacy inspect command\n' +
       'and providing structured data to AI coding agents (Claude, Codex, Antigravity).',
   )
-  .version('0.1.0');
+  .version('0.3.0');
 
 // Register commands
 program.addCommand(createScanCommand());

@@ -73,7 +73,7 @@ interface ScanCommandOptions {
 }
 
 const EXPORT_SCHEMA_VERSION = '1.0.0';
-const DEPXRAY_CLI_VERSION = '0.1.0';
+const DEPXRAY_CLI_VERSION = '0.3.0';
 
 function parseDepth(value: string | undefined): number | 'all' {
   if (!value) {
