@@ -1,6 +1,6 @@
 # React Dependency Graph
 
-> Scan React projects and explore project structure graphs in the browser, from the CLI, or as structured data for AI agents.
+> Scan React projects and explore structure and dependency graphs in the browser, CLI, or JSON exports for AI agents.
 
 ## 📦 Packages
 
@@ -61,6 +61,7 @@ See [DEVELOPMENT_PLAN.md](./DEVELOPMENT_PLAN.md) for the full architecture, road
 - The CLI build now bundles the compiled web UI into `packages/cli/dist/web-ui/`.
 - The built CLI entrypoint is bundled into a single `dist/index.js`, so published installs do not require a separate `@rdg/core` package at runtime.
 - Browser mode and static export no longer depend on `packages/web-ui/dist` at runtime when using the built CLI package.
+- The intended public package name is `react-dependency-graph`, which supports `npx react-dependency-graph`.
 
 ## License
 

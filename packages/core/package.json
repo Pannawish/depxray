@@ -1,7 +1,7 @@
 {
   "name": "@rdg/core",
   "version": "0.1.0",
-  "description": "Platform-agnostic React dependency graph scanner — parses imports, resolves paths, builds graphs, detects circular dependencies.",
+  "description": "Platform-agnostic scanner for React project structure and dependency graphs, including import analysis and circular detection.",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "files": ["dist"],

@@ -2,7 +2,7 @@
   "name": "react-dependency-graph",
   "private": true,
   "version": "0.1.0",
-  "description": "Scan and visualize React project structure graphs — usable as a library, CLI, and AI agent tool.",
+  "description": "Scan React projects and explore structure and dependency graphs in the browser, CLI, or JSON exports for AI agents.",
   "workspaces": [
     "packages/core",
     "packages/cli",

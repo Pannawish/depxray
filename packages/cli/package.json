@@ -1,7 +1,7 @@
 {
   "name": "@rdg/cli",
   "version": "0.1.0",
-  "description": "CLI tool for React Dependency Graph — scan React projects from the terminal or AI agents.",
+  "description": "Browser-first CLI for exploring React project structure and dependency graphs, with JSON and static HTML export.",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "bin": {
