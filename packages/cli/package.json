@@ -38,5 +38,14 @@
     "cli",
     "static-analysis"
   ],
-  "license": "MIT"
+  "author": "Pannawish Kriengyakul",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Pannawish/depxray"
+  },
+  "homepage": "https://github.com/Pannawish/depxray#readme",
+  "bugs": {
+    "url": "https://github.com/Pannawish/depxray/issues"
+  }
 }

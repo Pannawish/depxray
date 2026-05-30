@@ -194,12 +194,13 @@ export default function App() {
   const handleLeftResize = (e: React.MouseEvent) => {
     e.preventDefault();
     const startX = e.clientX;
-    const element = document.querySelector('.tree-panel');
+    const element = document.querySelector('.tree-panel') ?? document.querySelector('.right-column-container');
     const startWidth = leftWidth ?? (element ? element.getBoundingClientRect().width : 360);
+    const maxLeft = Math.floor(window.innerWidth * 0.45);
     
     const onMouseMove = (moveEvent: MouseEvent) => {
       const delta = moveEvent.clientX - startX;
-      const newWidth = Math.max(200, Math.min(500, startWidth + delta));
+      const newWidth = Math.max(180, Math.min(maxLeft, startWidth + delta));
       setLeftWidth(newWidth);
     };
     
@@ -215,12 +216,13 @@ export default function App() {
   const handleRightResize = (e: React.MouseEvent) => {
     e.preventDefault();
     const startX = e.clientX;
-    const element = document.querySelector('.right-column-container');
+    const element = document.querySelector('.right-column-container') ?? document.querySelector('.tree-panel:last-child');
     const startWidth = rightWidth ?? (element ? element.getBoundingClientRect().width : 480);
+    const maxRight = Math.floor(window.innerWidth * 0.55);
     
     const onMouseMove = (moveEvent: MouseEvent) => {
       const delta = moveEvent.clientX - startX;
-      const newWidth = Math.max(300, Math.min(800, startWidth - delta));
+      const newWidth = Math.max(200, Math.min(maxRight, startWidth - delta));
       setRightWidth(newWidth);
     };
     
@@ -239,12 +241,14 @@ export default function App() {
     const element = document.querySelector('.details-panel');
     const startHeight = detailsHeight ?? (element ? element.getBoundingClientRect().height : 260);
     const isDetailsOnTop = rightColumnOrder[0] === 'details';
+    const container = document.querySelector('.right-column-container');
+    const maxH = container ? Math.floor(container.getBoundingClientRect().height * 0.8) : 600;
     
     const onMouseMove = (moveEvent: MouseEvent) => {
       const delta = moveEvent.clientY - startY;
       const newHeight = isDetailsOnTop
-        ? Math.max(120, Math.min(500, startHeight + delta))
-        : Math.max(120, Math.min(500, startHeight - delta));
+        ? Math.max(100, Math.min(maxH, startHeight + delta))
+        : Math.max(100, Math.min(maxH, startHeight - delta));
       setDetailsHeight(newHeight);
     };
     
@@ -339,40 +343,11 @@ export default function App() {
 
   const gridStyle = useMemo(() => {
     const isSwapped = columnsOrder[0] === 'details';
+    const left = leftWidth !== null ? `${leftWidth}px` : (isSwapped ? 'minmax(300px, 1fr)' : 'minmax(240px, 360px)');
+    const right = rightWidth !== null ? `${rightWidth}px` : (isSwapped ? 'minmax(240px, 360px)' : 'minmax(300px, 1fr)');
     
-    // If neither left nor right are resized, use the original proportions!
-    if (leftWidth === null && rightWidth === null) {
-      return {
-        gridTemplateColumns: isSwapped
-          ? 'minmax(360px, 1fr) 6px minmax(320px, 0.85fr) 6px minmax(260px, 360px)'
-          : 'minmax(260px, 360px) 6px minmax(320px, 0.85fr) 6px minmax(360px, 1fr)',
-        gap: 0
-      };
-    }
-    
-    // If only left is resized
-    if (leftWidth !== null && rightWidth === null) {
-      return {
-        gridTemplateColumns: isSwapped
-          ? `${leftWidth}px 6px minmax(320px, 0.85fr) 6px minmax(260px, 360px)`
-          : `${leftWidth}px 6px minmax(320px, 0.85fr) 6px minmax(360px, 1fr)`,
-        gap: 0
-      };
-    }
-    
-    // If only right is resized
-    if (leftWidth === null && rightWidth !== null) {
-      return {
-        gridTemplateColumns: isSwapped
-          ? `minmax(360px, 1fr) 6px minmax(320px, 0.85fr) 6px ${rightWidth}px`
-          : `minmax(260px, 360px) 6px minmax(320px, 0.85fr) 6px ${rightWidth}px`,
-        gap: 0
-      };
-    }
-    
-    // If both are resized
     return {
-      gridTemplateColumns: `${leftWidth}px 6px 1fr 6px ${rightWidth}px`,
+      gridTemplateColumns: `${left} 6px minmax(280px, 1fr) 6px ${right}`,
       gap: 0
     };
   }, [leftWidth, rightWidth, columnsOrder]);
