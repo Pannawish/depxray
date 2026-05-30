@@ -3,7 +3,7 @@
   "version": "0.2.0",
   "private": true,
   "type": "module",
-  "description": "Standalone browser UI for exploring React project structure and dependency graphs.",
+  "description": "Standalone browser UI for exploring JavaScript and TypeScript project structure and dependency graphs.",
   "scripts": {
     "dev": "vite",
     "build": "vite build",

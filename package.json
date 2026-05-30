@@ -2,7 +2,7 @@
   "name": "depxray-root",
   "private": true,
   "version": "0.1.0",
-  "description": "Scan and visualize React project structure graphs — usable as a library, CLI, and AI agent tool.",
+  "description": "Scan and visualize JavaScript and TypeScript project structure and dependency graphs — usable as a library, CLI, and AI agent tool.",
   "workspaces": [
     "packages/core",
     "packages/cli",

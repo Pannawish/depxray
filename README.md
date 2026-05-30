@@ -1,6 +1,6 @@
 # ⚛️ depxray
 
-> A browser-first static analyzer and interactive explorer for JavaScript, TypeScript, and React codebases. Map imports, discover circular dependencies, and visualize your code structure with zero configuration.
+> A browser-first static analyzer and interactive explorer for JavaScript and TypeScript codebases, with first-class React support. Map imports, discover circular dependencies, and visualize your code structure with zero configuration.
 
 [![GitHub Repo](https://img.shields.io/badge/GitHub-Pannawish%2Fdepxray-blue?logo=github)](https://github.com/Pannawish/depxray)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -8,7 +8,7 @@
 
 ---
 
-`depxray` is a highly-optimized developer tool that scans your codebase's physical structure and module import graphs. It serves a stunning, interactive local dashboard to explore files, view import/export relationships, detect circular dependencies, and inspect file contents side-by-side.
+`depxray` is a highly-optimized developer tool that scans JavaScript and TypeScript codebases for physical structure and module import graphs. It serves an interactive local dashboard to explore files, view import/export relationships, detect circular dependencies, and inspect file contents side-by-side.
 
 It also supports CLI-only execution, producing clean versioned JSON output tailored for **AI Coding Agents** (such as Claude, Codex, and Antigravity) or fully static standalone HTML exports.
 
@@ -46,9 +46,6 @@ This project is built as a highly modular TypeScript monorepo with three core wo
 Ensure you have **Node.js >= 18** installed.
 
 ```bash
-# Run the scanner in the current directory and open the browser dashboard
-npx depxray scan
-
 npx depxray scan
 
 # Scan a specific target project
@@ -159,8 +156,8 @@ npm run build
 # 4. Run tests across all workspaces
 npm run test
 
-# 5. Run the CLI directly from source against any folder
-node packages/cli/dist/index.js scan /path/to/react-project
+# 5. Run the CLI directly from source against any supported project
+node packages/cli/dist/index.js scan /path/to/project
 ```
 
 ### Monorepo Workspaces Development

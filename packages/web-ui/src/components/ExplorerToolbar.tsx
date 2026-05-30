@@ -29,7 +29,7 @@ export function ExplorerToolbar({
     <header className="explorer-toolbar">
       {/* Title block */}
       <div className="toolbar-title">
-        <p className="eyebrow">React Dependency Graph</p>
+        <p className="eyebrow">Depxray</p>
         <h1>Codebase Explorer</h1>
       </div>
 

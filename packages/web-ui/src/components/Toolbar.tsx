@@ -58,7 +58,7 @@ export function Toolbar({
         <p className="eyebrow">
           {dependencyMode ? 'Dependency graph mode' : 'Local structure graph'}
         </p>
-        <h1>React Dependency Graph</h1>
+        <h1>Depxray</h1>
         <p className="toolbar-hint">Press <kbd>F</kbd> to fit the view and <kbd>Esc</kbd> to deselect.</p>
       </div>
 

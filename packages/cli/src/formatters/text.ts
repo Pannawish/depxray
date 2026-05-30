@@ -23,7 +23,7 @@ export function formatAsText(result: ScanResult): string {
   // ── Header ─────────────────────────────────────────────────────────
   lines.push('');
   lines.push('╔══════════════════════════════════════════════════════╗');
-  lines.push('║        React Dependency Graph — Scan Results        ║');
+  lines.push('║              Depxray — Scan Results                ║');
   lines.push('╚══════════════════════════════════════════════════════╝');
   lines.push('');
   lines.push(`  📁 Project:     ${graph.rootDir}`);
