@@ -1,10 +1,21 @@
-import { startTransition, useDeferredValue, useEffect, useState } from 'react';
-import { GraphView } from './components/GraphView.js';
-import { SidePanel } from './components/SidePanel.js';
-import { Toolbar } from './components/Toolbar.js';
+import { startTransition, useDeferredValue, useEffect, useMemo, useState } from 'react';
+import { ExplorerToolbar } from './components/ExplorerToolbar.js';
+import { FileTreeView, type FileTreeRowData } from './components/FileTreeView.js';
+import { FocusedGraphPanel } from './components/FocusedGraphPanel.js';
+import { RelationshipPanel } from './components/RelationshipPanel.js';
+import { SelectionPanel } from './components/SelectionPanel.js';
 import { useGraphData } from './hooks/useGraphData.js';
-import { useTreeState } from './hooks/useTreeState.js';
-import type { DependencyFilters, DepthFilter, GraphMode } from './types.js';
+import { useRelationshipIndex } from './hooks/useRelationshipIndex.js';
+import {
+  getAncestorIds,
+  getFolderSummary,
+  type FileRelationshipIndex,
+} from './relationshipIndex.js';
+import type {
+  DependencyFilters,
+  ExplorerGraphNode,
+  GraphMode,
+} from './types.js';
 
 const SOURCE_LABELS = {
   window: 'embedded data',
@@ -12,23 +23,11 @@ const SOURCE_LABELS = {
   sample: 'sample preview',
 } as const;
 
-function readInitialDepth(): DepthFilter {
-  const searchParams = new URLSearchParams(window.location.search);
-  const queryDepth = searchParams.get('depth');
-  const embeddedDepth = window.__RDG_INITIAL_DEPTH__;
-  const rawDepth = queryDepth ?? (embeddedDepth !== undefined ? String(embeddedDepth) : '2');
-
-  if (rawDepth === 'all') {
-    return 'all';
-  }
-
-  const parsed = Number.parseInt(rawDepth, 10);
-  if ([1, 2, 3, 4].includes(parsed)) {
-    return parsed as DepthFilter;
-  }
-
-  return 2;
-}
+const DEFAULT_DEPENDENCY_FILTERS: DependencyFilters = {
+  showTypeOnlyEdges: true,
+  showDynamicEdges: true,
+  circularOnly: false,
+};
 
 function readInitialMode(): GraphMode {
   const searchParams = new URLSearchParams(window.location.search);
@@ -39,38 +38,143 @@ function readInitialMode(): GraphMode {
   return rawMode === 'dependencies' ? 'dependencies' : 'structure';
 }
 
-const DEFAULT_DEPENDENCY_FILTERS: DependencyFilters = {
-  showTypeOnlyEdges: true,
-  showDynamicEdges: true,
-  circularOnly: false,
-};
+function buildInitialExpandedIds(index: FileRelationshipIndex): Set<string> {
+  const expandedIds = new Set<string>();
+
+  for (const node of index.structureGraph?.nodes ?? []) {
+    if (node.kind === 'directory' && node.depth <= 1) {
+      expandedIds.add(node.id);
+    }
+  }
+
+  if (index.rootId) {
+    expandedIds.add(index.rootId);
+  }
+
+  return expandedIds;
+}
+
+function firstSelectableNode(index: FileRelationshipIndex): ExplorerGraphNode | null {
+  if (index.rootId) {
+    return index.nodeById.get(index.rootId) ?? null;
+  }
+
+  return Array.from(index.nodeById.values())[0] ?? null;
+}
+
+function buildTreeRows(
+  index: FileRelationshipIndex,
+  expandedIds: Set<string>,
+  searchTerm: string,
+  filters: DependencyFilters,
+): FileTreeRowData[] {
+  const rows: FileTreeRowData[] = [];
+  const normalizedSearch = searchTerm.trim().toLowerCase();
+  const structureNodes = index.structureGraph?.nodes ?? Array.from(index.nodeById.values());
+  const searchMatchedIds = new Set<string>();
+  const searchVisibleIds = new Set<string>();
+  const circularVisibleIds = new Set<string>();
+
+  if (normalizedSearch) {
+    for (const node of structureNodes) {
+      if (
+        node.label.toLowerCase().includes(normalizedSearch) ||
+        node.relativePath.toLowerCase().includes(normalizedSearch)
+      ) {
+        searchMatchedIds.add(node.id);
+        searchVisibleIds.add(node.id);
+        for (const ancestorId of getAncestorIds(node.id, index)) {
+          searchVisibleIds.add(ancestorId);
+        }
+      }
+    }
+  }
+
+  if (filters.circularOnly) {
+    for (const nodeId of index.circularNodeIds) {
+      circularVisibleIds.add(nodeId);
+      for (const ancestorId of getAncestorIds(nodeId, index)) {
+        circularVisibleIds.add(ancestorId);
+      }
+    }
+  }
+
+  function shouldShowNode(nodeId: string): boolean {
+    if (normalizedSearch && !searchVisibleIds.has(nodeId)) {
+      return false;
+    }
+
+    if (filters.circularOnly && !circularVisibleIds.has(nodeId)) {
+      return false;
+    }
+
+    return true;
+  }
+
+  function visit(node: ExplorerGraphNode, level: number) {
+    if (!shouldShowNode(node.id)) {
+      return;
+    }
+
+    const children = index.childrenByParentId.get(node.id) ?? [];
+    const forceExpanded = Boolean(normalizedSearch) || filters.circularOnly;
+    const expanded = expandedIds.has(node.id) || forceExpanded;
+
+    rows.push({
+      node,
+      level,
+      hasChildren: children.length > 0,
+      expanded,
+      matched: searchMatchedIds.has(node.id),
+      circular: index.circularNodeIds.has(node.id),
+    });
+
+    if (!children.length || !expanded) {
+      return;
+    }
+
+    for (const child of children) {
+      visit(child, level + 1);
+    }
+  }
+
+  if (index.rootId) {
+    const rootNode = index.nodeById.get(index.rootId);
+    if (rootNode) {
+      visit(rootNode, 0);
+    }
+  } else {
+    for (const node of structureNodes) {
+      visit(node, 0);
+    }
+  }
+
+  return rows;
+}
 
 export default function App() {
   const { dataSet, loading, error, source } = useGraphData();
-  const [depthFilter, setDepthFilter] = useState<DepthFilter>(() => readInitialDepth());
-  const [searchTerm, setSearchTerm] = useState('');
-  const [activeMode, setActiveMode] = useState<GraphMode>(() => readInitialMode());
-  const [dependencyFilters, setDependencyFilters] = useState<DependencyFilters>(DEFAULT_DEPENDENCY_FILTERS);
-  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
-  const [fitViewNonce, setFitViewNonce] = useState(0);
-  const deferredSearchTerm = useDeferredValue(searchTerm);
+  const index = useRelationshipIndex(dataSet);
   const availableModes = dataSet?.availableModes ?? ['structure'];
+  const [activeMode, setActiveMode] = useState<GraphMode>(() => readInitialMode());
+  const [searchTerm, setSearchTerm] = useState('');
+  const [dependencyFilters, setDependencyFilters] = useState<DependencyFilters>(DEFAULT_DEPENDENCY_FILTERS);
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+  const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const deferredSearchTerm = useDeferredValue(searchTerm);
   const resolvedMode = availableModes.includes(activeMode) ? activeMode : (dataSet?.defaultMode ?? 'structure');
-  const data = dataSet?.graphs[resolvedMode] ?? null;
+  const selectedNode = selectedNodeId ? (index.nodeById.get(selectedNodeId) ?? null) : null;
+  const folderSummary = selectedNode?.kind === 'directory'
+    ? getFolderSummary(selectedNode.id, index, dependencyFilters)
+    : null;
+  const visibleRows = useMemo(() => (
+    buildTreeRows(index, expandedIds, deferredSearchTerm, dependencyFilters)
+  ), [deferredSearchTerm, dependencyFilters, expandedIds, index]);
 
-  const {
-    visibleNodes,
-    visibleEdges,
-    matchedNodeIds,
-    emphasizedNodeIds,
-    searchMatchCount,
-    collapsedCount,
-    firstMatchedVisibleNodeId,
-    toggleCollapsed,
-    expandAll,
-    collapseAll,
-    resetCollapsed,
-  } = useTreeState(data, resolvedMode, depthFilter, deferredSearchTerm, dependencyFilters);
+  useEffect(() => {
+    setExpandedIds(buildInitialExpandedIds(index));
+    setSelectedNodeId(firstSelectableNode(index)?.id ?? null);
+  }, [index]);
 
   useEffect(() => {
     if (availableModes.includes(activeMode)) {
@@ -82,38 +186,20 @@ export default function App() {
 
   useEffect(() => {
     const searchParams = new URLSearchParams(window.location.search);
-    searchParams.set('depth', String(depthFilter));
     searchParams.set('mode', resolvedMode);
-    const nextQuery = searchParams.toString();
-    window.history.replaceState({}, '', `${window.location.pathname}?${nextQuery}`);
-  }, [depthFilter, resolvedMode]);
+    window.history.replaceState({}, '', `${window.location.pathname}?${searchParams.toString()}`);
+  }, [resolvedMode]);
 
   useEffect(() => {
-    if (!visibleNodes.length) {
+    if (!visibleRows.length) {
       setSelectedNodeId(null);
       return;
     }
 
-    const selectedStillVisible = visibleNodes.some((node) => node.id === selectedNodeId);
-    if (!selectedStillVisible) {
-      setSelectedNodeId(visibleNodes[0]?.id ?? null);
+    if (!selectedNodeId || !visibleRows.some((row) => row.node.id === selectedNodeId)) {
+      setSelectedNodeId(visibleRows[0]?.node.id ?? null);
     }
-  }, [selectedNodeId, visibleNodes]);
-
-  useEffect(() => {
-    if (!deferredSearchTerm || !firstMatchedVisibleNodeId) {
-      return;
-    }
-
-    if (!selectedNodeId || !matchedNodeIds.has(selectedNodeId)) {
-      setSelectedNodeId(firstMatchedVisibleNodeId);
-    }
-  }, [
-    deferredSearchTerm,
-    firstMatchedVisibleNodeId,
-    matchedNodeIds,
-    selectedNodeId,
-  ]);
+  }, [selectedNodeId, visibleRows]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -122,18 +208,8 @@ export default function App() {
         || target instanceof HTMLTextAreaElement
         || target instanceof HTMLSelectElement;
 
-      if (event.key === 'Escape') {
-        setSelectedNodeId(null);
-        return;
-      }
-
-      if (isField) {
-        return;
-      }
-
-      if (event.key.toLowerCase() === 'f') {
-        event.preventDefault();
-        setFitViewNonce((value) => value + 1);
+      if (event.key === 'Escape' && !isField) {
+        setSearchTerm('');
       }
     };
 
@@ -141,107 +217,88 @@ export default function App() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
-  const selectedNode = visibleNodes.find((node) => node.id === selectedNodeId) ?? null;
+  function toggleFolder(nodeId: string) {
+    setExpandedIds((current) => {
+      const next = new Set(current);
+      if (next.has(nodeId)) {
+        next.delete(nodeId);
+      } else {
+        next.add(nodeId);
+      }
+      return next;
+    });
+  }
 
   if (loading) {
     return (
       <main className="app-shell loading-state">
-        <div className="loading-card">
-          <p className="eyebrow">Preparing graph</p>
-          <h1>Scanning project structure…</h1>
-          <p className="muted">Waiting for graph data from the CLI or embedded payload.</p>
-        </div>
+        <section className="loading-panel">
+          <p className="eyebrow">Preparing explorer</p>
+          <h1>Loading project data</h1>
+          <p>Waiting for graph data from the CLI or embedded HTML export.</p>
+        </section>
       </main>
     );
   }
 
   return (
     <main className="app-shell">
-      <div className="ambient ambient-left" />
-      <div className="ambient ambient-right" />
+      <ExplorerToolbar
+        availableModes={availableModes}
+        activeMode={resolvedMode}
+        sourceLabel={SOURCE_LABELS[source]}
+        searchTerm={searchTerm}
+        totalFiles={index.structureGraph?.totalFiles ?? index.dependencyGraph?.totalFiles ?? 0}
+        totalDirs={index.structureGraph?.totalDirs ?? 0}
+        totalImports={index.dependencyGraph?.totalImports ?? 0}
+        circularCount={index.dependencyGraph?.circularCount ?? index.circularNodeIds.size}
+        visibleRows={visibleRows.length}
+        dependencyFilters={dependencyFilters}
+        onModeChange={(nextMode) => {
+          startTransition(() => setActiveMode(nextMode));
+        }}
+        onSearchChange={(nextSearch) => {
+          startTransition(() => setSearchTerm(nextSearch));
+        }}
+        onDependencyFiltersChange={(nextFilters) => {
+          startTransition(() => setDependencyFilters(nextFilters));
+        }}
+      />
 
-      <section className="app-frame">
-        <Toolbar
-          availableModes={availableModes}
-          activeMode={resolvedMode}
-          totalFiles={data?.totalFiles ?? 0}
-          totalDirs={data?.totalDirs ?? 0}
-          totalImports={data?.totalImports ?? 0}
-          circularCount={data?.circularCount ?? 0}
-          visibleNodes={visibleNodes.length}
-          matchCount={searchMatchCount}
-          collapsedCount={collapsedCount}
-          sourceLabel={SOURCE_LABELS[source]}
-          depthFilter={depthFilter}
-          searchTerm={searchTerm}
-          dependencyFilters={dependencyFilters}
-          onModeChange={(nextMode) => {
-            startTransition(() => {
-              setActiveMode(nextMode);
-              setSelectedNodeId(null);
-            });
-          }}
-          onDependencyFiltersChange={(nextFilters) => {
-            startTransition(() => {
-              setDependencyFilters(nextFilters);
-            });
-          }}
-          onDepthChange={(nextDepth) => {
-            startTransition(() => setDepthFilter(nextDepth));
-          }}
-          onSearchChange={(nextSearch) => {
-            startTransition(() => setSearchTerm(nextSearch));
-          }}
-          onClearSearch={() => {
-            startTransition(() => setSearchTerm(''));
-          }}
-          onFitView={() => setFitViewNonce((value) => value + 1)}
-          onExpandAll={() => {
-            startTransition(() => expandAll());
-          }}
-          onCollapseAll={() => {
-            startTransition(() => collapseAll());
-          }}
-          onResetCollapsed={() => {
-            startTransition(() => resetCollapsed());
-          }}
+      <div className="explorer-grid">
+        <FileTreeView
+          rows={visibleRows}
+          selectedNodeId={selectedNodeId}
+          onSelectNode={setSelectedNodeId}
+          onToggleFolder={toggleFolder}
         />
 
-        <div className="content-grid">
-          <section className="graph-panel">
-            <div className="graph-header">
-              <div>
-                <p className="eyebrow">Project root</p>
-                <h2>{data?.projectRoot}</h2>
-              </div>
-              <p className="muted">
-                {visibleNodes.length} visible nodes
-                {' · '}
-                {visibleEdges.length} visible edges
-              </p>
-            </div>
-
-            <GraphView
-              mode={resolvedMode}
-              nodes={visibleNodes}
-              edges={visibleEdges}
-              matchedNodeIds={matchedNodeIds}
-              emphasizedNodeIds={emphasizedNodeIds}
-              selectedNodeId={selectedNodeId}
-              fitViewNonce={fitViewNonce}
-              onSelectNode={setSelectedNodeId}
-              onToggleNode={toggleCollapsed}
-            />
-          </section>
-
-          <SidePanel
+        <div className="center-column">
+          <SelectionPanel
             node={selectedNode}
-            mode={resolvedMode}
-            projectRoot={data?.projectRoot ?? ''}
+            index={index}
+            folderSummary={folderSummary}
+            projectRoot={index.projectRoot}
             error={error}
           />
+          <FocusedGraphPanel
+            node={selectedNode}
+            index={index}
+            folderSummary={folderSummary}
+            filters={dependencyFilters}
+            selectedNodeId={selectedNodeId}
+            onSelectNode={setSelectedNodeId}
+          />
         </div>
-      </section>
+
+        <RelationshipPanel
+          node={selectedNode}
+          index={index}
+          folderSummary={folderSummary}
+          filters={dependencyFilters}
+          onSelectNode={setSelectedNodeId}
+        />
+      </div>
     </main>
   );
 }

@@ -9,7 +9,7 @@ export const sampleGraphData: ExplorerGraphData = {
   totalDirs: 5,
   totalImports: 11,
   circularCount: 0,
-  generatedBy: 'react-dependency-graph@0.3.0',
+  generatedBy: 'react-dependency-graph@0.1.0',
   errors: [],
   nodes: [
     {
