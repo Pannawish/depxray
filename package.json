@@ -1,5 +1,5 @@
 {
-  "name": "react-dependency-graph",
+  "name": "react-dependency-graph-root",
   "private": true,
   "version": "0.1.0",
   "description": "Scan and visualize React project structure graphs — usable as a library, CLI, and AI agent tool.",
@@ -9,7 +9,7 @@
     "packages/web-ui"
   ],
   "scripts": {
-    "build": "npm run build --workspace @rdg/core && npm run build --workspace @rdg/web-ui && npm run build --workspace @rdg/cli",
+    "build": "npm run build --workspace @rdg/core && npm run build --workspace @rdg/web-ui && npm run build --workspace react-dependency-graph",
     "test": "npm run test --workspaces --if-present",
     "clean": "npm run clean --workspaces --if-present",
     "lint": "eslint packages/*/src/**/*.ts"
