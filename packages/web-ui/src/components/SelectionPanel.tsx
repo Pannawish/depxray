@@ -7,6 +7,9 @@ interface SelectionPanelProps {
   folderSummary: FolderSummary | null;
   projectRoot: string;
   error: string | null;
+  onDragStart: () => void;
+  onDrop: () => void;
+  onSwap: () => void;
 }
 
 function formatBytes(value: number | undefined): string {
@@ -40,13 +43,36 @@ export function SelectionPanel({
   folderSummary,
   projectRoot,
   error,
+  onDragStart,
+  onDrop,
+  onSwap,
 }: SelectionPanelProps) {
   if (!node) {
     return (
       <section className="details-panel">
-        <div className="panel-header">
-          <p className="eyebrow">Selection</p>
-          <h2>No file selected</h2>
+        <div 
+          className="panel-header draggable" 
+          draggable
+          onDragStart={onDragStart}
+          onDragOver={(e) => e.preventDefault()} 
+          onDrop={onDrop}
+          style={{ cursor: 'grab' }}
+        >
+          <div className="drag-handle-layout">
+            <div className="drag-handle">⋮⋮</div>
+            <div>
+              <p className="eyebrow">Selection</p>
+              <h2>No file selected</h2>
+            </div>
+          </div>
+          <button 
+            className="swap-layout-btn"
+            onClick={onSwap}
+            title="Swap places with Code Viewer"
+            type="button"
+          >
+            ⇄
+          </button>
         </div>
         {error ? <p className="panel-warning">Using sample data: {error}</p> : null}
       </section>
@@ -59,9 +85,29 @@ export function SelectionPanel({
 
   return (
     <section className="details-panel">
-      <div className="panel-header">
-        <p className="eyebrow">{isDirectory ? 'Folder' : 'File'}</p>
-        <h2>{node.label}</h2>
+      <div 
+        className="panel-header draggable" 
+        draggable
+        onDragStart={onDragStart}
+        onDragOver={(e) => e.preventDefault()} 
+        onDrop={onDrop}
+        style={{ cursor: 'grab' }}
+      >
+        <div className="drag-handle-layout">
+          <div className="drag-handle">⋮⋮</div>
+          <div>
+            <p className="eyebrow">{isDirectory ? 'Folder' : 'File'}</p>
+            <h2>{node.label}</h2>
+          </div>
+        </div>
+        <button 
+          className="swap-layout-btn"
+          onClick={onSwap}
+          title="Swap places with Code Viewer"
+          type="button"
+        >
+          ⇄
+        </button>
       </div>
 
       <div className="badge-row">

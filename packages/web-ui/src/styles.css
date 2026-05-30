@@ -361,11 +361,103 @@ button {
   border-bottom: 1px solid var(--border);
 }
 
+.panel-header.draggable {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+}
+
 .panel-header.inline {
   display: flex;
   justify-content: space-between;
   gap: 12px;
   align-items: center;
+}
+
+.drag-handle-layout {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.drag-handle {
+  cursor: grab;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.95rem;
+  color: var(--muted);
+  user-select: none;
+  font-weight: bold;
+  width: 20px;
+  height: 28px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.drag-handle:hover {
+  background: var(--panel-subtle);
+  color: var(--text);
+}
+
+.drag-handle:active {
+  cursor: grabbing;
+}
+
+.swap-layout-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  transition: all 0.15s;
+  font-size: 0.85rem;
+  font-weight: bold;
+  flex-shrink: 0;
+}
+
+.swap-layout-btn:hover {
+  background: var(--panel-subtle);
+  color: var(--text);
+  border-color: var(--border-strong);
+}
+
+/* Gutter Splitters */
+.resizer.vertical {
+  width: 6px;
+  cursor: col-resize;
+  background: transparent;
+  transition: background 0.15s ease;
+  position: relative;
+  z-index: 10;
+  align-self: stretch;
+}
+
+.resizer.vertical:hover,
+.resizer.vertical:active {
+  background: var(--accent);
+}
+
+.resizer.horizontal {
+  height: 6px;
+  cursor: row-resize;
+  background: transparent;
+  transition: background 0.15s ease;
+  position: relative;
+  z-index: 10;
+}
+
+.resizer.horizontal:hover,
+.resizer.horizontal:active {
+  background: var(--accent);
 }
 
 .tree-rows,

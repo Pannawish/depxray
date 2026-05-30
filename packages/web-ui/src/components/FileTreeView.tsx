@@ -34,8 +34,10 @@ export function FileTreeView({
     return (
       <section className="tree-panel">
         <div className="panel-header">
-          <p className="eyebrow">Project tree</p>
-          <h2>No matching files</h2>
+          <div>
+            <p className="eyebrow">Project tree</p>
+            <h2>No matching files</h2>
+          </div>
         </div>
       </section>
     );
@@ -44,8 +46,10 @@ export function FileTreeView({
   return (
     <section className="tree-panel">
       <div className="panel-header">
-        <p className="eyebrow">Project tree</p>
-        <h2>{rows.length.toLocaleString()} visible paths</h2>
+        <div>
+          <p className="eyebrow">Project tree</p>
+          <h2>{rows.length.toLocaleString()} visible paths</h2>
+        </div>
       </div>
 
       <div className="tree-rows" role="tree">

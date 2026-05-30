@@ -1,4 +1,4 @@
-import { startTransition, useDeferredValue, useEffect, useMemo, useState } from 'react';
+import React, { startTransition, useDeferredValue, useEffect, useMemo, useState } from 'react';
 import { ExplorerToolbar } from './components/ExplorerToolbar.js';
 import { FileTreeView, type FileTreeRowData } from './components/FileTreeView.js';
 import { MillerColumnsPanel } from './components/MillerColumnsPanel.js';
@@ -149,6 +149,91 @@ export default function App() {
   
   const [millerChain, setMillerChain] = useState<string[]>([]);
   const [activeCodeNodeId, setActiveCodeNodeId] = useState<string | null>(null);
+  
+  const [rightColumnOrder, setRightColumnOrder] = useState<('details' | 'code')[]>(['details', 'code']);
+  const [draggedStackType, setDraggedStackType] = useState<'details' | 'code' | null>(null);
+  
+  const [leftWidth, setLeftWidth] = useState<number>(300);
+  const [rightWidth, setRightWidth] = useState<number>(400);
+  const [detailsHeight, setDetailsHeight] = useState<number>(220);
+
+  const handleStackDragStart = (type: 'details' | 'code') => {
+    setDraggedStackType(type);
+  };
+
+  const handleStackDrop = (targetType: 'details' | 'code') => {
+    if (draggedStackType && draggedStackType !== targetType) {
+      setRightColumnOrder(prev => [prev[1], prev[0]]);
+    }
+    setDraggedStackType(null);
+  };
+
+  const swapStackLayout = () => {
+    setRightColumnOrder(prev => [prev[1], prev[0]]);
+  };
+
+  const handleLeftResize = (e: React.MouseEvent) => {
+    e.preventDefault();
+    const startX = e.clientX;
+    const startWidth = leftWidth;
+    
+    const onMouseMove = (moveEvent: MouseEvent) => {
+      const delta = moveEvent.clientX - startX;
+      const newWidth = Math.max(200, Math.min(500, startWidth + delta));
+      setLeftWidth(newWidth);
+    };
+    
+    const onMouseUp = () => {
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+    };
+    
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+  };
+
+  const handleRightResize = (e: React.MouseEvent) => {
+    e.preventDefault();
+    const startX = e.clientX;
+    const startWidth = rightWidth;
+    
+    const onMouseMove = (moveEvent: MouseEvent) => {
+      const delta = moveEvent.clientX - startX;
+      const newWidth = Math.max(300, Math.min(800, startWidth - delta));
+      setRightWidth(newWidth);
+    };
+    
+    const onMouseUp = () => {
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+    };
+    
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+  };
+
+  const handleHeightResize = (e: React.MouseEvent) => {
+    e.preventDefault();
+    const startY = e.clientY;
+    const startHeight = detailsHeight;
+    const isDetailsOnTop = rightColumnOrder[0] === 'details';
+    
+    const onMouseMove = (moveEvent: MouseEvent) => {
+      const delta = moveEvent.clientY - startY;
+      const newHeight = isDetailsOnTop
+        ? Math.max(120, Math.min(500, startHeight + delta))
+        : Math.max(120, Math.min(500, startHeight - delta));
+      setDetailsHeight(newHeight);
+    };
+    
+    const onMouseUp = () => {
+      window.removeEventListener('mousemove', onMouseMove);
+      window.removeEventListener('mouseup', onMouseUp);
+    };
+    
+    window.addEventListener('mousemove', onMouseMove);
+    window.addEventListener('mouseup', onMouseUp);
+  };
 
   const deferredSearchTerm = useDeferredValue(searchTerm);
   const selectedNode = selectedNodeId ? (index.nodeById.get(selectedNodeId) ?? null) : null;
@@ -259,7 +344,13 @@ export default function App() {
         onCircularOnlyChange={setCircularOnly}
       />
 
-      <div className="explorer-grid">
+      <div 
+        className="explorer-grid"
+        style={{
+          gridTemplateColumns: `${leftWidth}px 6px 1fr 6px ${rightWidth}px`
+        }}
+      >
+        {/* Column 1 (Left) - Anchored Explorer */}
         <FileTreeView
           rows={visibleRows}
           selectedNodeId={selectedNodeId}
@@ -267,6 +358,10 @@ export default function App() {
           onToggleFolder={toggleFolder}
         />
 
+        {/* Resizer 1 */}
+        <div className="resizer vertical" onMouseDown={handleLeftResize}></div>
+
+        {/* Column 2 (Center) - Anchored Miller Columns */}
         <div className="center-column">
           <MillerColumnsPanel
             node={selectedNode}
@@ -277,22 +372,67 @@ export default function App() {
           />
         </div>
 
-        <div className="right-column">
-          <SelectionPanel
-            node={activeCodeNode}
-            index={index}
-            folderSummary={folderSummary}
-            projectRoot={index.projectRoot}
-            error={error}
-          />
-          <FileCodeViewer
-            node={activeCodeNode}
-            index={index}
-            onSelectNode={selectAndExpandNode}
-            eligibleTabs={millerChain}
-            activeTabId={activeCodeNodeId}
-            onTabSelect={setActiveCodeNodeId}
-          />
+        {/* Resizer 2 */}
+        <div className="resizer vertical" onMouseDown={handleRightResize}></div>
+
+        {/* Column 3 (Right) - Stacked Details & Code Viewer */}
+        <div 
+          className="right-column-container"
+          style={{ 
+            display: 'grid', 
+            gridTemplateRows: rightColumnOrder[0] === 'details' 
+              ? `${detailsHeight}px 6px 1fr` 
+              : `1fr 6px ${detailsHeight}px`, 
+            height: '100%', 
+            minHeight: 0 
+          }}
+        >
+          {rightColumnOrder.map((type, idx) => {
+            if (type === 'details') {
+              return (
+                <React.Fragment key="details">
+                  <SelectionPanel
+                    node={activeCodeNode}
+                    index={index}
+                    folderSummary={folderSummary}
+                    projectRoot={index.projectRoot}
+                    error={error}
+                    onDragStart={() => handleStackDragStart('details')}
+                    onDrop={() => handleStackDrop('details')}
+                    onSwap={swapStackLayout}
+                  />
+                  {idx === 0 && (
+                    <div 
+                      className="resizer horizontal" 
+                      onMouseDown={handleHeightResize}
+                    ></div>
+                  )}
+                </React.Fragment>
+              );
+            } else {
+              return (
+                <React.Fragment key="code">
+                  <FileCodeViewer
+                    node={activeCodeNode}
+                    index={index}
+                    onSelectNode={selectAndExpandNode}
+                    eligibleTabs={millerChain}
+                    activeTabId={activeCodeNodeId}
+                    onTabSelect={setActiveCodeNodeId}
+                    onDragStart={() => handleStackDragStart('code')}
+                    onDrop={() => handleStackDrop('code')}
+                    onSwap={swapStackLayout}
+                  />
+                  {idx === 0 && (
+                    <div 
+                      className="resizer horizontal" 
+                      onMouseDown={handleHeightResize}
+                    ></div>
+                  )}
+                </React.Fragment>
+              );
+            }
+          })}
         </div>
       </div>
     </main>

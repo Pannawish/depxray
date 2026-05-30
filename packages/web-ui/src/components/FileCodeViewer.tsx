@@ -9,6 +9,9 @@ interface FileCodeViewerProps {
   eligibleTabs: string[];
   activeTabId: string | null;
   onTabSelect: (tabId: string) => void;
+  onDragStart: () => void;
+  onDrop: () => void;
+  onSwap: () => void;
 }
 
 export function FileCodeViewer({
@@ -18,6 +21,9 @@ export function FileCodeViewer({
   eligibleTabs,
   activeTabId,
   onTabSelect,
+  onDragStart,
+  onDrop,
+  onSwap,
 }: FileCodeViewerProps) {
   const [code, setCode] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
@@ -72,9 +78,29 @@ export function FileCodeViewer({
   if (!node) {
     return (
       <section className="code-viewer-panel empty-state">
-        <div className="panel-header">
-          <p className="eyebrow">Source Code</p>
-          <h2>No file selected</h2>
+        <div 
+          className="panel-header draggable" 
+          draggable
+          onDragStart={onDragStart}
+          onDragOver={(e) => e.preventDefault()} 
+          onDrop={onDrop}
+          style={{ cursor: 'grab' }}
+        >
+          <div className="drag-handle-layout">
+            <div className="drag-handle">⋮⋮</div>
+            <div>
+              <p className="eyebrow">Source Code</p>
+              <h2>No file selected</h2>
+            </div>
+          </div>
+          <button 
+            className="swap-layout-btn"
+            onClick={onSwap}
+            title="Swap places with Details Panel"
+            type="button"
+          >
+            ⇄
+          </button>
         </div>
         <div className="code-viewer-content empty">
           <p className="empty-copy">Select a file in the project explorer to view its source code and trace imports.</p>
@@ -116,16 +142,37 @@ export function FileCodeViewer({
 
   return (
     <section className="code-viewer-panel">
-      <div className="panel-header inline">
-        <div>
-          <p className="eyebrow">{node.kind === 'directory' ? 'Folder' : 'Code Viewer'}</p>
-          <h2>{node.label}</h2>
+      <div 
+        className="panel-header inline draggable" 
+        draggable
+        onDragStart={onDragStart}
+        onDragOver={(e) => e.preventDefault()} 
+        onDrop={onDrop}
+        style={{ cursor: 'grab' }}
+      >
+        <div className="drag-handle-layout">
+          <div className="drag-handle">⋮⋮</div>
+          <div>
+            <p className="eyebrow">{node.kind === 'directory' ? 'Folder' : 'Code Viewer'}</p>
+            <h2>{node.label}</h2>
+          </div>
         </div>
-        <span className="code-viewer-stats">
-          {node.kind === 'directory'
-            ? `${index.childrenByParentId.get(node.id)?.length || 0} items`
-            : `${outgoing.length} imports • ${incoming.length} dependents`}
-        </span>
+        
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span className="code-viewer-stats">
+            {node.kind === 'directory'
+              ? `${index.childrenByParentId.get(node.id)?.length || 0} items`
+              : `${outgoing.length} imports • ${incoming.length} dependents`}
+          </span>
+          <button 
+            className="swap-layout-btn"
+            onClick={onSwap}
+            title="Swap places with Details Panel"
+            type="button"
+          >
+            ⇄
+          </button>
+        </div>
       </div>
 
       {eligibleTabs.length > 1 && (
