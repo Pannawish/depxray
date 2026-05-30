@@ -41,6 +41,7 @@ export function SidePanel({ node, mode, projectRoot, error }: SidePanelProps) {
         {node.kind === 'directory' ? (
           <span>{node.collapsed ? 'collapsed' : 'expanded'}</span>
         ) : null}
+        {mode === 'dependencies' && node.isCircular ? <span>circular</span> : null}
         {node.extension ? <span>{node.extension}</span> : null}
       </div>
       <div className="layer-path">
@@ -97,7 +98,7 @@ export function SidePanel({ node, mode, projectRoot, error }: SidePanelProps) {
       <p className="muted panel-footnote">
         {mode === 'structure'
           ? 'Directory nodes can be expanded or collapsed from the graph canvas.'
-          : 'Dependency nodes are sized by import activity and highlighted when they participate in matches or cycles.'}
+          : 'Dependency nodes are sized by import activity; use the toolbar to filter type-only, dynamic, or circular relationships.'}
       </p>
       {error ? <p className="panel-warning">Using sample data: {error}</p> : null}
     </aside>

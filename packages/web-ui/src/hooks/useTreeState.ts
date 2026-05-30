@@ -1,8 +1,15 @@
 import { useEffect, useState } from 'react';
-import type { DepthFilter, ExplorerGraphData, ExplorerGraphNode } from '../types.js';
+import type {
+  DependencyFilters,
+  DepthFilter,
+  ExplorerGraphData,
+  ExplorerGraphEdge,
+  ExplorerGraphNode,
+  GraphMode,
+} from '../types.js';
 
-function buildDefaultCollapsedIds(data: ExplorerGraphData | null): Set<string> {
-  if (!data) {
+function buildDefaultCollapsedIds(data: ExplorerGraphData | null, mode: GraphMode): Set<string> {
+  if (!data || mode !== 'structure') {
     return new Set();
   }
 
@@ -28,6 +35,24 @@ function collectAncestorIds(
   return ancestors;
 }
 
+function collectDependencyNeighborIds(
+  nodeId: string,
+  edges: ExplorerGraphEdge[],
+): string[] {
+  const neighborIds = new Set<string>();
+
+  for (const edge of edges) {
+    if (edge.source === nodeId) {
+      neighborIds.add(edge.target);
+    }
+    if (edge.target === nodeId) {
+      neighborIds.add(edge.source);
+    }
+  }
+
+  return Array.from(neighborIds);
+}
+
 function isVisible(
   node: ExplorerGraphNode,
   parentById: Map<string, string>,
@@ -51,16 +76,18 @@ function isVisible(
 
 export function useTreeState(
   data: ExplorerGraphData | null,
+  mode: GraphMode,
   depthFilter: DepthFilter,
   searchTerm: string,
+  dependencyFilters: DependencyFilters,
 ) {
   const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
   const maxDepth = depthFilter === 'all' ? Number.POSITIVE_INFINITY : depthFilter;
   const normalizedSearch = searchTerm.trim().toLowerCase();
 
   useEffect(() => {
-    setCollapsedIds(buildDefaultCollapsedIds(data));
-  }, [data]);
+    setCollapsedIds(buildDefaultCollapsedIds(data, mode));
+  }, [data, mode]);
 
   if (!data) {
     return {
@@ -80,9 +107,18 @@ export function useTreeState(
   }
 
   const parentById = new Map<string, string>();
-  for (const edge of data.edges) {
-    parentById.set(edge.target, edge.source);
+  if (mode === 'structure') {
+    for (const edge of data.edges) {
+      parentById.set(edge.target, edge.source);
+    }
   }
+
+  const filteredEdges = mode === 'dependencies'
+    ? data.edges.filter((edge) => (
+      (dependencyFilters.showTypeOnlyEdges || !edge.isTypeOnly) &&
+      (dependencyFilters.showDynamicEdges || !edge.isDynamic)
+    ))
+    : data.edges;
 
   const matchedNodeIds = normalizedSearch
     ? new Set(
@@ -96,25 +132,43 @@ export function useTreeState(
     : new Set<string>();
 
   const emphasizedNodeIds = new Set<string>(matchedNodeIds);
+
   for (const nodeId of matchedNodeIds) {
-    for (const ancestorId of collectAncestorIds(nodeId, parentById)) {
-      emphasizedNodeIds.add(ancestorId);
+    if (mode === 'structure') {
+      for (const ancestorId of collectAncestorIds(nodeId, parentById)) {
+        emphasizedNodeIds.add(ancestorId);
+      }
+    } else {
+      for (const neighborId of collectDependencyNeighborIds(nodeId, filteredEdges)) {
+        emphasizedNodeIds.add(neighborId);
+      }
     }
   }
 
+  const circularNodeIds = mode === 'dependencies'
+    ? new Set(
+      data.nodes
+        .filter((node) => node.isCircular)
+        .map((node) => node.id),
+    )
+    : new Set<string>();
+
   const visibleNodes = data.nodes
     .filter((node) => (
-      isVisible(node, parentById, collapsedIds, maxDepth) ||
-      emphasizedNodeIds.has(node.id)
+      node.depth <= maxDepth &&
+      (mode === 'structure'
+        ? isVisible(node, parentById, collapsedIds, maxDepth) || emphasizedNodeIds.has(node.id)
+        : true) &&
+      (!dependencyFilters.circularOnly || circularNodeIds.has(node.id) || emphasizedNodeIds.has(node.id))
     ))
     .map((node) => ({
       ...node,
-      collapsed: collapsedIds.has(node.id),
+      collapsed: mode === 'structure' && collapsedIds.has(node.id),
       hidden: false,
     }));
 
   const visibleNodeIds = new Set(visibleNodes.map((node) => node.id));
-  const visibleEdges = data.edges.filter((edge) => (
+  const visibleEdges = filteredEdges.filter((edge) => (
     visibleNodeIds.has(edge.source) && visibleNodeIds.has(edge.target)
   ));
 
@@ -131,6 +185,10 @@ export function useTreeState(
   ))?.id ?? null;
 
   function toggleCollapsed(nodeId: string) {
+    if (mode !== 'structure') {
+      return;
+    }
+
     setCollapsedIds((current) => {
       const next = new Set(current);
       if (next.has(nodeId)) {
@@ -143,10 +201,17 @@ export function useTreeState(
   }
 
   function expandAll() {
+    if (mode !== 'structure') {
+      return;
+    }
     setCollapsedIds(new Set());
   }
 
   function collapseAll() {
+    if (mode !== 'structure') {
+      return;
+    }
+
     setCollapsedIds(new Set(
       data.nodes
         .filter((node) => node.kind === 'directory' && node.childCount > 0 && node.depth > 0)
@@ -155,7 +220,7 @@ export function useTreeState(
   }
 
   function resetCollapsed() {
-    setCollapsedIds(buildDefaultCollapsedIds(data));
+    setCollapsedIds(buildDefaultCollapsedIds(data, mode));
   }
 
   return {
@@ -165,7 +230,7 @@ export function useTreeState(
     matchedNodeIds: visibleMatchedNodeIds,
     emphasizedNodeIds,
     searchMatchCount: matchedNodeIds.size,
-    collapsedCount: collapsedIds.size,
+    collapsedCount: mode === 'structure' ? collapsedIds.size : 0,
     firstMatchedVisibleNodeId,
     toggleCollapsed,
     expandAll,

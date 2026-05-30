@@ -45,9 +45,27 @@ export interface ExplorerGraphData {
   edges: ExplorerGraphEdge[];
 }
 
+export interface ExplorerGraphSet {
+  schemaVersion: string;
+  generatedBy: string;
+  projectRoot: string;
+  scannedAt: string;
+  availableModes: GraphMode[];
+  defaultMode: GraphMode;
+  graphs: Partial<Record<GraphMode, ExplorerGraphData>>;
+}
+
+export interface DependencyFilters {
+  showTypeOnlyEdges: boolean;
+  showDynamicEdges: boolean;
+  circularOnly: boolean;
+}
+
 declare global {
   interface Window {
     __GRAPH_DATA__?: ExplorerGraphData;
+    __GRAPH_DATA_SET__?: ExplorerGraphSet;
     __RDG_INITIAL_DEPTH__?: DepthFilter;
+    __RDG_INITIAL_MODE__?: GraphMode;
   }
 }

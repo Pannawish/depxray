@@ -8,8 +8,6 @@ import {
   scanFileTree,
   scanProject,
   type FileTreeNode,
-  type GraphEdge as DependencyGraphEdge,
-  type GraphNode as DependencyGraphNode,
   type ScanError,
   type ScanResult,
   type StructureGraph,
@@ -47,6 +45,16 @@ interface ExplorerGraphData {
   errors: ScanError[];
   nodes: ExplorerGraphNode[];
   edges: ExplorerGraphEdge[];
+}
+
+interface ExplorerGraphSet {
+  schemaVersion: string;
+  generatedBy: string;
+  projectRoot: string;
+  scannedAt: string;
+  availableModes: GraphMode[];
+  defaultMode: GraphMode;
+  graphs: Partial<Record<GraphMode, ExplorerGraphData>>;
 }
 
 interface ScanCommandOptions {
@@ -186,6 +194,10 @@ function serializeGraphData(data: ExplorerGraphData): string {
   return JSON.stringify(data, null, 2);
 }
 
+function serializeGraphSet(data: ExplorerGraphSet): string {
+  return JSON.stringify(data, null, 2);
+}
+
 async function ensureDirectory(dirPath: string): Promise<void> {
   await fs.mkdir(dirPath, { recursive: true });
 }
@@ -250,7 +262,7 @@ function normalizeInitialDepth(depth: number | 'all'): string {
 
 async function createStaticExport(
   outputDir: string,
-  graphData: ExplorerGraphData,
+  graphSet: ExplorerGraphSet,
   initialDepth: number | 'all',
 ): Promise<string> {
   const webUiDistDir = await requireWebUiDist();
@@ -258,10 +270,10 @@ async function createStaticExport(
   await ensureDirectory(outputDir);
   await fs.cp(webUiDistDir, outputDir, { recursive: true });
 
-  const graphDataJson = serializeGraphData(graphData);
+  const graphSetJson = serializeGraphSet(graphSet);
   await fs.writeFile(
     path.join(outputDir, 'graph-data.json'),
-    graphDataJson,
+    graphSetJson,
     'utf-8',
   );
 
@@ -269,7 +281,7 @@ async function createStaticExport(
   const originalIndex = await fs.readFile(indexPath, 'utf-8');
   const injectedIndex = originalIndex.replace(
     '</body>',
-    `    <script>window.__GRAPH_DATA__ = ${graphDataJson}; window.__RDG_INITIAL_DEPTH__ = ${JSON.stringify(normalizeInitialDepth(initialDepth))};</script>\n  </body>`,
+    `    <script>window.__GRAPH_DATA_SET__ = ${graphSetJson}; window.__RDG_INITIAL_DEPTH__ = ${JSON.stringify(normalizeInitialDepth(initialDepth))}; window.__RDG_INITIAL_MODE__ = ${JSON.stringify(graphSet.defaultMode)};</script>\n  </body>`,
   );
   await fs.writeFile(indexPath, injectedIndex, 'utf-8');
 
@@ -320,14 +332,14 @@ async function readStaticAsset(
 
 async function startGraphServer(
   rootDir: string,
-  tree: FileTreeNode | null,
-  graphData: ExplorerGraphData,
+  tree: FileTreeNode,
+  graphSet: ExplorerGraphSet,
   port: number,
   initialDepth: number | 'all',
 ): Promise<void> {
   const distDir = await requireWebUiDist();
-  const treeJson = tree ? JSON.stringify(tree, null, 2) : null;
-  const graphDataJson = serializeGraphData(graphData);
+  const treeJson = JSON.stringify(tree, null, 2);
+  const graphSetJson = serializeGraphSet(graphSet);
   const initialDepthValue = normalizeInitialDepth(initialDepth);
 
   const server = http.createServer(async (req, res) => {
@@ -335,19 +347,27 @@ async function startGraphServer(
     const requestPath = requestUrl.pathname;
 
     try {
-      if (requestPath === '/api/graph-data') {
+      if (requestPath === '/api/graph-set') {
         res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' });
-        res.end(graphDataJson);
+        res.end(graphSetJson);
+        return;
+      }
+
+      if (requestPath === '/api/graph-data') {
+        const requestedMode = parseMode(requestUrl.searchParams.get('mode') ?? graphSet.defaultMode);
+        const graphData = graphSet.graphs[requestedMode];
+        if (!graphData) {
+          res.writeHead(404, { 'content-type': 'text/plain; charset=utf-8' });
+          res.end(`Graph mode not available: ${requestedMode}`);
+          return;
+        }
+
+        res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' });
+        res.end(serializeGraphData(graphData));
         return;
       }
 
       if (requestPath === '/api/tree') {
-        if (!treeJson) {
-          res.writeHead(404, { 'content-type': 'text/plain; charset=utf-8' });
-          res.end('Tree data is only available in structure mode.');
-          return;
-        }
-
         res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' });
         res.end(treeJson);
         return;
@@ -358,7 +378,7 @@ async function startGraphServer(
         const originalIndex = await fs.readFile(indexPath, 'utf-8');
         const indexHtml = originalIndex.replace(
           '</body>',
-          `    <script>window.__RDG_INITIAL_DEPTH__ = ${JSON.stringify(initialDepthValue)};</script>\n  </body>`,
+          `    <script>window.__RDG_INITIAL_DEPTH__ = ${JSON.stringify(initialDepthValue)}; window.__RDG_INITIAL_MODE__ = ${JSON.stringify(graphSet.defaultMode)};</script>\n  </body>`,
         );
         res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
         res.end(indexHtml);
@@ -386,7 +406,7 @@ async function startGraphServer(
     server.listen(port, '127.0.0.1', () => resolve());
   });
 
-  const url = `http://127.0.0.1:${port}?depth=${encodeURIComponent(initialDepthValue)}`;
+  const url = `http://127.0.0.1:${port}?depth=${encodeURIComponent(initialDepthValue)}&mode=${encodeURIComponent(graphSet.defaultMode)}`;
   process.stderr.write(`Serving ${rootDir}\n`);
   process.stderr.write(`Opening ${url}\n`);
 
@@ -402,10 +422,10 @@ async function startGraphServer(
   process.once('SIGTERM', shutdown);
 }
 
-async function buildGraphData(
+async function buildSelectedGraphData(
   rootDir: string,
   options: ScanCommandOptions,
-): Promise<{ tree: FileTreeNode | null; graphData: ExplorerGraphData }> {
+): Promise<ExplorerGraphData> {
   const mode = parseMode(options.mode);
 
   if (mode === 'structure') {
@@ -413,10 +433,7 @@ async function buildGraphData(
       ignorePatterns: options.ignore,
     });
     const structureGraph = buildStructureGraph(tree);
-    return {
-      tree,
-      graphData: toStructureGraphData(structureGraph),
-    };
+    return toStructureGraphData(structureGraph);
   }
 
   const result = await scanProject({
@@ -427,9 +444,43 @@ async function buildGraphData(
     extensions: options.extensions,
   });
 
+  return toDependencyGraphData(result);
+}
+
+async function buildGraphSet(
+  rootDir: string,
+  options: ScanCommandOptions,
+): Promise<{ tree: FileTreeNode; graphSet: ExplorerGraphSet }> {
+  const tree = await scanFileTree(rootDir, {
+    ignorePatterns: options.ignore,
+  });
+  const structureGraph = buildStructureGraph(tree);
+  const dependencyResult = await scanProject({
+    rootDir,
+    ignorePatterns: options.ignore,
+    detectCircular: options.circular !== false,
+    resolveAliases: options.aliases !== false,
+    extensions: options.extensions,
+  });
+
+  const structureData = toStructureGraphData(structureGraph);
+  const dependencyData = toDependencyGraphData(dependencyResult);
+  const defaultMode = parseMode(options.mode);
+
   return {
-    tree: null,
-    graphData: toDependencyGraphData(result),
+    tree,
+    graphSet: {
+      schemaVersion: EXPORT_SCHEMA_VERSION,
+      generatedBy: getGeneratedBy(),
+      projectRoot: rootDir,
+      scannedAt: new Date().toISOString(),
+      availableModes: ['structure', 'dependencies'],
+      defaultMode,
+      graphs: {
+        structure: structureData,
+        dependencies: dependencyData,
+      },
+    },
   };
 }
 
@@ -472,9 +523,8 @@ export function createScanCommand(): Command {
         await verifyDirectory(rootDir);
         process.stderr.write(`Scanning ${rootDir}...\n`);
 
-        const { tree, graphData } = await buildGraphData(rootDir, rawOptions);
-
         if (rawOptions.json) {
+          const graphData = await buildSelectedGraphData(rootDir, rawOptions);
           const output = serializeGraphData(graphData);
           if (rawOptions.output) {
             const outputPath = path.resolve(rawOptions.output);
@@ -488,15 +538,17 @@ export function createScanCommand(): Command {
         }
 
         if (rawOptions.html) {
+          const { graphSet } = await buildGraphSet(rootDir, rawOptions);
           const outputDir = path.join(rootDir, '.react-dependency-graph');
-          const indexPath = await createStaticExport(outputDir, graphData, initialDepth);
+          const indexPath = await createStaticExport(outputDir, graphSet, initialDepth);
           process.stderr.write(`Static export written to ${indexPath}\n`);
           return;
         }
 
-        await startGraphServer(rootDir, tree, graphData, port, initialDepth);
+        const { tree, graphSet } = await buildGraphSet(rootDir, rawOptions);
+        await startGraphServer(rootDir, tree, graphSet, port, initialDepth);
         if (rawOptions.open !== false) {
-          const url = `http://127.0.0.1:${port}?depth=${encodeURIComponent(normalizeInitialDepth(initialDepth))}`;
+          const url = `http://127.0.0.1:${port}?depth=${encodeURIComponent(normalizeInitialDepth(initialDepth))}&mode=${encodeURIComponent(graphSet.defaultMode)}`;
           await openBrowser(url);
         }
 

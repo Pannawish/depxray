@@ -75,10 +75,13 @@ describe('CLI Integration Tests', () => {
       const graphData = JSON.parse(await fs.readFile(graphDataPath, 'utf-8'));
       
       expect(stderr).toContain(`Static export written to ${indexPath}`);
-      expect(indexHtml).toContain('window.__GRAPH_DATA__ =');
+      expect(indexHtml).toContain('window.__GRAPH_DATA_SET__ =');
       expect(indexHtml).toContain('window.__RDG_INITIAL_DEPTH__ = "3"');
-      expect(graphData.mode).toBe('structure');
-      expect(graphData.totalFiles).toBe(8);
+      expect(indexHtml).toContain('window.__RDG_INITIAL_MODE__ = "structure"');
+      expect(graphData.defaultMode).toBe('structure');
+      expect(graphData.availableModes).toEqual(['structure', 'dependencies']);
+      expect(graphData.graphs.structure.totalFiles).toBe(8);
+      expect(graphData.graphs.dependencies.totalImports).toBeGreaterThanOrEqual(8);
     });
 
     it('should respect --ignore flag for structure JSON', async () => {
@@ -141,8 +144,9 @@ describe('CLI Integration Tests', () => {
       const graphData = JSON.parse(
         await fs.readFile(path.join(outputDir, 'graph-data.json'), 'utf-8'),
       );
-      expect(graphData.mode).toBe('dependencies');
-      expect(graphData.totalImports).toBeGreaterThanOrEqual(8);
+      expect(graphData.defaultMode).toBe('dependencies');
+      expect(graphData.graphs.dependencies.totalImports).toBeGreaterThanOrEqual(8);
+      expect(graphData.graphs.structure.totalFiles).toBe(8);
     });
 
   });

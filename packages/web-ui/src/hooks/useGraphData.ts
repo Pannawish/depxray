@@ -1,17 +1,31 @@
 import { useEffect, useState } from 'react';
-import { sampleGraphData } from '../mockData.js';
-import type { ExplorerGraphData } from '../types.js';
+import { sampleGraphData, sampleGraphSet } from '../mockData.js';
+import type { ExplorerGraphData, ExplorerGraphSet } from '../types.js';
 
 interface GraphDataState {
-  data: ExplorerGraphData | null;
+  dataSet: ExplorerGraphSet | null;
   loading: boolean;
   error: string | null;
   source: 'window' | 'http' | 'sample';
 }
 
+function toGraphSet(data: ExplorerGraphData): ExplorerGraphSet {
+  return {
+    schemaVersion: data.schemaVersion,
+    generatedBy: data.generatedBy,
+    projectRoot: data.projectRoot,
+    scannedAt: data.scannedAt,
+    availableModes: [data.mode],
+    defaultMode: data.mode,
+    graphs: {
+      [data.mode]: data,
+    },
+  };
+}
+
 export function useGraphData(): GraphDataState {
   const [state, setState] = useState<GraphDataState>({
-    data: null,
+    dataSet: null,
     loading: true,
     error: null,
     source: 'sample',
@@ -21,10 +35,22 @@ export function useGraphData(): GraphDataState {
     let cancelled = false;
 
     async function loadGraphData() {
+      if (window.__GRAPH_DATA_SET__) {
+        if (!cancelled) {
+          setState({
+            dataSet: window.__GRAPH_DATA_SET__,
+            loading: false,
+            error: null,
+            source: 'window',
+          });
+        }
+        return;
+      }
+
       if (window.__GRAPH_DATA__) {
         if (!cancelled) {
           setState({
-            data: window.__GRAPH_DATA__,
+            dataSet: toGraphSet(window.__GRAPH_DATA__),
             loading: false,
             error: null,
             source: 'window',
@@ -34,15 +60,29 @@ export function useGraphData(): GraphDataState {
       }
 
       try {
-        const response = await fetch('/api/graph-data');
+        const response = await fetch('/api/graph-set');
         if (!response.ok) {
-          throw new Error(`Request failed with status ${response.status}`);
+          const legacyResponse = await fetch('/api/graph-data');
+          if (!legacyResponse.ok) {
+            throw new Error(`Request failed with status ${response.status}`);
+          }
+
+          const legacyData = await legacyResponse.json() as ExplorerGraphData;
+          if (!cancelled) {
+            setState({
+              dataSet: toGraphSet(legacyData),
+              loading: false,
+              error: null,
+              source: 'http',
+            });
+          }
+          return;
         }
 
-        const data = await response.json() as ExplorerGraphData;
+        const data = await response.json() as ExplorerGraphSet;
         if (!cancelled) {
           setState({
-            data,
+            dataSet: data,
             loading: false,
             error: null,
             source: 'http',
@@ -51,7 +91,7 @@ export function useGraphData(): GraphDataState {
       } catch (err) {
         if (!cancelled) {
           setState({
-            data: sampleGraphData,
+            dataSet: sampleGraphSet,
             loading: false,
             error: (err as Error).message,
             source: 'sample',

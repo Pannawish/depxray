@@ -1,7 +1,9 @@
 import { SearchBox } from './SearchBox.js';
-import type { DepthFilter, GraphMode } from '../types.js';
+import type { DependencyFilters, DepthFilter, GraphMode } from '../types.js';
 
 interface ToolbarProps {
+  availableModes: GraphMode[];
+  activeMode: GraphMode;
   totalFiles: number;
   totalDirs: number;
   totalImports: number;
@@ -9,10 +11,12 @@ interface ToolbarProps {
   visibleNodes: number;
   matchCount: number;
   collapsedCount: number;
-  mode: GraphMode;
   sourceLabel: string;
   depthFilter: DepthFilter;
   searchTerm: string;
+  dependencyFilters: DependencyFilters;
+  onModeChange: (nextMode: GraphMode) => void;
+  onDependencyFiltersChange: (nextFilters: DependencyFilters) => void;
   onDepthChange: (nextDepth: DepthFilter) => void;
   onSearchChange: (nextSearch: string) => void;
   onClearSearch: () => void;
@@ -23,6 +27,8 @@ interface ToolbarProps {
 }
 
 export function Toolbar({
+  availableModes,
+  activeMode,
   totalFiles,
   totalDirs,
   totalImports,
@@ -30,10 +36,12 @@ export function Toolbar({
   visibleNodes,
   matchCount,
   collapsedCount,
-  mode,
   sourceLabel,
   depthFilter,
   searchTerm,
+  dependencyFilters,
+  onModeChange,
+  onDependencyFiltersChange,
   onDepthChange,
   onSearchChange,
   onClearSearch,
@@ -42,11 +50,13 @@ export function Toolbar({
   onCollapseAll,
   onResetCollapsed,
 }: ToolbarProps) {
+  const dependencyMode = activeMode === 'dependencies';
+
   return (
     <header className="toolbar-shell">
       <div>
         <p className="eyebrow">
-          {mode === 'structure' ? 'Local structure graph' : 'Dependency graph mode'}
+          {dependencyMode ? 'Dependency graph mode' : 'Local structure graph'}
         </p>
         <h1>React Dependency Graph</h1>
         <p className="toolbar-hint">Press <kbd>F</kbd> to fit the view and <kbd>Esc</kbd> to deselect.</p>
@@ -55,8 +65,8 @@ export function Toolbar({
       <div className="toolbar-stats">
         <span>{totalDirs} dirs</span>
         <span>{totalFiles} files</span>
-        {mode === 'dependencies' ? <span>{totalImports} imports</span> : null}
-        {mode === 'dependencies' ? <span>{circularCount} circular</span> : null}
+        {dependencyMode ? <span>{totalImports} imports</span> : null}
+        {dependencyMode ? <span>{circularCount} circular</span> : null}
         <span>{visibleNodes} visible</span>
         <span>{collapsedCount} collapsed</span>
         {searchTerm ? <span>{matchCount} matches</span> : null}
@@ -64,6 +74,22 @@ export function Toolbar({
       </div>
 
       <div className="toolbar-controls">
+        <div className="toolbar-mode-group" role="tablist" aria-label="Graph mode">
+          {availableModes.map((availableMode) => (
+            <button
+              key={availableMode}
+              className={[
+                'toolbar-chip-button',
+                activeMode === availableMode ? 'active' : '',
+              ].filter(Boolean).join(' ')}
+              onClick={() => onModeChange(availableMode)}
+              type="button"
+            >
+              {availableMode === 'structure' ? 'Structure' : 'Dependencies'}
+            </button>
+          ))}
+        </div>
+
         <label className="toolbar-select">
           <span>Depth</span>
           <select
@@ -89,21 +115,89 @@ export function Toolbar({
           onClear={onClearSearch}
         />
 
+        {dependencyMode ? (
+          <div className="toolbar-filter-group">
+            <label className="toolbar-check">
+              <input
+                checked={dependencyFilters.showTypeOnlyEdges}
+                onChange={(event) => {
+                  onDependencyFiltersChange({
+                    ...dependencyFilters,
+                    showTypeOnlyEdges: event.target.checked,
+                  });
+                }}
+                type="checkbox"
+              />
+              <span>Type-only</span>
+            </label>
+            <label className="toolbar-check">
+              <input
+                checked={dependencyFilters.showDynamicEdges}
+                onChange={(event) => {
+                  onDependencyFiltersChange({
+                    ...dependencyFilters,
+                    showDynamicEdges: event.target.checked,
+                  });
+                }}
+                type="checkbox"
+              />
+              <span>Dynamic</span>
+            </label>
+            <label className="toolbar-check">
+              <input
+                checked={dependencyFilters.circularOnly}
+                onChange={(event) => {
+                  onDependencyFiltersChange({
+                    ...dependencyFilters,
+                    circularOnly: event.target.checked,
+                  });
+                }}
+                type="checkbox"
+              />
+              <span>Cycles only</span>
+            </label>
+          </div>
+        ) : null}
+
         <div className="toolbar-action-group">
           <button className="toolbar-button" onClick={onFitView} type="button">
             Fit view
           </button>
-          <button className="toolbar-button" onClick={onExpandAll} type="button">
+          <button
+            className="toolbar-button"
+            disabled={dependencyMode}
+            onClick={onExpandAll}
+            type="button"
+          >
             Expand all
           </button>
-          <button className="toolbar-button" onClick={onCollapseAll} type="button">
+          <button
+            className="toolbar-button"
+            disabled={dependencyMode}
+            onClick={onCollapseAll}
+            type="button"
+          >
             Collapse all
           </button>
-          <button className="toolbar-button subtle" onClick={onResetCollapsed} type="button">
+          <button
+            className="toolbar-button subtle"
+            disabled={dependencyMode}
+            onClick={onResetCollapsed}
+            type="button"
+          >
             Auto collapse
           </button>
         </div>
       </div>
+
+      {dependencyMode ? (
+        <div className="toolbar-legend">
+          <span><i className="legend-swatch standard" /> Standard import</span>
+          <span><i className="legend-swatch type-only" /> Type-only import</span>
+          <span><i className="legend-swatch dynamic" /> Dynamic import</span>
+          <span><i className="legend-swatch circular" /> Circular participant</span>
+        </div>
+      ) : null}
     </header>
   );
 }

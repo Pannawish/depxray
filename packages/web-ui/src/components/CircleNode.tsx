@@ -25,6 +25,7 @@ export function CircleNode({ data }: NodeProps<CircleNodeData>) {
       className={[
         'circle-node',
         isDirectory ? 'directory' : 'file',
+        node.isCircular ? 'circular' : '',
         selected ? 'selected' : '',
         matched ? 'matched' : '',
         emphasized ? 'emphasized' : '',

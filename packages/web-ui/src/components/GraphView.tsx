@@ -86,7 +86,7 @@ export function GraphView({
       padding: 0.2,
       duration: 280,
     });
-  }, [fitViewNonce, flowInstance]);
+  }, [edges.length, fitViewNonce, flowInstance, mode, nodes.length]);
 
   const flowNodes: Node[] = nodes.map((node) => {
     const position = graph.node(node.id);
@@ -126,7 +126,7 @@ export function GraphView({
           ? '#7b7aac'
           : emphasized
             ? '#26445e'
-            : '#6f7f90'
+            : '#5f7385'
       : emphasized
         ? '#26445e'
         : '#6f7f90';
@@ -182,6 +182,8 @@ export function GraphView({
                 ? '#c5ced3'
                 : matchedNodeIds.has(node.id)
                   ? '#ef8a16'
+                  : (nodes.find((item) => item.id === node.id)?.isCircular)
+                    ? '#c94d3f'
                   : '#3d8bfd'
           )}
           maskColor="rgba(250, 244, 233, 0.62)"

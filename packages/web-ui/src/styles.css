@@ -146,6 +146,18 @@ kbd {
   justify-content: flex-end;
 }
 
+.toolbar-mode-group,
+.toolbar-filter-group,
+.toolbar-legend {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.toolbar-mode-group {
+  align-items: center;
+}
+
 .toolbar-select,
 .toolbar-search {
   display: grid;
@@ -176,7 +188,8 @@ kbd {
 }
 
 .search-clear-button,
-.toolbar-button {
+.toolbar-button,
+.toolbar-chip-button {
   padding: 10px 14px;
   border: 1px solid rgba(19, 41, 61, 0.1);
   border-radius: 14px;
@@ -190,20 +203,77 @@ kbd {
 }
 
 .search-clear-button:hover,
-.toolbar-button:hover {
+.toolbar-button:hover,
+.toolbar-chip-button:hover {
   transform: translateY(-1px);
   background: rgba(255, 255, 255, 0.96);
   border-color: rgba(19, 41, 61, 0.2);
+}
+
+.toolbar-button:disabled,
+.toolbar-chip-button:disabled {
+  cursor: default;
+  opacity: 0.45;
+  transform: none;
+}
+
+.toolbar-chip-button.active {
+  background: #13293d;
+  color: #fff9ef;
+  border-color: #13293d;
 }
 
 .toolbar-button.subtle {
   color: #52606b;
 }
 
+.toolbar-check {
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgba(19, 41, 61, 0.04);
+  color: #485764;
+}
+
+.toolbar-check input {
+  accent-color: #13293d;
+}
+
 .toolbar-action-group {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
+}
+
+.toolbar-legend {
+  grid-column: 1 / -1;
+  padding-top: 4px;
+  color: #54626f;
+  font-size: 0.86rem;
+}
+
+.legend-swatch {
+  display: inline-block;
+  width: 18px;
+  height: 0;
+  margin-right: 6px;
+  vertical-align: middle;
+  border-top: 3px solid #5f7385;
+}
+
+.legend-swatch.type-only {
+  border-top-color: #7b7aac;
+  border-top-style: dashed;
+}
+
+.legend-swatch.dynamic {
+  border-top-color: #da7c1b;
+}
+
+.legend-swatch.circular {
+  border-top-color: #c94d3f;
 }
 
 .content-grid {
@@ -345,6 +415,11 @@ kbd {
   border-color: rgba(255, 166, 77, 0.35);
 }
 
+.circle-node.circular {
+  border-color: rgba(201, 77, 63, 0.6);
+  box-shadow: 0 0 0 4px rgba(201, 77, 63, 0.08), 0 10px 24px rgba(19, 41, 61, 0.08);
+}
+
 .circle-node.selected {
   transform: translateY(-2px);
   border-color: #13293d;
@@ -415,7 +490,9 @@ kbd {
   }
 
   .search-input-shell,
-  .toolbar-action-group {
+  .toolbar-action-group,
+  .toolbar-mode-group,
+  .toolbar-filter-group {
     width: 100%;
   }
 }

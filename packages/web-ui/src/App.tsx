@@ -4,7 +4,7 @@ import { SidePanel } from './components/SidePanel.js';
 import { Toolbar } from './components/Toolbar.js';
 import { useGraphData } from './hooks/useGraphData.js';
 import { useTreeState } from './hooks/useTreeState.js';
-import type { DepthFilter } from './types.js';
+import type { DependencyFilters, DepthFilter, GraphMode } from './types.js';
 
 const SOURCE_LABELS = {
   window: 'embedded data',
@@ -30,13 +30,33 @@ function readInitialDepth(): DepthFilter {
   return 2;
 }
 
+function readInitialMode(): GraphMode {
+  const searchParams = new URLSearchParams(window.location.search);
+  const queryMode = searchParams.get('mode');
+  const embeddedMode = window.__RDG_INITIAL_MODE__;
+  const rawMode = queryMode ?? embeddedMode ?? 'structure';
+
+  return rawMode === 'dependencies' ? 'dependencies' : 'structure';
+}
+
+const DEFAULT_DEPENDENCY_FILTERS: DependencyFilters = {
+  showTypeOnlyEdges: true,
+  showDynamicEdges: true,
+  circularOnly: false,
+};
+
 export default function App() {
-  const { data, loading, error, source } = useGraphData();
+  const { dataSet, loading, error, source } = useGraphData();
   const [depthFilter, setDepthFilter] = useState<DepthFilter>(() => readInitialDepth());
   const [searchTerm, setSearchTerm] = useState('');
+  const [activeMode, setActiveMode] = useState<GraphMode>(() => readInitialMode());
+  const [dependencyFilters, setDependencyFilters] = useState<DependencyFilters>(DEFAULT_DEPENDENCY_FILTERS);
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const [fitViewNonce, setFitViewNonce] = useState(0);
   const deferredSearchTerm = useDeferredValue(searchTerm);
+  const availableModes = dataSet?.availableModes ?? ['structure'];
+  const resolvedMode = availableModes.includes(activeMode) ? activeMode : (dataSet?.defaultMode ?? 'structure');
+  const data = dataSet?.graphs[resolvedMode] ?? null;
 
   const {
     visibleNodes,
@@ -50,7 +70,23 @@ export default function App() {
     expandAll,
     collapseAll,
     resetCollapsed,
-  } = useTreeState(data, depthFilter, deferredSearchTerm);
+  } = useTreeState(data, resolvedMode, depthFilter, deferredSearchTerm, dependencyFilters);
+
+  useEffect(() => {
+    if (availableModes.includes(activeMode)) {
+      return;
+    }
+
+    setActiveMode(dataSet?.defaultMode ?? 'structure');
+  }, [activeMode, availableModes, dataSet?.defaultMode]);
+
+  useEffect(() => {
+    const searchParams = new URLSearchParams(window.location.search);
+    searchParams.set('depth', String(depthFilter));
+    searchParams.set('mode', resolvedMode);
+    const nextQuery = searchParams.toString();
+    window.history.replaceState({}, '', `${window.location.pathname}?${nextQuery}`);
+  }, [depthFilter, resolvedMode]);
 
   useEffect(() => {
     if (!visibleNodes.length) {
@@ -126,6 +162,8 @@ export default function App() {
 
       <section className="app-frame">
         <Toolbar
+          availableModes={availableModes}
+          activeMode={resolvedMode}
           totalFiles={data?.totalFiles ?? 0}
           totalDirs={data?.totalDirs ?? 0}
           totalImports={data?.totalImports ?? 0}
@@ -133,10 +171,21 @@ export default function App() {
           visibleNodes={visibleNodes.length}
           matchCount={searchMatchCount}
           collapsedCount={collapsedCount}
-          mode={data?.mode ?? 'structure'}
           sourceLabel={SOURCE_LABELS[source]}
           depthFilter={depthFilter}
           searchTerm={searchTerm}
+          dependencyFilters={dependencyFilters}
+          onModeChange={(nextMode) => {
+            startTransition(() => {
+              setActiveMode(nextMode);
+              setSelectedNodeId(null);
+            });
+          }}
+          onDependencyFiltersChange={(nextFilters) => {
+            startTransition(() => {
+              setDependencyFilters(nextFilters);
+            });
+          }}
           onDepthChange={(nextDepth) => {
             startTransition(() => setDepthFilter(nextDepth));
           }}
@@ -173,7 +222,7 @@ export default function App() {
             </div>
 
             <GraphView
-              mode={data?.mode ?? 'structure'}
+              mode={resolvedMode}
               nodes={visibleNodes}
               edges={visibleEdges}
               matchedNodeIds={matchedNodeIds}
@@ -187,7 +236,7 @@ export default function App() {
 
           <SidePanel
             node={selectedNode}
-            mode={data?.mode ?? 'structure'}
+            mode={resolvedMode}
             projectRoot={data?.projectRoot ?? ''}
             error={error}
           />

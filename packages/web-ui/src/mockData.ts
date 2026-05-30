@@ -1,4 +1,4 @@
-import type { ExplorerGraphData } from './types.js';
+import type { ExplorerGraphData, ExplorerGraphSet } from './types.js';
 
 export const sampleGraphData: ExplorerGraphData = {
   schemaVersion: '1.0.0',
@@ -244,4 +244,16 @@ export const sampleGraphData: ExplorerGraphData = {
       kind: 'structure',
     },
   ],
+};
+
+export const sampleGraphSet: ExplorerGraphSet = {
+  schemaVersion: sampleGraphData.schemaVersion,
+  generatedBy: sampleGraphData.generatedBy,
+  projectRoot: sampleGraphData.projectRoot,
+  scannedAt: sampleGraphData.scannedAt,
+  availableModes: ['structure'],
+  defaultMode: 'structure',
+  graphs: {
+    structure: sampleGraphData,
+  },
 };
