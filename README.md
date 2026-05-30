@@ -1,4 +1,4 @@
-# ⚛️ depxray
+# depxray (Dependency X-Ray)
 
 > A static analyzer and interactive explorer for JavaScript and TypeScript codebases, with support for React projects. Map imports, discover circular dependencies, and visualize your code structure from the command line or in the browser.
 
@@ -14,7 +14,7 @@ It also supports CLI-only execution, with versioned JSON output for **AI coding 
 
 ---
 
-## 🚀 How to Use It (Quick Start)
+## How to Use It (Quick Start)
 
 You can run `depxray` immediately on any JavaScript or TypeScript project without installing it using `npx`:
 
@@ -41,34 +41,34 @@ depxray scan
 
 ---
 
-## ✨ Features
+## Features
 
-- 📂 **Dual Visual Modes**:
+- **Dual Visual Modes**:
   - **Structure Mode**: A structure explorer that represents directories and files as nested columns with file details, sizing metrics, and an inline code viewer.
   - **Dependency Mode**: An interactive module graph visualization (powered by React Flow) mapping how files import one another.
-- 🔴 **Circular Loop Detection**: Scans for and highlights circular dependency chains in your code.
-- ⇄ **Customizable Workspace Layout**:
+- **Circular Loop Detection**: Scans for and highlights circular dependency chains in your code.
+- **Customizable Workspace Layout**:
   - **Horizontal Column Swapping**: Toggle or drag-and-drop the left Project Explorer and right panel columns to match your visual preference.
   - **Vertical Panel Swapping**: Flip the Selection Details panel and the Source Code viewer vertically using header grab-handles (`⋮⋮`) or swap buttons (`⇅`).
   - **Fluid Sizing Splitters**: Resize panels dynamically with draggable splitters.
-- 🔍 **Interactive Code Viewer**: Read code directly inside the graph explorer with syntax highlighting.
-- ⚡ **AI-Agent and CLI Friendly**: Outputs raw, versioned JSON graphs to standard output or outputs standalone zero-dependency static HTML bundles (`--html`) to host anywhere.
+- **Interactive Code Viewer**: Read code directly inside the graph explorer with syntax highlighting.
+- **AI-Agent and CLI Friendly**: Outputs raw, versioned JSON graphs to standard output or outputs standalone zero-dependency static HTML bundles (`--html`) to host anywhere.
 
 ---
 
-## 📦 Monorepo Architecture
+## Monorepo Architecture
 
 This project is organized as a TypeScript monorepo with three core workspaces:
 
 | Workspace | Package Name | Role | Status |
 |:---|:---|:---|:---|
-| [`packages/core`](./packages/core) | `@depxray/core` | Core platform-agnostic scanner. Uses TypeScript AST compiler APIs to extract imports, map dependencies, and detect circular loops. | ✅ Core Engine |
-| [`packages/web-ui`](./packages/web-ui) | `@depxray/web-ui` | React dashboard built with React Flow, multiple layouts, and an interactive file code viewer. | ✅ Visual client |
-| [`packages/cli`](./packages/cli) | `depxray` | Publicly publishable binary bundle. It compiles all packages into a single-file, zero-dependency engine with the static Web UI fully embedded inside. | ✅ Single-file CLI |
+| [`packages/core`](./packages/core) | `@depxray/core` | Core platform-agnostic scanner. Uses TypeScript AST compiler APIs to extract imports, map dependencies, and detect circular loops. | Core Engine |
+| [`packages/web-ui`](./packages/web-ui) | `@depxray/web-ui` | React dashboard built with React Flow, multiple layouts, and an interactive file code viewer. | Visual client |
+| [`packages/cli`](./packages/cli) | `depxray` | Publicly publishable binary bundle. It compiles all packages into a single-file, zero-dependency engine with the static Web UI fully embedded inside. | Single-file CLI |
 
 ---
 
-## 📖 Documentation
+## Documentation
 
 - **[CLI Reference Guide](./docs/cli.md)**: Detailed explanations of all `scan` and `inspect` commands, arguments, option tables, and format outputs.
 - **[Development & Contribution Guide](./docs/development.md)**: Local developer setup instructions, build steps, workspace management, and packaging pipeline highlights.

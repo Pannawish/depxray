@@ -1,4 +1,4 @@
-# depxray
+# depxray (Dependency X-Ray)
 
 Analyze JavaScript and TypeScript codebases with an interactive dependency graph and structure explorer.
 
