@@ -1,183 +1,72 @@
 // ============================================================================
 // React Dependency Graph — VS Code Extension Entry Point
 // ============================================================================
-// This is the main activation entry point for the VS Code extension.
-// It registers commands, the tree view provider, and handles webview panels.
-//
-// Architecture:
-//   - This file only does VS Code-specific wiring (commands, UI, events)
-//   - All scanning logic lives in @rdg/core (platform-agnostic)
-//   - The webview graph UI will be added in v0.5
+// This is a thin wiring layer. All business logic lives in:
+//   - ScanManager     — scan orchestration + shared state
+//   - commands.ts     — command palette entries
+//   - statusBar.ts    — status bar item
+//   - DependencyTreeProvider — sidebar tree view
+//   - WebviewPanel    — interactive graph webview
 // ============================================================================
 
 import * as vscode from 'vscode';
-import { scanProject, exportGraphJSON } from '@rdg/core';
-import type { ScanResult } from '@rdg/core';
+import { ScanManager } from './ScanManager.js';
+import { RdgStatusBar } from './statusBar.js';
+import { registerCommands } from './commands.js';
+import { DependencyTreeProvider } from './treeView/DependencyTreeProvider.js';
 
-// Store the latest scan result so multiple views can access it
-let lastScanResult: ScanResult | undefined;
+let scanManager: ScanManager | undefined;
 
-/**
- * Called by VS Code when the extension is activated.
- *
- * Activation happens when:
- * - The user runs one of our commands
- * - The user opens the dependency tree view
- *
- * We register all commands and providers here.
- */
 export function activate(context: vscode.ExtensionContext): void {
   console.log('React Dependency Graph extension activated');
 
-  // ── Register commands ──────────────────────────────────────────────
-
-  // Command: Scan the current workspace
-  const scanCommand = vscode.commands.registerCommand(
-    'rdg.scan',
-    async () => {
-      const workspaceRoot = getWorkspaceRoot();
-      if (!workspaceRoot) {
-        vscode.window.showErrorMessage(
-          'React Dependency Graph: No workspace folder open.',
-        );
-        return;
-      }
-
-      await runScan(workspaceRoot);
-    },
+  // ── Output channel ────────────────────────────────────────────────────
+  const outputChannel = vscode.window.createOutputChannel(
+    'React Dependency Graph',
   );
+  context.subscriptions.push(outputChannel);
 
-  // Command: Show the dependency graph (webview — placeholder for v0.5)
-  const showGraphCommand = vscode.commands.registerCommand(
-    'rdg.showGraph',
-    async () => {
-      if (!lastScanResult) {
-        const workspaceRoot = getWorkspaceRoot();
-        if (!workspaceRoot) {
-          vscode.window.showErrorMessage(
-            'React Dependency Graph: No workspace folder open.',
-          );
-          return;
-        }
-        await runScan(workspaceRoot);
-      }
+  // ── Core scan manager ─────────────────────────────────────────────────
+  scanManager = new ScanManager(outputChannel);
+  context.subscriptions.push(scanManager);
 
-      if (lastScanResult) {
-        // TODO (v0.5): Open the React Flow webview panel
-        vscode.window.showInformationMessage(
-          `React Dependency Graph: ${lastScanResult.totalFiles} files, ` +
-            `${lastScanResult.totalImports} imports, ` +
-            `${lastScanResult.circularCount} circular chains. ` +
-            `(Webview graph coming in v0.5)`,
-        );
-      }
-    },
+  // ── Status bar ────────────────────────────────────────────────────────
+  const statusBar = new RdgStatusBar();
+  context.subscriptions.push(statusBar);
+
+  scanManager.onDidStartScan(() => statusBar.setScanning());
+  scanManager.onDidScan((result) => statusBar.setResult(result));
+
+  // ── Workspace root helper ─────────────────────────────────────────────
+  const workspaceRoot = (): string | undefined => {
+    const folders = vscode.workspace.workspaceFolders;
+    return folders && folders.length > 0 ? folders[0].uri.fsPath : undefined;
+  };
+
+  // ── Commands ──────────────────────────────────────────────────────────
+  const commandDisposables = registerCommands(
+    context,
+    scanManager,
+    workspaceRoot,
   );
+  context.subscriptions.push(...commandDisposables);
 
-  // Command: Export the dependency graph as JSON
-  const exportJsonCommand = vscode.commands.registerCommand(
-    'rdg.exportJson',
-    async () => {
-      if (!lastScanResult) {
-        const workspaceRoot = getWorkspaceRoot();
-        if (!workspaceRoot) {
-          vscode.window.showErrorMessage(
-            'React Dependency Graph: No workspace folder open.',
-          );
-          return;
-        }
-        await runScan(workspaceRoot);
-      }
+  // ── Tree View ─────────────────────────────────────────────────────────
+  const treeProvider = new DependencyTreeProvider(scanManager);
+  const treeView = vscode.window.createTreeView('rdg.dependencyTree', {
+    treeDataProvider: treeProvider,
+    showCollapseAll: true,
+  });
+  context.subscriptions.push(treeView, treeProvider);
 
-      if (!lastScanResult) {
-        return;
-      }
-
-      // Ask the user where to save
-      const uri = await vscode.window.showSaveDialog({
-        defaultUri: vscode.Uri.file('dependency-graph.json'),
-        filters: {
-          JSON: ['json'],
-        },
-      });
-
-      if (uri) {
-        const json = exportGraphJSON(lastScanResult.graph);
-        await vscode.workspace.fs.writeFile(
-          uri,
-          Buffer.from(json, 'utf-8'),
-        );
-        vscode.window.showInformationMessage(
-          `React Dependency Graph: Exported to ${uri.fsPath}`,
-        );
-      }
-    },
-  );
-
-  // Register all disposables
-  context.subscriptions.push(scanCommand, showGraphCommand, exportJsonCommand);
-}
-
-/**
- * Called by VS Code when the extension is deactivated.
- */
-export function deactivate(): void {
-  lastScanResult = undefined;
-}
-
-// ─── Helper Functions ──────────────────────────────────────────────────────
-
-/**
- * Get the root path of the current workspace.
- */
-function getWorkspaceRoot(): string | undefined {
-  const folders = vscode.workspace.workspaceFolders;
-  if (!folders || folders.length === 0) {
-    return undefined;
+  // ── Auto-scan on activation if a workspace is open ───────────────────
+  // Small delay so the workspace folders are fully resolved
+  const root = workspaceRoot();
+  if (root) {
+    setTimeout(() => scanManager?.scan(root), 500);
   }
-  return folders[0].uri.fsPath;
 }
 
-/**
- * Run the dependency scan with a progress indicator.
- */
-async function runScan(rootDir: string): Promise<void> {
-  await vscode.window.withProgress(
-    {
-      location: vscode.ProgressLocation.Notification,
-      title: 'React Dependency Graph',
-      cancellable: false,
-    },
-    async (progress) => {
-      progress.report({ message: 'Scanning project...' });
-
-      try {
-        lastScanResult = await scanProject({ rootDir });
-
-        const { totalFiles, totalImports, circularCount, durationMs } =
-          lastScanResult;
-
-        const message =
-          `Scanned ${totalFiles} files, found ${totalImports} imports` +
-          (circularCount > 0
-            ? `, ⚠️ ${circularCount} circular dependencies`
-            : '') +
-          ` (${durationMs.toFixed(0)}ms)`;
-
-        if (circularCount > 0) {
-          vscode.window.showWarningMessage(
-            `React Dependency Graph: ${message}`,
-          );
-        } else {
-          vscode.window.showInformationMessage(
-            `React Dependency Graph: ${message}`,
-          );
-        }
-      } catch (err) {
-        vscode.window.showErrorMessage(
-          `React Dependency Graph: Scan failed — ${(err as Error).message}`,
-        );
-      }
-    },
-  );
+export function deactivate(): void {
+  scanManager = undefined;
 }

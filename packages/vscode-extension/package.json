@@ -2,7 +2,7 @@
   "name": "react-dependency-graph",
   "displayName": "React Dependency Graph",
   "description": "Scan React projects, visualize import dependencies as an interactive graph, detect circular dependencies, and export graph data for AI coding agents.",
-  "version": "0.1.0",
+  "version": "0.3.0",
   "publisher": "rdg",
   "engines": {
     "vscode": "^1.85.0"
@@ -16,9 +16,12 @@
     "dependency",
     "graph",
     "imports",
-    "circular"
+    "circular",
+    "typescript"
   ],
-  "activationEvents": [],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
   "main": "./dist/extension.js",
   "contributes": {
     "commands": [
@@ -27,6 +30,12 @@
         "title": "Scan Dependencies",
         "category": "React Dependency Graph",
         "icon": "$(search)"
+      },
+      {
+        "command": "rdg.refresh",
+        "title": "Refresh",
+        "category": "React Dependency Graph",
+        "icon": "$(refresh)"
       },
       {
         "command": "rdg.showGraph",
@@ -39,6 +48,11 @@
         "title": "Export Graph as JSON",
         "category": "React Dependency Graph",
         "icon": "$(export)"
+      },
+      {
+        "command": "rdg.openFile",
+        "title": "Open File",
+        "category": "React Dependency Graph"
       }
     ],
     "viewsContainers": {
@@ -62,23 +76,43 @@
     "menus": {
       "view/title": [
         {
-          "command": "rdg.scan",
+          "command": "rdg.refresh",
           "when": "view == rdg.dependencyTree",
-          "group": "navigation"
+          "group": "navigation@1"
         },
         {
           "command": "rdg.showGraph",
           "when": "view == rdg.dependencyTree",
-          "group": "navigation"
+          "group": "navigation@2"
+        },
+        {
+          "command": "rdg.exportJson",
+          "when": "view == rdg.dependencyTree",
+          "group": "navigation@3"
         }
       ]
-    }
+    },
+    "keybindings": [
+      {
+        "command": "rdg.scan",
+        "key": "ctrl+shift+d",
+        "mac": "cmd+shift+d",
+        "when": "workspaceFolderCount > 0"
+      },
+      {
+        "command": "rdg.showGraph",
+        "key": "ctrl+shift+g",
+        "mac": "cmd+shift+g",
+        "when": "workspaceFolderCount > 0"
+      }
+    ]
   },
   "scripts": {
+    "prebuild": "npm run build --prefix webview-ui",
     "build": "tsc",
     "dev": "tsc --watch",
     "package": "vsce package --no-dependencies",
-    "clean": "rm -rf dist"
+    "clean": "rm -rf dist webview-ui/dist"
   },
   "dependencies": {
     "@rdg/core": "0.1.0"
