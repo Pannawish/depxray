@@ -1,8 +1,6 @@
-import type { DependencyFilters, GraphMode } from '../types.js';
+import React from 'react';
 
 interface ExplorerToolbarProps {
-  availableModes: GraphMode[];
-  activeMode: GraphMode;
   sourceLabel: string;
   searchTerm: string;
   totalFiles: number;
@@ -10,15 +8,12 @@ interface ExplorerToolbarProps {
   totalImports: number;
   circularCount: number;
   visibleRows: number;
-  dependencyFilters: DependencyFilters;
-  onModeChange: (mode: GraphMode) => void;
+  circularOnly: boolean;
   onSearchChange: (searchTerm: string) => void;
-  onDependencyFiltersChange: (filters: DependencyFilters) => void;
+  onCircularOnlyChange: (circularOnly: boolean) => void;
 }
 
 export function ExplorerToolbar({
-  availableModes,
-  activeMode,
   sourceLabel,
   searchTerm,
   totalFiles,
@@ -26,85 +21,78 @@ export function ExplorerToolbar({
   totalImports,
   circularCount,
   visibleRows,
-  dependencyFilters,
-  onModeChange,
+  circularOnly,
   onSearchChange,
-  onDependencyFiltersChange,
+  onCircularOnlyChange,
 }: ExplorerToolbarProps) {
   return (
     <header className="explorer-toolbar">
+      {/* Title block */}
       <div className="toolbar-title">
         <p className="eyebrow">React Dependency Graph</p>
         <h1>Codebase Explorer</h1>
       </div>
 
-      <div className="toolbar-search">
-        <label htmlFor="project-search">Search paths</label>
-        <input
-          id="project-search"
-          onChange={(event) => onSearchChange(event.target.value)}
-          placeholder="src/App.tsx"
-          type="search"
-          value={searchTerm}
-        />
+      {/* Spacious Search Container */}
+      <div className="toolbar-search-container">
+        <div className="search-wrapper">
+          <span className="search-icon">🔍</span>
+          <input
+            id="project-search"
+            onChange={(event) => onSearchChange(event.target.value)}
+            placeholder="Search files by name or path... (e.g. App.tsx)"
+            type="search"
+            value={searchTerm}
+          />
+          {searchTerm && (
+            <button 
+              className="search-clear-btn" 
+              onClick={() => onSearchChange('')} 
+              title="Clear search"
+              type="button"
+            >
+              ✕
+            </button>
+          )}
+        </div>
       </div>
 
-      <div className="toolbar-modes" aria-label="Graph mode">
-        {availableModes.map((mode) => (
-          <button
-            className={activeMode === mode ? 'active' : ''}
-            key={mode}
-            onClick={() => onModeChange(mode)}
-            type="button"
-          >
-            {mode === 'structure' ? 'Structure' : 'Dependencies'}
-          </button>
-        ))}
-      </div>
+      {/* Action Controls & Stats */}
+      <div className="toolbar-actions">
+        {/* Cycles Pill Toggle */}
+        <button
+          className={`cycles-toggle-btn ${circularOnly ? 'active' : ''} ${circularCount > 0 ? 'has-cycles' : ''}`}
+          onClick={() => onCircularOnlyChange(!circularOnly)}
+          type="button"
+          title="Filter project tree to show circular dependencies only"
+        >
+          <span className="cycles-dot"></span>
+          Cycles Only
+          {circularCount > 0 && <span className="cycles-count-badge">{circularCount}</span>}
+        </button>
 
-      <div className="toolbar-filters">
-        <label>
-          <input
-            checked={dependencyFilters.showTypeOnlyEdges}
-            onChange={(event) => onDependencyFiltersChange({
-              ...dependencyFilters,
-              showTypeOnlyEdges: event.target.checked,
-            })}
-            type="checkbox"
-          />
-          Type-only
-        </label>
-        <label>
-          <input
-            checked={dependencyFilters.showDynamicEdges}
-            onChange={(event) => onDependencyFiltersChange({
-              ...dependencyFilters,
-              showDynamicEdges: event.target.checked,
-            })}
-            type="checkbox"
-          />
-          Dynamic
-        </label>
-        <label>
-          <input
-            checked={dependencyFilters.circularOnly}
-            onChange={(event) => onDependencyFiltersChange({
-              ...dependencyFilters,
-              circularOnly: event.target.checked,
-            })}
-            type="checkbox"
-          />
-          Cycles only
-        </label>
-      </div>
-
-      <div className="toolbar-stats" aria-label="Project summary">
-        <span>{totalDirs} dirs</span>
-        <span>{totalFiles} files</span>
-        <span>{totalImports} imports</span>
-        <span>{circularCount} circular</span>
-        <span>{visibleRows} visible</span>
-        <span>{sourceLabel}</span>
+        {/* Low-profile Summary Stats */}
+        <div className="toolbar-stats-summary" aria-label="Project stats">
+          <div className="stat-pill" title="Total directories scanned">
+            <span className="label">Dirs</span>
+            <span className="val">{totalDirs}</span>
+          </div>
+          <div className="stat-pill" title="Total files scanned">
+            <span className="label">Files</span>
+            <span className="val">{totalFiles}</span>
+          </div>
+          <div className="stat-pill" title="Total import statements traced">
+            <span className="label">Imports</span>
+            <span className="val">{totalImports}</span>
+          </div>
+          <div className="stat-pill highlight" title="Currently visible nodes in the Project Explorer">
+            <span className="label">Visible</span>
+            <span className="val">{visibleRows}</span>
+          </div>
+          <div className="stat-pill source-mode" title="Scan data source">
+            <span className="val">{sourceLabel}</span>
+          </div>
+        </div>
       </div>
     </header>
   );

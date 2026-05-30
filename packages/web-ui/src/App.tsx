@@ -23,20 +23,7 @@ const SOURCE_LABELS = {
   sample: 'sample preview',
 } as const;
 
-const DEFAULT_DEPENDENCY_FILTERS: DependencyFilters = {
-  showTypeOnlyEdges: true,
-  showDynamicEdges: true,
-  circularOnly: false,
-};
 
-function readInitialMode(): GraphMode {
-  const searchParams = new URLSearchParams(window.location.search);
-  const queryMode = searchParams.get('mode');
-  const embeddedMode = window.__RDG_INITIAL_MODE__;
-  const rawMode = queryMode ?? embeddedMode ?? 'structure';
-
-  return rawMode === 'dependencies' ? 'dependencies' : 'structure';
-}
 
 function buildInitialExpandedIds(index: FileRelationshipIndex): Set<string> {
   const expandedIds = new Set<string>();
@@ -155,10 +142,8 @@ function buildTreeRows(
 export default function App() {
   const { dataSet, loading, error, source } = useGraphData();
   const index = useRelationshipIndex(dataSet);
-  const availableModes = dataSet?.availableModes ?? ['structure'];
-  const [activeMode, setActiveMode] = useState<GraphMode>(() => readInitialMode());
   const [searchTerm, setSearchTerm] = useState('');
-  const [dependencyFilters, setDependencyFilters] = useState<DependencyFilters>(DEFAULT_DEPENDENCY_FILTERS);
+  const [circularOnly, setCircularOnly] = useState<boolean>(false);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   
@@ -166,16 +151,15 @@ export default function App() {
   const [activeCodeNodeId, setActiveCodeNodeId] = useState<string | null>(null);
 
   const deferredSearchTerm = useDeferredValue(searchTerm);
-  const resolvedMode = availableModes.includes(activeMode) ? activeMode : (dataSet?.defaultMode ?? 'structure');
   const selectedNode = selectedNodeId ? (index.nodeById.get(selectedNodeId) ?? null) : null;
   const activeCodeNode = activeCodeNodeId ? (index.nodeById.get(activeCodeNodeId) ?? null) : null;
 
   const folderSummary = activeCodeNode?.kind === 'directory'
-    ? getFolderSummary(activeCodeNode.id, index, dependencyFilters)
+    ? getFolderSummary(activeCodeNode.id, index, { showTypeOnlyEdges: true, showDynamicEdges: true, circularOnly })
     : null;
   const visibleRows = useMemo(() => (
-    buildTreeRows(index, expandedIds, deferredSearchTerm, dependencyFilters)
-  ), [deferredSearchTerm, dependencyFilters, expandedIds, index]);
+    buildTreeRows(index, expandedIds, deferredSearchTerm, { showTypeOnlyEdges: true, showDynamicEdges: true, circularOnly })
+  ), [deferredSearchTerm, circularOnly, expandedIds, index]);
 
   useEffect(() => {
     if (selectedNodeId) {
@@ -192,19 +176,7 @@ export default function App() {
     setSelectedNodeId(firstSelectableNode(index)?.id ?? null);
   }, [index]);
 
-  useEffect(() => {
-    if (availableModes.includes(activeMode)) {
-      return;
-    }
 
-    setActiveMode(dataSet?.defaultMode ?? 'structure');
-  }, [activeMode, availableModes, dataSet?.defaultMode]);
-
-  useEffect(() => {
-    const searchParams = new URLSearchParams(window.location.search);
-    searchParams.set('mode', resolvedMode);
-    window.history.replaceState({}, '', `${window.location.pathname}?${searchParams.toString()}`);
-  }, [resolvedMode]);
 
   useEffect(() => {
     if (!visibleRows.length) {
@@ -273,25 +245,18 @@ export default function App() {
   return (
     <main className="app-shell">
       <ExplorerToolbar
-        availableModes={availableModes}
-        activeMode={resolvedMode}
         sourceLabel={SOURCE_LABELS[source]}
         searchTerm={searchTerm}
         totalFiles={index.structureGraph?.totalFiles ?? index.dependencyGraph?.totalFiles ?? 0}
         totalDirs={index.structureGraph?.totalDirs ?? 0}
         totalImports={index.dependencyGraph?.totalImports ?? 0}
-        circularCount={index.dependencyGraph?.circularCount ?? index.circularNodeIds.size}
+        circularCount={index.circularNodeIds.size}
         visibleRows={visibleRows.length}
-        dependencyFilters={dependencyFilters}
-        onModeChange={(nextMode) => {
-          startTransition(() => setActiveMode(nextMode));
-        }}
+        circularOnly={circularOnly}
         onSearchChange={(nextSearch) => {
           startTransition(() => setSearchTerm(nextSearch));
         }}
-        onDependencyFiltersChange={(nextFilters) => {
-          startTransition(() => setDependencyFilters(nextFilters));
-        }}
+        onCircularOnlyChange={setCircularOnly}
       />
 
       <div className="explorer-grid">
