@@ -11,7 +11,8 @@ interface FileCodeViewerProps {
   onTabSelect: (tabId: string) => void;
   onDragStart: () => void;
   onDrop: () => void;
-  onSwap: () => void;
+  onSwapVertical: () => void;
+  onSwapHorizontal: () => void;
 }
 
 export function FileCodeViewer({
@@ -23,7 +24,8 @@ export function FileCodeViewer({
   onTabSelect,
   onDragStart,
   onDrop,
-  onSwap,
+  onSwapVertical,
+  onSwapHorizontal,
 }: FileCodeViewerProps) {
   const [code, setCode] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
@@ -93,14 +95,24 @@ export function FileCodeViewer({
               <h2>No file selected</h2>
             </div>
           </div>
-          <button 
-            className="swap-layout-btn"
-            onClick={onSwap}
-            title="Swap places with Details Panel"
-            type="button"
-          >
-            ⇄
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <button 
+              className="swap-layout-btn"
+              onClick={onSwapVertical}
+              title="Swap vertical layout with Details Panel"
+              type="button"
+            >
+              ⇅
+            </button>
+            <button 
+              className="swap-layout-btn"
+              onClick={onSwapHorizontal}
+              title="Swap horizontal column with Project Tree"
+              type="button"
+            >
+              ⇄
+            </button>
+          </div>
         </div>
         <div className="code-viewer-content empty">
           <p className="empty-copy">Select a file in the project explorer to view its source code and trace imports.</p>
@@ -166,8 +178,16 @@ export function FileCodeViewer({
           </span>
           <button 
             className="swap-layout-btn"
-            onClick={onSwap}
-            title="Swap places with Details Panel"
+            onClick={onSwapVertical}
+            title="Swap vertical layout with Details Panel"
+            type="button"
+          >
+            ⇅
+          </button>
+          <button 
+            className="swap-layout-btn"
+            onClick={onSwapHorizontal}
+            title="Swap horizontal column with Project Tree"
             type="button"
           >
             ⇄

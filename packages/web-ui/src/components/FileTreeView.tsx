@@ -14,6 +14,9 @@ interface FileTreeViewProps {
   selectedNodeId: string | null;
   onSelectNode: (nodeId: string) => void;
   onToggleFolder: (nodeId: string) => void;
+  onDragStart: () => void;
+  onDrop: () => void;
+  onSwap: () => void;
 }
 
 function getNodeIcon(node: ExplorerGraphNode, expanded: boolean): string {
@@ -29,15 +32,36 @@ export function FileTreeView({
   selectedNodeId,
   onSelectNode,
   onToggleFolder,
+  onDragStart,
+  onDrop,
+  onSwap,
 }: FileTreeViewProps) {
   if (!rows.length) {
     return (
       <section className="tree-panel">
-        <div className="panel-header">
-          <div>
-            <p className="eyebrow">Project tree</p>
-            <h2>No matching files</h2>
+        <div 
+          className="panel-header draggable" 
+          draggable
+          onDragStart={onDragStart}
+          onDragOver={(e) => e.preventDefault()} 
+          onDrop={onDrop}
+          style={{ cursor: 'grab' }}
+        >
+          <div className="drag-handle-layout">
+            <div className="drag-handle">⋮⋮</div>
+            <div>
+              <p className="eyebrow">Project tree</p>
+              <h2>No matching files</h2>
+            </div>
           </div>
+          <button 
+            className="swap-layout-btn"
+            onClick={onSwap}
+            title="Swap columns horizontally"
+            type="button"
+          >
+            ⇄
+          </button>
         </div>
       </section>
     );
@@ -45,11 +69,29 @@ export function FileTreeView({
 
   return (
     <section className="tree-panel">
-      <div className="panel-header">
-        <div>
-          <p className="eyebrow">Project tree</p>
-          <h2>{rows.length.toLocaleString()} visible paths</h2>
+      <div 
+        className="panel-header draggable" 
+        draggable
+        onDragStart={onDragStart}
+        onDragOver={(e) => e.preventDefault()} 
+        onDrop={onDrop}
+        style={{ cursor: 'grab' }}
+      >
+        <div className="drag-handle-layout">
+          <div className="drag-handle">⋮⋮</div>
+          <div>
+            <p className="eyebrow">Project tree</p>
+            <h2>{rows.length.toLocaleString()} visible paths</h2>
+          </div>
         </div>
+        <button 
+          className="swap-layout-btn"
+          onClick={onSwap}
+          title="Swap columns horizontally"
+          type="button"
+        >
+          ⇄
+        </button>
       </div>
 
       <div className="tree-rows" role="tree">

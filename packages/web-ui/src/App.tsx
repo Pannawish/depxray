@@ -1,4 +1,4 @@
-import React, { startTransition, useDeferredValue, useEffect, useMemo, useState } from 'react';
+import { Fragment, startTransition, useDeferredValue, useEffect, useMemo, useState } from 'react';
 import { ExplorerToolbar } from './components/ExplorerToolbar.js';
 import { FileTreeView, type FileTreeRowData } from './components/FileTreeView.js';
 import { MillerColumnsPanel } from './components/MillerColumnsPanel.js';
@@ -150,26 +150,45 @@ export default function App() {
   const [millerChain, setMillerChain] = useState<string[]>([]);
   const [activeCodeNodeId, setActiveCodeNodeId] = useState<string | null>(null);
   
+  const [columnsOrder, setColumnsOrder] = useState<('explorer' | 'details')[]>(['explorer', 'details']);
   const [rightColumnOrder, setRightColumnOrder] = useState<('details' | 'code')[]>(['details', 'code']);
-  const [draggedStackType, setDraggedStackType] = useState<'details' | 'code' | null>(null);
+  const [draggedType, setDraggedType] = useState<'explorer' | 'details' | 'code' | null>(null);
   
   const [leftWidth, setLeftWidth] = useState<number | null>(null);
   const [rightWidth, setRightWidth] = useState<number | null>(null);
   const [detailsHeight, setDetailsHeight] = useState<number | null>(null);
 
-  const handleStackDragStart = (type: 'details' | 'code') => {
-    setDraggedStackType(type);
+  const swapHorizontalLayout = () => {
+    setColumnsOrder(prev => [prev[1], prev[0]]);
   };
 
-  const handleStackDrop = (targetType: 'details' | 'code') => {
-    if (draggedStackType && draggedStackType !== targetType) {
-      setRightColumnOrder(prev => [prev[1], prev[0]]);
-    }
-    setDraggedStackType(null);
-  };
-
-  const swapStackLayout = () => {
+  const swapVerticalLayout = () => {
     setRightColumnOrder(prev => [prev[1], prev[0]]);
+  };
+
+  const handleExplorerDrop = () => {
+    if (draggedType === 'details' || draggedType === 'code') {
+      swapHorizontalLayout();
+    }
+    setDraggedType(null);
+  };
+
+  const handleDetailsDrop = () => {
+    if (draggedType === 'explorer') {
+      swapHorizontalLayout();
+    } else if (draggedType === 'code') {
+      swapVerticalLayout();
+    }
+    setDraggedType(null);
+  };
+
+  const handleCodeDrop = () => {
+    if (draggedType === 'explorer') {
+      swapHorizontalLayout();
+    } else if (draggedType === 'details') {
+      swapVerticalLayout();
+    }
+    setDraggedType(null);
   };
 
   const handleLeftResize = (e: React.MouseEvent) => {
@@ -318,23 +337,15 @@ export default function App() {
     });
   }
 
-  if (loading) {
-    return (
-      <main className="app-shell loading-state">
-        <section className="loading-panel">
-          <p className="eyebrow">Preparing explorer</p>
-          <h1>Loading project data</h1>
-          <p>Waiting for graph data from the CLI or embedded HTML export.</p>
-        </section>
-      </main>
-    );
-  }
-
   const gridStyle = useMemo(() => {
+    const isSwapped = columnsOrder[0] === 'details';
+    
     // If neither left nor right are resized, use the original proportions!
     if (leftWidth === null && rightWidth === null) {
       return {
-        gridTemplateColumns: 'minmax(260px, 360px) 6px minmax(320px, 0.85fr) 6px minmax(360px, 1fr)',
+        gridTemplateColumns: isSwapped
+          ? 'minmax(360px, 1fr) 6px minmax(320px, 0.85fr) 6px minmax(260px, 360px)'
+          : 'minmax(260px, 360px) 6px minmax(320px, 0.85fr) 6px minmax(360px, 1fr)',
         gap: 0
       };
     }
@@ -342,7 +353,9 @@ export default function App() {
     // If only left is resized
     if (leftWidth !== null && rightWidth === null) {
       return {
-        gridTemplateColumns: `${leftWidth}px 6px minmax(320px, 0.85fr) 6px minmax(360px, 1fr)`,
+        gridTemplateColumns: isSwapped
+          ? `${leftWidth}px 6px minmax(320px, 0.85fr) 6px minmax(260px, 360px)`
+          : `${leftWidth}px 6px minmax(320px, 0.85fr) 6px minmax(360px, 1fr)`,
         gap: 0
       };
     }
@@ -350,7 +363,9 @@ export default function App() {
     // If only right is resized
     if (leftWidth === null && rightWidth !== null) {
       return {
-        gridTemplateColumns: `minmax(260px, 360px) 6px minmax(320px, 0.85fr) 6px ${rightWidth}px`,
+        gridTemplateColumns: isSwapped
+          ? `minmax(360px, 1fr) 6px minmax(320px, 0.85fr) 6px ${rightWidth}px`
+          : `minmax(260px, 360px) 6px minmax(320px, 0.85fr) 6px ${rightWidth}px`,
         gap: 0
       };
     }
@@ -360,7 +375,7 @@ export default function App() {
       gridTemplateColumns: `${leftWidth}px 6px 1fr 6px ${rightWidth}px`,
       gap: 0
     };
-  }, [leftWidth, rightWidth]);
+  }, [leftWidth, rightWidth, columnsOrder]);
 
   const rightColumnStyle = useMemo(() => {
     const isDetailsOnTop = rightColumnOrder[0] === 'details';
@@ -386,6 +401,18 @@ export default function App() {
     };
   }, [detailsHeight, rightColumnOrder]);
 
+  if (loading) {
+    return (
+      <main className="app-shell loading-state">
+        <section className="loading-panel">
+          <p className="eyebrow">Preparing explorer</p>
+          <h1>Loading project data</h1>
+          <p>Waiting for graph data from the CLI or embedded HTML export.</p>
+        </section>
+      </main>
+    );
+  }
+
   return (
     <main className="app-shell">
       <ExplorerToolbar
@@ -407,13 +434,72 @@ export default function App() {
         className="explorer-grid"
         style={gridStyle}
       >
-        {/* Column 1 (Left) - Anchored Explorer */}
-        <FileTreeView
-          rows={visibleRows}
-          selectedNodeId={selectedNodeId}
-          onSelectNode={selectAndExpandNode}
-          onToggleFolder={toggleFolder}
-        />
+        {/* Column 1 (Left) */}
+        {columnsOrder[0] === 'explorer' ? (
+          <FileTreeView
+            rows={visibleRows}
+            selectedNodeId={selectedNodeId}
+            onSelectNode={selectAndExpandNode}
+            onToggleFolder={toggleFolder}
+            onDragStart={() => setDraggedType('explorer')}
+            onDrop={handleExplorerDrop}
+            onSwap={swapHorizontalLayout}
+          />
+        ) : (
+          <div 
+            className="right-column-container"
+            style={rightColumnStyle}
+          >
+            {rightColumnOrder.map((type, idx) => {
+              if (type === 'details') {
+                return (
+                  <Fragment key="details">
+                    <SelectionPanel
+                      node={activeCodeNode}
+                      index={index}
+                      folderSummary={folderSummary}
+                      projectRoot={index.projectRoot}
+                      error={error}
+                      onDragStart={() => setDraggedType('details')}
+                      onDrop={handleDetailsDrop}
+                      onSwapVertical={swapVerticalLayout}
+                      onSwapHorizontal={swapHorizontalLayout}
+                    />
+                    {idx === 0 && (
+                      <div 
+                        className="resizer horizontal" 
+                        onMouseDown={handleHeightResize}
+                      ></div>
+                    )}
+                  </Fragment>
+                );
+              } else {
+                return (
+                  <Fragment key="code">
+                    <FileCodeViewer
+                      node={activeCodeNode}
+                      index={index}
+                      onSelectNode={selectAndExpandNode}
+                      eligibleTabs={millerChain}
+                      activeTabId={activeCodeNodeId}
+                      onTabSelect={setActiveCodeNodeId}
+                      onDragStart={() => setDraggedType('code')}
+                      onDrop={handleCodeDrop}
+                      onSwapVertical={swapVerticalLayout}
+                      onSwapHorizontal={swapHorizontalLayout}
+                    />
+                    {idx === 0 && (
+                      <div 
+                        className="resizer horizontal" 
+                        onMouseDown={handleHeightResize}
+                      ></div>
+                    )}
+                  </Fragment>
+                );
+              }
+            })}
+          </div>
+        )}
 
         {/* Resizer 1 */}
         <div className="resizer vertical" onMouseDown={handleLeftResize}></div>
@@ -432,58 +518,72 @@ export default function App() {
         {/* Resizer 2 */}
         <div className="resizer vertical" onMouseDown={handleRightResize}></div>
 
-        {/* Column 3 (Right) - Stacked Details & Code Viewer */}
-        <div 
-          className="right-column-container"
-          style={rightColumnStyle}
-        >
-          {rightColumnOrder.map((type, idx) => {
-            if (type === 'details') {
-              return (
-                <React.Fragment key="details">
-                  <SelectionPanel
-                    node={activeCodeNode}
-                    index={index}
-                    folderSummary={folderSummary}
-                    projectRoot={index.projectRoot}
-                    error={error}
-                    onDragStart={() => handleStackDragStart('details')}
-                    onDrop={() => handleStackDrop('details')}
-                    onSwap={swapStackLayout}
-                  />
-                  {idx === 0 && (
-                    <div 
-                      className="resizer horizontal" 
-                      onMouseDown={handleHeightResize}
-                    ></div>
-                  )}
-                </React.Fragment>
-              );
-            } else {
-              return (
-                <React.Fragment key="code">
-                  <FileCodeViewer
-                    node={activeCodeNode}
-                    index={index}
-                    onSelectNode={selectAndExpandNode}
-                    eligibleTabs={millerChain}
-                    activeTabId={activeCodeNodeId}
-                    onTabSelect={setActiveCodeNodeId}
-                    onDragStart={() => handleStackDragStart('code')}
-                    onDrop={() => handleStackDrop('code')}
-                    onSwap={swapStackLayout}
-                  />
-                  {idx === 0 && (
-                    <div 
-                      className="resizer horizontal" 
-                      onMouseDown={handleHeightResize}
-                    ></div>
-                  )}
-                </React.Fragment>
-              );
-            }
-          })}
-        </div>
+        {/* Column 3 (Right) */}
+        {columnsOrder[1] === 'explorer' ? (
+          <FileTreeView
+            rows={visibleRows}
+            selectedNodeId={selectedNodeId}
+            onSelectNode={selectAndExpandNode}
+            onToggleFolder={toggleFolder}
+            onDragStart={() => setDraggedType('explorer')}
+            onDrop={handleExplorerDrop}
+            onSwap={swapHorizontalLayout}
+          />
+        ) : (
+          <div 
+            className="right-column-container"
+            style={rightColumnStyle}
+          >
+            {rightColumnOrder.map((type, idx) => {
+              if (type === 'details') {
+                return (
+                  <Fragment key="details">
+                    <SelectionPanel
+                      node={activeCodeNode}
+                      index={index}
+                      folderSummary={folderSummary}
+                      projectRoot={index.projectRoot}
+                      error={error}
+                      onDragStart={() => setDraggedType('details')}
+                      onDrop={handleDetailsDrop}
+                      onSwapVertical={swapVerticalLayout}
+                      onSwapHorizontal={swapHorizontalLayout}
+                    />
+                    {idx === 0 && (
+                      <div 
+                        className="resizer horizontal" 
+                        onMouseDown={handleHeightResize}
+                      ></div>
+                    )}
+                  </Fragment>
+                );
+              } else {
+                return (
+                  <Fragment key="code">
+                    <FileCodeViewer
+                      node={activeCodeNode}
+                      index={index}
+                      onSelectNode={selectAndExpandNode}
+                      eligibleTabs={millerChain}
+                      activeTabId={activeCodeNodeId}
+                      onTabSelect={setActiveCodeNodeId}
+                      onDragStart={() => setDraggedType('code')}
+                      onDrop={handleCodeDrop}
+                      onSwapVertical={swapVerticalLayout}
+                      onSwapHorizontal={swapHorizontalLayout}
+                    />
+                    {idx === 0 && (
+                      <div 
+                        className="resizer horizontal" 
+                        onMouseDown={handleHeightResize}
+                      ></div>
+                    )}
+                  </Fragment>
+                );
+              }
+            })}
+          </div>
+        )}
       </div>
     </main>
   );

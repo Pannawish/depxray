@@ -9,7 +9,8 @@ interface SelectionPanelProps {
   error: string | null;
   onDragStart: () => void;
   onDrop: () => void;
-  onSwap: () => void;
+  onSwapVertical: () => void;
+  onSwapHorizontal: () => void;
 }
 
 function formatBytes(value: number | undefined): string {
@@ -45,7 +46,8 @@ export function SelectionPanel({
   error,
   onDragStart,
   onDrop,
-  onSwap,
+  onSwapVertical,
+  onSwapHorizontal,
 }: SelectionPanelProps) {
   if (!node) {
     return (
@@ -65,14 +67,24 @@ export function SelectionPanel({
               <h2>No file selected</h2>
             </div>
           </div>
-          <button 
-            className="swap-layout-btn"
-            onClick={onSwap}
-            title="Swap places with Code Viewer"
-            type="button"
-          >
-            ⇄
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <button 
+              className="swap-layout-btn"
+              onClick={onSwapVertical}
+              title="Swap vertical layout with Code Viewer"
+              type="button"
+            >
+              ⇅
+            </button>
+            <button 
+              className="swap-layout-btn"
+              onClick={onSwapHorizontal}
+              title="Swap horizontal column with Project Tree"
+              type="button"
+            >
+              ⇄
+            </button>
+          </div>
         </div>
         {error ? <p className="panel-warning">Using sample data: {error}</p> : null}
       </section>
@@ -131,8 +143,16 @@ export function SelectionPanel({
           )}
           <button 
             className="swap-layout-btn"
-            onClick={onSwap}
-            title="Swap places with Code Viewer"
+            onClick={onSwapVertical}
+            title="Swap vertical layout with Code Viewer"
+            type="button"
+          >
+            ⇅
+          </button>
+          <button 
+            className="swap-layout-btn"
+            onClick={onSwapHorizontal}
+            title="Swap horizontal column with Project Tree"
             type="button"
           >
             ⇄
