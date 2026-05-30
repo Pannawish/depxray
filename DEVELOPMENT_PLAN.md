@@ -1,6 +1,6 @@
 # React Dependency Graph — New Development Plan
 
-> **Important Note**: This plan pivots the product direction. The existing `@rdg/core` dependency scanner and CLI are valuable and will be **kept as-is**. This plan adds a new first-class feature: the **Project Structure Graph**, served via a local browser — making it the new MVP entry point (`npx react-dependency-graph visualize`).
+> **Important Note**: This plan pivots the product direction. The existing `@rdg/core` dependency scanner and CLI are valuable and will be **kept as-is**. This plan adds a new first-class feature: the **Project Structure Graph**, served via a local browser — making it the new MVP entry point (`npx rdg scan`).
 
 ---
 
@@ -10,7 +10,7 @@
 
 Run one command from any React project:
 ```bash
-npx react-dependency-graph visualize
+npx rdg scan
 ```
 
 A browser opens at `http://localhost:5178` showing an **interactive Project Structure Graph**: all your folders and files laid out as circular nodes you can zoom, pan, search, and explore by depth.
@@ -31,8 +31,8 @@ The MVP (`v0.1–v0.5`) delivers **Project Structure Graph** via a local browser
 - ✅ Search for file/folder by name
 - ✅ Zoom, pan, fit view
 - ✅ Export structure as JSON
-- ✅ `npx react-dependency-graph visualize` → opens browser automatically
-- ✅ `npx react-dependency-graph export-html` → generates `.react-dependency-graph/index.html`
+- ✅ `npx rdg scan` → opens browser automatically
+- ✅ `npx rdg scan --html` → generates `.react-dependency-graph/index.html`
 
 ---
 
@@ -94,9 +94,7 @@ react-dependency-graph/
 │   │   └── src/
 │   │       ├── index.ts              # CLI entry (shebang + commander)
 │   │       └── commands/
-│   │           ├── visualize.ts      # Start server + open browser
-│   │           ├── scanStructure.ts  # Scan + print JSON
-│   │           └── exportHtml.ts     # Generate static HTML
+│   │           └── scan.ts           # scan command (browser / --json / --html)
 │   │
 │   ├── web-ui/
 │   │   ├── package.json
@@ -142,11 +140,17 @@ react-dependency-graph/
 
 ## 7. CLI Package Responsibilities (`@rdg/cli`)
 
+All functionality is exposed through a **single `scan` command** with flags:
+
 | Command | Responsibility |
 |---------|---------------|
-| `visualize` | Scan project, start Express/sirv server, serve web-ui + graph data at `localhost:5178`, open browser |
-| `scan-structure` | Scan project + print JSON to stdout |
-| `export-html` | Build static HTML with embedded data into `.react-dependency-graph/index.html` |
+| `rdg scan` | Scan project, start Express/sirv server, open browser at `localhost:5178` (default) |
+| `rdg scan --json` | Scan + print JSON to stdout (pipeline-friendly) |
+| `rdg scan --json --output <file>` | Scan + write JSON to file |
+| `rdg scan --html` | Generate static HTML into `.react-dependency-graph/index.html` |
+| `rdg scan --depth <n>` | Set initial visible depth (default: 2) |
+| `rdg scan --port <n>` | Override server port (default: 5178) |
+| `rdg scan --mode dependencies` | [v0.7] Show dependency graph instead of structure graph |
 
 ---
 
@@ -491,7 +495,7 @@ For large projects (100+ files/folders), the graph can become overwhelming. Stra
 
 ## 19. Implementing Local Browser Visualization
 
-The `visualize` command:
+The `rdg scan` command (default mode):
 
 ```
 1. Run scanFileTree(cwd) → full file tree
@@ -536,7 +540,7 @@ Web UI → checks if window.__GRAPH_DATA__ exists → uses it instead of fetch()
 ## 21. Implementing Static HTML Export
 
 ```
-export-html command:
+rdg scan --html:
 1. Scan project → full file tree + graph data
 2. Read web-ui/dist/index.html (pre-built bundle)
 3. Inject before </body>:
@@ -562,7 +566,7 @@ Two approaches:
 
 **CLI flag:**
 ```bash
-npx react-dependency-graph scan-structure --output structure.json
+npx rdg scan --json --output structure.json
 ```
 Writes to file. If no `--output`, prints to stdout (pipeline-friendly).
 
@@ -613,16 +617,16 @@ Test cases:
 cd packages/cli && npm link
 
 # Test all commands
-react-dependency-graph --help
-react-dependency-graph scan-structure
-react-dependency-graph scan-structure --output /tmp/test.json
-react-dependency-graph visualize           # opens browser
-react-dependency-graph export-html         # generates .react-dependency-graph/
+rdg --help
+rdg scan --json
+rdg scan --json --output /tmp/test.json
+rdg scan           # opens browser
+rdg scan --html         # generates .react-dependency-graph/
 ```
 
 Or without linking:
 ```bash
-node packages/cli/dist/index.js visualize /path/to/test-project
+node packages/cli/dist/index.js scan /path/to/test-project
 ```
 
 Integration tests use `execa` to run the compiled CLI and assert stdout/exit code.
@@ -632,9 +636,9 @@ Integration tests use `execa` to run the compiled CLI and assert stdout/exit cod
 ## 25. How to Test the Browser Visualization
 
 **Locally during development:**
-```bash
+```
 # Terminal 1: start CLI server (serves /api/graph-data)
-react-dependency-graph visualize /path/to/test-project
+rdg scan /path/to/test-project
 
 # Terminal 2: Vite dev server with proxy to CLI server
 cd packages/web-ui
@@ -666,13 +670,13 @@ npm run build --workspaces
 # 2. Set version in CLI package.json
 cd packages/cli && npm version 0.1.0
 
-# 3. Update package name to match desired npx command
+# 3. The CLI package name controls the npx command
 # packages/cli/package.json:
 {
-  "name": "react-dependency-graph",   ← this is what npx uses
+  "name": "react-dependency-graph",   ← npx react-dependency-graph scan
   "bin": {
     "react-dependency-graph": "./dist/index.js",
-    "rdg": "./dist/index.js"
+    "rdg": "./dist/index.js"            ← npx rdg scan (short alias)
   }
 }
 
@@ -681,7 +685,7 @@ npm publish --access public
 ```
 
 > [!IMPORTANT]
-> The CLI package (`packages/cli`) needs to **bundle** the built web-ui assets inside it. The web-ui `dist/` should be copied into the CLI package before publishing so that `npx react-dependency-graph visualize` has the assets to serve.
+> The CLI package (`packages/cli`) needs to **bundle** the built web-ui assets inside it. The web-ui `dist/` should be copied into the CLI package before publishing so that `npx rdg scan` has the assets to serve.
 
 ---
 
@@ -689,19 +693,23 @@ npm publish --access public
 
 ```bash
 # No installation needed — npx downloads and runs automatically
-npx react-dependency-graph visualize
+npx rdg scan                              # open browser at localhost:5178
 
-# Scan structure and print JSON
-npx react-dependency-graph scan-structure
+# Scan a specific project directory
+npx rdg scan /path/to/my-project
 
-# Export static HTML
-npx react-dependency-graph export-html
+# Output JSON to stdout (AI agent / CI friendly)
+npx rdg scan --json
+npx rdg scan --json --output structure.json
 
-# Specify a project directory
-npx react-dependency-graph visualize /path/to/my-project
+# Generate a static shareable HTML file
+npx rdg scan --html
 
-# Short alias
-npx rdg visualize
+# Control depth on launch
+npx rdg scan --depth 3
+
+# Use the full package name (same thing)
+npx react-dependency-graph scan
 ```
 
 ---
@@ -723,7 +731,7 @@ npx rdg visualize
 
 ### Codex-readable JSON Output
 ```bash
-npx react-dependency-graph scan-structure --format json > structure.json
+npx rdg scan --json > structure.json
 ```
 Codex reads `structure.json` as context when working on the project.
 
@@ -755,7 +763,7 @@ Codex reads `structure.json` as context when working on the project.
 
 **`@rdg/core`** — "The brain". It reads your project folder, understands what files and folders exist, and turns that into a clean data structure (a tree). It doesn't know anything about browsers, React, or VS Code. Just pure logic.
 
-**`@rdg/cli`** — "The command". When you type `npx react-dependency-graph visualize`, this is what runs. It asks the brain to scan your project, starts a small web server, and opens your browser.
+**`@rdg/cli`** — "The command". When you type `npx rdg scan`, this is what runs. It asks the brain to scan your project, starts a small web server, and opens your browser.
 
 **`@rdg/web-ui`** — "The face". A React app that lives in your browser. It asks the server for the project data, then draws it as circles connected by lines. You can zoom in, click things, and explore.
 
@@ -777,19 +785,20 @@ Codex reads `structure.json` as context when working on the project.
 - Unit tests with fixture projects
 - **Deliverable**: `scanFileTree('/path')` returns a `FileTreeNode` tree
 
-### v0.2 — CLI scan-structure Command
-- Set up `commander` CLI
-- `scan-structure [dir]` → prints JSON to stdout
-- `--output <file>` flag → writes to file
+### v0.2 — CLI `scan` Command (JSON mode)
+- Set up `commander` CLI with single `scan` command
+- `rdg scan [dir]` → default: opens browser
+- `rdg scan --json` → prints JSON to stdout
+- `rdg scan --json --output <file>` → writes to file
 - `--depth <n>` flag → filter by depth
-- **Deliverable**: `npx react-dependency-graph scan-structure > structure.json`
+- **Deliverable**: `npx rdg scan --json > structure.json`
 
 ### v0.3 — Local Browser Server (Basic)
 - Scaffold `@rdg/web-ui` with Vite + React
-- `visualize [dir]` command → starts Express server + opens browser
+- `rdg scan` → starts Express server + opens browser
 - Basic React Flow graph (default nodes, no circles yet)
 - Fetches `/api/graph-data` from server
-- **Deliverable**: `npx react-dependency-graph visualize` → browser opens with graph
+- **Deliverable**: `npx rdg scan` → browser opens with graph
 
 ### v0.4 — Circle Nodes + Depth Selector + Side Panel
 - Implement `CircleNode.tsx` custom React Flow node
@@ -807,18 +816,18 @@ Codex reads `structure.json` as context when working on the project.
 - **Deliverable**: Fully interactive structure graph
 
 ### v0.6 — Static HTML Export
-- `export-html [dir]` command
+- `rdg scan --html` flag
 - Generates `.react-dependency-graph/index.html` (standalone)
 - `window.__GRAPH_DATA__` injection strategy
 - Also writes `graph-data.json` alongside
-- **Deliverable**: `npx react-dependency-graph export-html`
+- **Deliverable**: `npx rdg scan --html`
 
 ### v0.7 — Dependency Graph Mode
 - Reuse existing `@rdg/core` dependency scanner (already built!)
-- `visualize --mode dependencies` command
+- `rdg scan --mode dependencies` flag
 - Second view in web-ui: switch between Structure and Dependencies
 - Circular dependency highlighting
-- **Deliverable**: Full dependency graph in browser
+- **Deliverable**: `npx rdg scan --mode dependencies`
 
 ### v1.0 — Polished npm Package
 - `prepublishOnly` bundles web-ui into CLI
@@ -839,9 +848,7 @@ Codex reads `structure.json` as context when working on the project.
 ### [NEW] `packages/core/src/filterTreeByDepth.ts`
 ### [NEW] `packages/core/src/buildGraphFromTree.ts`
 ### [NEW] `packages/core/src/expandCollapse.ts`
-### [NEW] `packages/cli/src/commands/visualize.ts`
-### [NEW] `packages/cli/src/commands/scanStructure.ts`
-### [NEW] `packages/cli/src/commands/exportHtml.ts`
+### [NEW] `packages/cli/src/commands/scan.ts` — single `scan` command handling all modes
 ### [NEW] `packages/web-ui/` — full Vite + React package
 ### [NEW] `packages/web-ui/src/components/CircleNode.tsx`
 ### [NEW] `packages/web-ui/src/components/GraphView.tsx`
