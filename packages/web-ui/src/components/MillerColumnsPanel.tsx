@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import type { ExplorerGraphNode } from '../types.js';
 import type { FileRelationshipIndex } from '../relationshipIndex.js';
 
@@ -17,6 +17,7 @@ export function MillerColumnsPanel({
   onChainChange,
   onActiveNodeChange,
 }: MillerColumnsPanelProps) {
+  const [millerMode, setMillerMode] = useState<'imports' | 'dependents'>('imports');
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll to the rightmost column when the chain grows
@@ -48,51 +49,88 @@ export function MillerColumnsPanel({
     onActiveNodeChange(targetId);
   };
 
+  const handleModeChange = (newMode: 'imports' | 'dependents') => {
+    setMillerMode(newMode);
+    if (node) {
+      // Cleanly reset the active chain back to the main selected tree root node
+      onChainChange([node.id]);
+      onActiveNodeChange(node.id);
+    }
+  };
+
   const getFileIcon = (kind: 'file' | 'directory') => {
     return kind === 'directory' ? '📁' : '📄';
   };
 
   return (
     <section className="miller-panel">
-      <div className="panel-header">
-        <p className="eyebrow">Dependency Explorer</p>
-        <h2>{node.label}</h2>
+      {/* Header with Segmented Toggle Bar */}
+      <div className="panel-header inline">
+        <div>
+          <p className="eyebrow">Dependency Explorer</p>
+          <h2>{node.label}</h2>
+        </div>
+
+        <div className="miller-toggle-bar" aria-label="Tracing direction toggle">
+          <button
+            className={`miller-toggle-btn ${millerMode === 'imports' ? 'active' : ''}`}
+            onClick={() => handleModeChange('imports')}
+            type="button"
+          >
+            Imports (Outgoing)
+          </button>
+          <button
+            className={`miller-toggle-btn ${millerMode === 'dependents' ? 'active' : ''}`}
+            onClick={() => handleModeChange('dependents')}
+            type="button"
+          >
+            Dependents (Incoming)
+          </button>
+        </div>
       </div>
       
+      {/* Columns List Container */}
       <div className="miller-columns-container" ref={containerRef}>
         {chain.map((chainId, colIndex) => {
           const colNode = index.structureNodeById.get(chainId);
           if (!colNode) return null;
 
-          // Outgoing dependencies (files that this node imports)
-          const outgoingDeps = index.importsBySourceId.get(chainId) || [];
+          const isImports = millerMode === 'imports';
+          const relations = isImports
+            ? (index.importsBySourceId.get(chainId) || [])
+            : (index.importedByTargetId.get(chainId) || []);
           
           return (
             <div key={`${chainId}-${colIndex}`} className="miller-column">
               <div className="miller-column-header">
                 <h3>{colNode.label}</h3>
-                <span className="miller-meta">{outgoingDeps.length} imports</span>
+                <span className="miller-meta">
+                  {relations.length} {isImports ? 'imports' : 'dependents'}
+                </span>
               </div>
               
               <div className="miller-column-list">
-                {outgoingDeps.length === 0 ? (
-                  <div className="miller-empty">No imports</div>
+                {relations.length === 0 ? (
+                  <div className="miller-empty">
+                    {isImports ? 'No imports' : 'No dependents'}
+                  </div>
                 ) : (
-                  outgoingDeps.map(dep => {
-                    const depNode = index.structureNodeById.get(dep.target);
+                  relations.map(edge => {
+                    const targetId = isImports ? edge.target : edge.source;
+                    const depNode = index.structureNodeById.get(targetId);
                     if (!depNode) return null;
                     
-                    // Is this item selected in the next column?
-                    const isSelected = chain[colIndex + 1] === dep.target;
-                    
-                    // Check if it has its own imports to show a chevron
-                    const hasChildren = (index.importsBySourceId.get(dep.target)?.length || 0) > 0;
+                    const isSelected = chain[colIndex + 1] === targetId;
+                    const childRelations = isImports
+                      ? (index.importsBySourceId.get(targetId) || [])
+                      : (index.importedByTargetId.get(targetId) || []);
+                    const hasChildren = childRelations.length > 0;
 
                     return (
                       <button 
-                        key={dep.target}
+                        key={targetId}
                         className={`miller-item ${isSelected ? 'selected' : ''}`}
-                        onClick={() => handleItemClick(colIndex, dep.target)}
+                        onClick={() => handleItemClick(colIndex, targetId)}
                       >
                         <span className="miller-item-icon">{getFileIcon(depNode.kind)}</span>
                         <div className="miller-item-labels">

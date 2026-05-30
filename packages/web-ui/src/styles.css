@@ -566,6 +566,39 @@ button {
   min-height: 0;
 }
 
+/* Miller Columns Segmented Toggle */
+.miller-toggle-bar {
+  display: flex;
+  background: var(--panel-subtle);
+  padding: 2px;
+  border-radius: 99px;
+  border: 1px solid var(--border);
+  gap: 2px;
+}
+
+.miller-toggle-btn {
+  padding: 4px 12px;
+  border: none;
+  background: transparent;
+  border-radius: 99px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  white-space: nowrap;
+}
+
+.miller-toggle-btn:hover {
+  color: var(--text);
+}
+
+.miller-toggle-btn.active {
+  background: #ffffff;
+  color: var(--accent);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
 .miller-columns-container {
   display: flex;
   flex: 1;
