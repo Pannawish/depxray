@@ -69,7 +69,7 @@ export function MillerColumnsPanel({ node, index }: MillerColumnsPanelProps) {
           if (!colNode) return null;
 
           // Outgoing dependencies (files that this node imports)
-          const outgoingDeps = index.outgoingByFile.get(chainId) || [];
+          const outgoingDeps = index.importsBySourceId.get(chainId) || [];
           
           return (
             <div key={`${chainId}-${colIndex}`} className="miller-column">
@@ -83,20 +83,20 @@ export function MillerColumnsPanel({ node, index }: MillerColumnsPanelProps) {
                   <div className="miller-empty">No imports</div>
                 ) : (
                   outgoingDeps.map(dep => {
-                    const depNode = index.structureNodeById.get(dep.targetId);
+                    const depNode = index.structureNodeById.get(dep.target);
                     if (!depNode) return null;
                     
                     // Is this item selected in the next column?
-                    const isSelected = chain[colIndex + 1] === dep.targetId;
+                    const isSelected = chain[colIndex + 1] === dep.target;
                     
                     // Check if it has its own imports to show a chevron
-                    const hasChildren = (index.outgoingByFile.get(dep.targetId)?.length || 0) > 0;
+                    const hasChildren = (index.importsBySourceId.get(dep.target)?.length || 0) > 0;
 
                     return (
                       <button 
-                        key={dep.targetId}
+                        key={dep.target}
                         className={`miller-item ${isSelected ? 'selected' : ''}`}
-                        onClick={() => handleItemClick(colIndex, dep.targetId)}
+                        onClick={() => handleItemClick(colIndex, dep.target)}
                       >
                         <span className="miller-item-icon">{getFileIcon(depNode.kind)}</span>
                         <div className="miller-item-labels">

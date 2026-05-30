@@ -31,11 +31,11 @@ export function AiContextGenerator({ node, index }: AiContextGeneratorProps) {
     let md = `# File Context: \`${node.relativePath}\`\n\n`;
     
     // Outgoing dependencies (Imports)
-    const outgoing = index.outgoingByFile.get(node.id) || [];
+    const outgoing = index.importsBySourceId.get(node.id) || [];
     if (outgoing.length > 0) {
       md += `## Dependencies (What this file imports)\n`;
       outgoing.forEach(dep => {
-        const targetNode = index.structureNodeById.get(dep.targetId);
+        const targetNode = index.structureNodeById.get(dep.target);
         if (targetNode) {
           md += `- \`${targetNode.relativePath}\`\n`;
         }
@@ -44,11 +44,11 @@ export function AiContextGenerator({ node, index }: AiContextGeneratorProps) {
     }
 
     // Incoming dependencies (Dependents)
-    const incoming = index.incomingByFile.get(node.id) || [];
+    const incoming = index.importedByTargetId.get(node.id) || [];
     if (incoming.length > 0) {
       md += `## Dependents (Files that import this one)\n`;
       incoming.forEach(dep => {
-        const sourceNode = index.structureNodeById.get(dep.sourceId);
+        const sourceNode = index.structureNodeById.get(dep.source);
         if (sourceNode) {
           md += `- \`${sourceNode.relativePath}\`\n`;
         }
