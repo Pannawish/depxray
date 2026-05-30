@@ -233,6 +233,19 @@ export default function App() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
+  function selectAndExpandNode(nodeId: string) {
+    setSearchTerm('');
+    const ancestors = getAncestorIds(nodeId, index);
+    if (ancestors.length > 0) {
+      setExpandedIds((current) => {
+        const next = new Set(current);
+        ancestors.forEach((id) => next.add(id));
+        return next;
+      });
+    }
+    setSelectedNodeId(nodeId);
+  }
+
   function toggleFolder(nodeId: string) {
     setExpandedIds((current) => {
       const next = new Set(current);
@@ -285,7 +298,7 @@ export default function App() {
         <FileTreeView
           rows={visibleRows}
           selectedNodeId={selectedNodeId}
-          onSelectNode={setSelectedNodeId}
+          onSelectNode={selectAndExpandNode}
           onToggleFolder={toggleFolder}
         />
 
@@ -310,7 +323,7 @@ export default function App() {
           <FileCodeViewer
             node={activeCodeNode}
             index={index}
-            onSelectNode={setSelectedNodeId}
+            onSelectNode={selectAndExpandNode}
             eligibleTabs={millerChain}
             activeTabId={activeCodeNodeId}
             onTabSelect={setActiveCodeNodeId}
