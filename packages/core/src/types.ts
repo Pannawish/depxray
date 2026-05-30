@@ -9,6 +9,110 @@
 // ─── Graph Data Structures ─────────────────────────────────────────────────
 
 /**
+ * A single node in the scanned folder/file tree.
+ *
+ * This structure is the source of truth for the project structure graph MVP.
+ * Unlike dependency graph nodes, directories and files are both represented.
+ */
+export interface FileTreeNode {
+  /** Unique identifier — the absolute path */
+  id: string;
+
+  /** Short display name (last path segment only) */
+  name: string;
+
+  /** Path relative to the scanned project root */
+  relativePath: string;
+
+  /** Absolute path on disk */
+  absolutePath: string;
+
+  /** Whether this node is a file or directory */
+  kind: 'file' | 'directory';
+
+  /** File extension for files, otherwise null */
+  extension: string | null;
+
+  /** Nesting depth from the root node */
+  depth: number;
+
+  /** Child nodes, only populated for directories */
+  children: FileTreeNode[];
+
+  /** File size in bytes, only populated for files */
+  sizeBytes?: number;
+}
+
+/**
+ * A node in the structure graph used by the browser UI.
+ */
+export interface StructureGraphNode {
+  /** Unique identifier — the absolute path */
+  id: string;
+
+  /** Short label for display */
+  label: string;
+
+  /** Path relative to the scanned project root */
+  relativePath: string;
+
+  /** Absolute path on disk */
+  absolutePath: string;
+
+  /** Whether this node is a file or directory */
+  kind: 'file' | 'directory';
+
+  /** File extension for files, otherwise null */
+  extension: string | null;
+
+  /** Nesting depth from the root node */
+  depth: number;
+
+  /** Whether this directory is currently collapsed */
+  collapsed: boolean;
+
+  /** Whether this node is hidden because an ancestor is collapsed */
+  hidden: boolean;
+
+  /** Number of direct children */
+  childCount: number;
+
+  /** Total recursive descendant count */
+  descendantCount: number;
+
+  /** File size in bytes, only populated for files */
+  sizeBytes?: number;
+}
+
+/**
+ * A directed edge from a parent node to its child in the file tree.
+ */
+export interface StructureGraphEdge {
+  /** Stable edge identifier */
+  id: string;
+
+  /** Parent node absolute path */
+  source: string;
+
+  /** Child node absolute path */
+  target: string;
+}
+
+/**
+ * The structure graph payload produced from a file tree.
+ */
+export interface StructureGraph {
+  /** Root project directory */
+  rootDir: string;
+
+  /** Graph nodes for directories and files */
+  nodes: StructureGraphNode[];
+
+  /** Parent-to-child edges */
+  edges: StructureGraphEdge[];
+}
+
+/**
  * A single file node in the dependency graph.
  *
  * Each scanned file becomes a GraphNode. The `id` is the absolute path,
@@ -151,6 +255,20 @@ export interface ScanOptions {
   includeDynamicImports?: boolean;
 }
 
+/**
+ * Options for scanning a raw folder/file tree.
+ */
+export interface ScanFileTreeOptions {
+  /** Additional directory/file names to ignore */
+  ignorePatterns?: string[];
+
+  /**
+   * Maximum child depth to traverse from the root node.
+   * @default Infinity
+   */
+  maxDepth?: number;
+}
+
 // ─── Scan Result ───────────────────────────────────────────────────────────
 
 /**
@@ -274,11 +392,13 @@ export const DEFAULT_IGNORE_PATTERNS: string[] = [
   'node_modules',
   'dist',
   'build',
+  'out',
   '.next',
   'coverage',
   '.git',
   '.cache',
   '.turbo',
+  '.react-dependency-graph',
   '__mocks__',
 ];
 

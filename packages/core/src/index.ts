@@ -8,6 +8,9 @@
 // ─── Main API ──────────────────────────────────────────────────────────────
 export { scanProject } from './scanProject.js';
 export { exportGraphJSON } from './exportGraph.js';
+export { scanFileTree } from './scanFileTree.js';
+export { filterTreeByDepth } from './filterTreeByDepth.js';
+export { buildStructureGraph } from './buildStructureGraph.js';
 
 // ─── Individual modules (for advanced usage) ──────────────────────────────
 export { parseImports } from './parseImports.js';
@@ -19,11 +22,16 @@ export { loadAliases } from './configLoader.js';
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 export type {
+  FileTreeNode,
   GraphNode,
   GraphEdge,
+  StructureGraphNode,
+  StructureGraphEdge,
+  StructureGraph,
   CircularChain,
   DependencyGraph,
   ScanOptions,
+  ScanFileTreeOptions,
   ScanResult,
   ScanError,
   ScanMetadata,
