@@ -13,7 +13,7 @@
 //   7. Return the complete ScanResult
 //
 // This function is platform-agnostic — it works in Node.js without any
-// dependency on VS Code, CLI frameworks, or browser APIs.
+// dependency on CLI frameworks or browser APIs.
 // ============================================================================
 
 import * as fs from 'fs/promises';

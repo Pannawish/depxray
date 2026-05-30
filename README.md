@@ -1,14 +1,14 @@
 # React Dependency Graph
 
-> Scan React projects, visualize import dependencies, detect circular dependencies — as a library, CLI, VS Code extension, or AI agent tool.
+> Scan React projects and explore project structure graphs in the browser, from the CLI, or as structured data for AI agents.
 
 ## 📦 Packages
 
 | Package | Description | Status |
 |---------|-------------|--------|
-| `@rdg/core` | Platform-agnostic dependency graph scanner | 🏗️ v0.1 |
-| `@rdg/cli` | CLI tool for terminal and AI agents | 🏗️ v0.2 |
-| `react-dependency-graph` | VS Code extension with graph visualization | 🏗️ v0.3+ |
+| `@rdg/core` | Platform-agnostic structure and dependency scanner | 🏗️ v0.1 |
+| `@rdg/cli` | Browser-first CLI for structure graphs and exports | 🏗️ v0.3 |
+| `@rdg/web-ui` | Standalone React Flow UI served by the CLI | 🏗️ v0.2 |
 
 ## 🚀 Quick Start
 
@@ -23,8 +23,9 @@ npm run build
 cd packages/cli && node dist/index.js scan /path/to/react-project
 
 # Or use it as a library
-import { scanProject } from '@rdg/core';
-const result = await scanProject({ rootDir: './my-react-app' });
+import { scanFileTree, buildStructureGraph } from '@rdg/core';
+const tree = await scanFileTree('./my-react-app');
+const graph = buildStructureGraph(tree);
 ```
 
 ## 🏗️ Development

@@ -2,8 +2,8 @@
 // React Dependency Graph — Core Types
 // ============================================================================
 // All shared type definitions for the scanner, graph, and output formats.
-// These types are consumed by the CLI, VS Code extension, and future
-// integrations (MCP server, Antigravity, Codex).
+// These types are consumed by the CLI and future integrations
+// (MCP server, Antigravity, Codex).
 // ============================================================================
 
 // ─── Graph Data Structures ─────────────────────────────────────────────────

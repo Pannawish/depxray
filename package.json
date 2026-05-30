@@ -2,12 +2,11 @@
   "name": "react-dependency-graph",
   "private": true,
   "version": "0.1.0",
-  "description": "Scan and visualize React project dependency graphs — usable as a library, CLI, VS Code extension, and AI agent tool.",
+  "description": "Scan and visualize React project structure graphs — usable as a library, CLI, and AI agent tool.",
   "workspaces": [
     "packages/core",
     "packages/cli",
-    "packages/web-ui",
-    "packages/vscode-extension"
+    "packages/web-ui"
   ],
   "scripts": {
     "build": "npm run build --workspaces",

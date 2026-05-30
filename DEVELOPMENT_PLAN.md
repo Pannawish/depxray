@@ -39,7 +39,6 @@ The MVP (`v0.1–v0.5`) delivers **Project Structure Graph** via a local browser
 ## 3. What Is NOT in MVP
 
 - ❌ Dependency graph (import analysis) — v0.7
-- ❌ VS Code extension — after v1.0
 - ❌ Circular dependency detection — v0.7
 - ❌ tsconfig path alias resolution — v0.7+
 - ❌ Full-stack flow tracing — post-v1.0
@@ -55,13 +54,12 @@ react-dependency-graph/                ← Root workspace
 │   ├── core/                          ← @rdg/core — pure TypeScript, zero UI deps
 │   ├── cli/                           ← @rdg/cli  — npx entry point
 │   ├── web-ui/                        ← @rdg/web-ui — React + React Flow app
-│   └── vscode-extension/              ← Future wrapper (already scaffolded)
 ├── package.json                       ← npm workspaces root
 ├── tsconfig.base.json
 └── .gitignore
 ```
 
-**Key principle**: `@rdg/core` has **zero dependencies** on React, browser APIs, Express, or VS Code. It is a pure Node.js TypeScript library.
+**Key principle**: `@rdg/core` has **zero dependencies** on React, browser APIs, or Express. It is a pure Node.js TypeScript library.
 
 ---
 
@@ -115,8 +113,6 @@ react-dependency-graph/
 │   │           ├── useGraphData.ts   # Fetch /api/graph-data
 │   │           └── useTreeState.ts   # Expand/collapse state
 │   │
-│   └── vscode-extension/             # Future — already scaffolded
-│
 └── .react-dependency-graph/          # Generated output dir (gitignored)
     ├── index.html                    # Static HTML export
     └── graph-data.json               # Embedded graph data
@@ -164,17 +160,7 @@ All functionality is exposed through a **single `scan` command** with flags:
 
 ---
 
-## 9. Future VS Code Extension Responsibilities
-
-The VS Code extension will:
-- Call `@rdg/core`'s `scanFileTree()` directly (no CLI subprocess)
-- Render the web-ui React app inside a VS Code Webview
-- Use `postMessage` to send graph data instead of HTTP fetch
-- Add commands to the VS Code Command Palette
-
----
-
-## 10. Data Structures
+## 9. Data Structures
 
 ### File Tree Node
 ```typescript
@@ -716,13 +702,8 @@ npx react-dependency-graph scan
 
 ## 28. How This Supports Future Integrations
 
-### VS Code Extension
-- Calls `@rdg/core`'s `scanFileTree()` directly (no HTTP)
-- Renders the same React components inside a VS Code Webview
-- Uses `postMessage` instead of `fetch('/api/graph-data')`
-
 ### Antigravity IDE
-- Same as VS Code — calls `@rdg/core` directly, renders webview
+- Calls `@rdg/core` directly and renders a webview-compatible structure graph
 
 ### Claude MCP Server
 - A future `@rdg/mcp` package wraps `@rdg/core` with MCP protocol
@@ -751,7 +732,6 @@ Codex reads `structure.json` as context when working on the project.
 | Putting browser/React code in `@rdg/core` | Core = pure Node.js only |
 | Not handling `Ctrl+C` in the server | Use `process.on('SIGINT')` to cleanup |
 | Rebuilding web-ui on every `npx` run | Pre-build + bundle into the CLI package |
-| Calling `acquireVsCodeApi` outside VS Code | Use a mock fallback for browser mode |
 | React Flow freezing on 500+ nodes | Default to depth=2, lazy-load deeper nodes |
 | Publishing without bundling web-ui assets | Add a `prepublishOnly` script |
 | Having `.react-dependency-graph/` tracked in git | Add to `.gitignore` |
@@ -761,7 +741,7 @@ Codex reads `structure.json` as context when working on the project.
 
 ## 30. Beginner-Friendly Explanation of Each Part
 
-**`@rdg/core`** — "The brain". It reads your project folder, understands what files and folders exist, and turns that into a clean data structure (a tree). It doesn't know anything about browsers, React, or VS Code. Just pure logic.
+**`@rdg/core`** — "The brain". It reads your project folder, understands what files and folders exist, and turns that into a clean data structure (a tree). It doesn't know anything about browsers or React. Just pure logic.
 
 **`@rdg/cli`** — "The command". When you type `npx rdg scan`, this is what runs. It asks the brain to scan your project, starts a small web server, and opens your browser.
 
@@ -858,9 +838,6 @@ Codex reads `structure.json` as context when working on the project.
 ---
 
 ## Open Questions
-
-> [!IMPORTANT]
-> **New project vs add to existing?** The new `web-ui` package is a separate browser app from the VS Code extension's `webview-ui`. Should we keep both? Recommendation: yes — `web-ui` is the standalone npm-served app; `webview-ui` is VS Code only.
 
 > [!NOTE]
 > **Port number**: I plan to use `5178` as the default server port (easily configurable with `--port`). This avoids conflicts with common dev servers (Vite: 5173, CRA: 3000, Next.js: 3000). OK?
