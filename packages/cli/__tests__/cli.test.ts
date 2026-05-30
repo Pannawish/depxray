@@ -35,6 +35,12 @@ describe('CLI Integration Tests', () => {
   });
 
   describe('scan command', () => {
+    it('should bundle the CLI without a runtime @rdg/core dependency', async () => {
+      const builtEntry = await fs.readFile(CLI_PATH, 'utf-8');
+      expect(builtEntry).not.toContain('require("@rdg/core")');
+      expect(builtEntry).not.toContain("require('@rdg/core')");
+    });
+
     it('should output structure JSON with --json', async () => {
       const { stdout, stderr, exitCode } = await execa('node', [CLI_PATH, 'scan', SIMPLE_PROJECT, '--json']);
       

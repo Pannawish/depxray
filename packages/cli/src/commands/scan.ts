@@ -216,7 +216,9 @@ async function verifyDirectory(rootDir: string): Promise<void> {
 
 function getWebUiDistDir(): string {
   const candidateDirs = [
+    path.resolve(__dirname, 'web-ui'),
     path.resolve(__dirname, '../../web-ui'),
+    path.resolve(__dirname, '../web-ui/dist'),
     path.resolve(__dirname, '../../../web-ui/dist'),
   ];
 

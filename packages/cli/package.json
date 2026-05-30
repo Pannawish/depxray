@@ -12,8 +12,11 @@
     "dist"
   ],
   "scripts": {
-    "build": "tsc && node ./scripts/bundle-web-ui.mjs",
+    "build": "rm -rf dist && tsc --emitDeclarationOnly && node ./scripts/build-cli.mjs && node ./scripts/bundle-web-ui.mjs && node ./scripts/strip-dist-maps.mjs",
+    "build:types": "tsc --emitDeclarationOnly",
+    "build:js": "node ./scripts/build-cli.mjs",
     "bundle:web-ui": "node ./scripts/bundle-web-ui.mjs",
+    "strip:maps": "node ./scripts/strip-dist-maps.mjs",
     "dev": "tsc --watch",
     "start": "node ./dist/index.js",
     "test": "vitest run",
@@ -21,11 +24,12 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@rdg/core": "0.1.0",
     "commander": "^12.1.0"
   },
   "devDependencies": {
+    "@rdg/core": "0.1.0",
     "@types/node": "^20.0.0",
+    "esbuild": "^0.21.5",
     "execa": "^8.0.1",
     "typescript": "^5.4.0",
     "vitest": "^1.6.0"

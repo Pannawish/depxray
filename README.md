@@ -59,6 +59,7 @@ See [DEVELOPMENT_PLAN.md](./DEVELOPMENT_PLAN.md) for the full architecture, road
 ## 📦 Packaging Notes
 
 - The CLI build now bundles the compiled web UI into `packages/cli/dist/web-ui/`.
+- The built CLI entrypoint is bundled into a single `dist/index.js`, so published installs do not require a separate `@rdg/core` package at runtime.
 - Browser mode and static export no longer depend on `packages/web-ui/dist` at runtime when using the built CLI package.
 
 ## License
