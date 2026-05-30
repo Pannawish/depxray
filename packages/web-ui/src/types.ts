@@ -19,5 +19,6 @@ export interface StructureGraphData {
 declare global {
   interface Window {
     __GRAPH_DATA__?: StructureGraphData;
+    __RDG_INITIAL_DEPTH__?: DepthFilter;
   }
 }

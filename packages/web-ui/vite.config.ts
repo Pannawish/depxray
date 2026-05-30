@@ -10,6 +10,7 @@ const sharedNodeModules = path.resolve(
 );
 
 export default defineConfig({
+  base: './',
   plugins: [react()],
   resolve: {
     alias: {

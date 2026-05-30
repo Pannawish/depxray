@@ -12,9 +12,27 @@ const SOURCE_LABELS = {
   sample: 'sample preview',
 } as const;
 
+function readInitialDepth(): DepthFilter {
+  const searchParams = new URLSearchParams(window.location.search);
+  const queryDepth = searchParams.get('depth');
+  const embeddedDepth = window.__RDG_INITIAL_DEPTH__;
+  const rawDepth = queryDepth ?? (embeddedDepth !== undefined ? String(embeddedDepth) : '2');
+
+  if (rawDepth === 'all') {
+    return 'all';
+  }
+
+  const parsed = Number.parseInt(rawDepth, 10);
+  if ([1, 2, 3, 4].includes(parsed)) {
+    return parsed as DepthFilter;
+  }
+
+  return 2;
+}
+
 export default function App() {
   const { data, loading, error, source } = useGraphData();
-  const [depthFilter, setDepthFilter] = useState<DepthFilter>(2);
+  const [depthFilter, setDepthFilter] = useState<DepthFilter>(() => readInitialDepth());
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   const deferredSearchTerm = useDeferredValue(searchTerm);

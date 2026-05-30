@@ -14,88 +14,78 @@ describe('CLI Integration Tests', () => {
     try {
       await fs.rm(path.join(__dirname, 'test-output.json'), { force: true });
     } catch {}
+    try {
+      await fs.rm(path.join(SIMPLE_PROJECT, '.react-dependency-graph'), {
+        recursive: true,
+        force: true,
+      });
+    } catch {}
   });
 
   afterEach(async () => {
     try {
       await fs.rm(path.join(__dirname, 'test-output.json'), { force: true });
     } catch {}
+    try {
+      await fs.rm(path.join(SIMPLE_PROJECT, '.react-dependency-graph'), {
+        recursive: true,
+        force: true,
+      });
+    } catch {}
   });
 
   describe('scan command', () => {
-    it('should output JSON by default', async () => {
-      const { stdout, stderr, exitCode } = await execa('node', [CLI_PATH, 'scan', SIMPLE_PROJECT]);
+    it('should output structure JSON with --json', async () => {
+      const { stdout, stderr, exitCode } = await execa('node', [CLI_PATH, 'scan', SIMPLE_PROJECT, '--json']);
       
       expect(exitCode).toBe(0);
       const parsed = JSON.parse(stdout);
-      expect(parsed.version).toBe('1.0.0');
-      expect(parsed.metadata.projectRoot).toBe(SIMPLE_PROJECT);
-      expect(parsed.nodes.length).toBe(7);
+      expect(parsed.projectRoot).toBe(SIMPLE_PROJECT);
+      expect(parsed.totalFiles).toBe(8);
+      expect(parsed.totalDirs).toBe(5);
+      expect(parsed.nodes.some((node: any) => node.relativePath === 'src')).toBe(true);
+      expect(stderr).toContain(`Scanning ${SIMPLE_PROJECT}...`);
     });
 
-    it('should output text format when --format text is passed', async () => {
-      const { stdout, stderr, exitCode } = await execa('node', [CLI_PATH, 'scan', SIMPLE_PROJECT, '--format', 'text']);
-      
-      expect(exitCode).toBe(0);
-      expect(stdout).toContain('React Dependency Graph — Scan Results');
-      expect(stdout).toContain('Files:       7');
-      expect(stderr).toContain(`Scanning ${SIMPLE_PROJECT}...`); // Scanner writes progress to stderr
-    });
-
-    it('should output DOT format when --format dot is passed', async () => {
-      const { stdout, exitCode } = await execa('node', [CLI_PATH, 'scan', SIMPLE_PROJECT, '--format', 'dot']);
-      
-      expect(exitCode).toBe(0);
-      expect(stdout).toContain('digraph DependencyGraph {');
-      expect(stdout).toContain('src/App.tsx');
-      expect(stdout).toContain('->'); // Edge indicator
-    });
-
-    it('should write output to file when --output flag is used', async () => {
+    it('should write JSON to file when --json --output is passed', async () => {
       const outputPath = path.join(__dirname, 'test-output.json');
-      const { stdout, stderr, exitCode } = await execa('node', [CLI_PATH, 'scan', SIMPLE_PROJECT, '--output', outputPath]);
+      const { stdout, stderr, exitCode } = await execa('node', [CLI_PATH, 'scan', SIMPLE_PROJECT, '--json', '--output', outputPath]);
       
       expect(exitCode).toBe(0);
-      expect(stdout.trim()).toBe(''); // Output goes to file
+      expect(stdout.trim()).toBe('');
       expect(stderr).toContain(`Output written to ${outputPath}`);
       
       const fileContent = await fs.readFile(outputPath, 'utf-8');
       const parsed = JSON.parse(fileContent);
-      expect(parsed.version).toBe('1.0.0');
-      expect(parsed.nodes.length).toBe(7);
+      expect(parsed.totalFiles).toBe(8);
+      expect(parsed.nodes.length).toBeGreaterThan(0);
     });
 
-    it('should respect --ignore flag', async () => {
-      const { stdout, exitCode } = await execa('node', [CLI_PATH, 'scan', SIMPLE_PROJECT, '--ignore', 'pages']);
+    it('should generate a static HTML export with --html', async () => {
+      const { stderr, exitCode } = await execa('node', [CLI_PATH, 'scan', SIMPLE_PROJECT, '--html', '--depth', '3']);
+      
+      expect(exitCode).toBe(0);
+      const outputDir = path.join(SIMPLE_PROJECT, '.react-dependency-graph');
+      const indexPath = path.join(outputDir, 'index.html');
+      const graphDataPath = path.join(outputDir, 'graph-data.json');
+      const indexHtml = await fs.readFile(indexPath, 'utf-8');
+      const graphData = JSON.parse(await fs.readFile(graphDataPath, 'utf-8'));
+      
+      expect(stderr).toContain(`Static export written to ${indexPath}`);
+      expect(indexHtml).toContain('window.__GRAPH_DATA__ =');
+      expect(indexHtml).toContain('window.__RDG_INITIAL_DEPTH__ = "3"');
+      expect(graphData.totalFiles).toBe(8);
+    });
+
+    it('should respect --ignore flag for structure JSON', async () => {
+      const { stdout, exitCode } = await execa('node', [CLI_PATH, 'scan', SIMPLE_PROJECT, '--json', '--ignore', 'pages']);
       
       expect(exitCode).toBe(0);
       const parsed = JSON.parse(stdout);
-      const hasPages = parsed.nodes.some((n: any) => n.relativePath.includes('pages'));
-      // Note: We use the logic from core tests: outDegree should be 0 since it wasn't scanned
-      const dashboardNode = parsed.nodes.find((n: any) => n.relativePath.includes('Dashboard'));
-      if (dashboardNode) {
-        expect(dashboardNode.outDegree).toBe(0);
-      }
-      
-      const scannedCount = parsed.nodes.filter((n: any) => !n.relativePath.includes('pages')).length;
-      expect(scannedCount).toBe(6);
+      expect(parsed.nodes.some((node: any) => node.relativePath.includes('pages'))).toBe(false);
+      expect(parsed.totalFiles).toBe(7);
     });
 
-    it('should respect --no-circular flag', async () => {
-      const { stdout, exitCode } = await execa('node', [CLI_PATH, 'scan', CIRCULAR_PROJECT, '--no-circular']);
-      
-      expect(exitCode).toBe(0);
-      const parsed = JSON.parse(stdout);
-      expect(parsed.circularDependencies).toHaveLength(0);
-      expect(parsed.metadata.circularCount).toBe(0);
-    });
-    
-    it('should warn about circular dependencies in stderr when found', async () => {
-      const { stderr, exitCode } = await execa('node', [CLI_PATH, 'scan', CIRCULAR_PROJECT, '--format', 'text']);
-      
-      expect(exitCode).toBe(0); // Assuming warning doesn't fail the command natively unless we changed it to
-      expect(stderr).toContain('Found 2 circular dependency chain(s)');
-    });
   });
 
   describe('inspect command', () => {
@@ -134,7 +124,7 @@ describe('CLI Integration Tests', () => {
   describe('error cases and help', () => {
     it('should fail if directory does not exist', async () => {
       try {
-        await execa('node', [CLI_PATH, 'scan', '/invalid/directory/path']);
+        await execa('node', [CLI_PATH, 'scan', '/invalid/directory/path', '--json']);
         expect.fail('Should have thrown an error');
       } catch (err: any) {
         expect(err.exitCode).toBe(1);
