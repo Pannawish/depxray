@@ -153,9 +153,9 @@ export default function App() {
   const [rightColumnOrder, setRightColumnOrder] = useState<('details' | 'code')[]>(['details', 'code']);
   const [draggedStackType, setDraggedStackType] = useState<'details' | 'code' | null>(null);
   
-  const [leftWidth, setLeftWidth] = useState<number>(300);
-  const [rightWidth, setRightWidth] = useState<number>(400);
-  const [detailsHeight, setDetailsHeight] = useState<number>(220);
+  const [leftWidth, setLeftWidth] = useState<number | null>(null);
+  const [rightWidth, setRightWidth] = useState<number | null>(null);
+  const [detailsHeight, setDetailsHeight] = useState<number | null>(null);
 
   const handleStackDragStart = (type: 'details' | 'code') => {
     setDraggedStackType(type);
@@ -175,7 +175,8 @@ export default function App() {
   const handleLeftResize = (e: React.MouseEvent) => {
     e.preventDefault();
     const startX = e.clientX;
-    const startWidth = leftWidth;
+    const element = document.querySelector('.tree-panel');
+    const startWidth = leftWidth ?? (element ? element.getBoundingClientRect().width : 360);
     
     const onMouseMove = (moveEvent: MouseEvent) => {
       const delta = moveEvent.clientX - startX;
@@ -195,7 +196,8 @@ export default function App() {
   const handleRightResize = (e: React.MouseEvent) => {
     e.preventDefault();
     const startX = e.clientX;
-    const startWidth = rightWidth;
+    const element = document.querySelector('.right-column-container');
+    const startWidth = rightWidth ?? (element ? element.getBoundingClientRect().width : 480);
     
     const onMouseMove = (moveEvent: MouseEvent) => {
       const delta = moveEvent.clientX - startX;
@@ -215,7 +217,8 @@ export default function App() {
   const handleHeightResize = (e: React.MouseEvent) => {
     e.preventDefault();
     const startY = e.clientY;
-    const startHeight = detailsHeight;
+    const element = document.querySelector('.details-panel');
+    const startHeight = detailsHeight ?? (element ? element.getBoundingClientRect().height : 260);
     const isDetailsOnTop = rightColumnOrder[0] === 'details';
     
     const onMouseMove = (moveEvent: MouseEvent) => {
@@ -327,6 +330,62 @@ export default function App() {
     );
   }
 
+  const gridStyle = useMemo(() => {
+    // If neither left nor right are resized, use the original proportions!
+    if (leftWidth === null && rightWidth === null) {
+      return {
+        gridTemplateColumns: 'minmax(260px, 360px) 6px minmax(320px, 0.85fr) 6px minmax(360px, 1fr)',
+        gap: 0
+      };
+    }
+    
+    // If only left is resized
+    if (leftWidth !== null && rightWidth === null) {
+      return {
+        gridTemplateColumns: `${leftWidth}px 6px minmax(320px, 0.85fr) 6px minmax(360px, 1fr)`,
+        gap: 0
+      };
+    }
+    
+    // If only right is resized
+    if (leftWidth === null && rightWidth !== null) {
+      return {
+        gridTemplateColumns: `minmax(260px, 360px) 6px minmax(320px, 0.85fr) 6px ${rightWidth}px`,
+        gap: 0
+      };
+    }
+    
+    // If both are resized
+    return {
+      gridTemplateColumns: `${leftWidth}px 6px 1fr 6px ${rightWidth}px`,
+      gap: 0
+    };
+  }, [leftWidth, rightWidth]);
+
+  const rightColumnStyle = useMemo(() => {
+    const isDetailsOnTop = rightColumnOrder[0] === 'details';
+    
+    if (detailsHeight === null) {
+      return {
+        display: 'grid',
+        gridTemplateRows: isDetailsOnTop ? 'auto 6px 1fr' : '1fr 6px auto',
+        gap: 0,
+        height: '100%',
+        minHeight: 0
+      };
+    }
+    
+    return {
+      display: 'grid',
+      gridTemplateRows: isDetailsOnTop
+        ? `${detailsHeight}px 6px 1fr`
+        : `1fr 6px ${detailsHeight}px`,
+      gap: 0,
+      height: '100%',
+      minHeight: 0
+    };
+  }, [detailsHeight, rightColumnOrder]);
+
   return (
     <main className="app-shell">
       <ExplorerToolbar
@@ -346,9 +405,7 @@ export default function App() {
 
       <div 
         className="explorer-grid"
-        style={{
-          gridTemplateColumns: `${leftWidth}px 6px 1fr 6px ${rightWidth}px`
-        }}
+        style={gridStyle}
       >
         {/* Column 1 (Left) - Anchored Explorer */}
         <FileTreeView
@@ -378,14 +435,7 @@ export default function App() {
         {/* Column 3 (Right) - Stacked Details & Code Viewer */}
         <div 
           className="right-column-container"
-          style={{ 
-            display: 'grid', 
-            gridTemplateRows: rightColumnOrder[0] === 'details' 
-              ? `${detailsHeight}px 6px 1fr` 
-              : `1fr 6px ${detailsHeight}px`, 
-            height: '100%', 
-            minHeight: 0 
-          }}
+          style={rightColumnStyle}
         >
           {rightColumnOrder.map((type, idx) => {
             if (type === 'details') {
