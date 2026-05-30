@@ -234,7 +234,7 @@ For AI coding agents (such as Claude, Codex, and Antigravity), reading raw sourc
 
 `depxray` provides a perfect semantic overview that agents can query to understand the shape of a project before writing code.
 
-### 🤖 Pipeline Example: Feeding Context to an Agent
+### Pipeline Example: Feeding Context to an Agent
 You can pipe `depxray`'s structured JSON output directly into your agent's system prompt or workspace context files:
 
 ```bash
@@ -242,7 +242,7 @@ You can pipe `depxray`'s structured JSON output directly into your agent's syste
 npx depxray scan --json > .depxray-context.json
 ```
 
-### 📊 Full Graph JSON Output Schema
+### Full Graph JSON Output Schema
 When running `depxray scan --json`, the generated structure matches the following portable format (all paths resolved as relative to project root):
 
 ```json
