@@ -1,7 +1,7 @@
 import { startTransition, useDeferredValue, useEffect, useMemo, useState } from 'react';
 import { ExplorerToolbar } from './components/ExplorerToolbar.js';
 import { FileTreeView, type FileTreeRowData } from './components/FileTreeView.js';
-import { FocusedTreePanel } from './components/FocusedTreePanel.js';
+import { VisualTreePanel } from './components/VisualTreePanel.js';
 import { RelationshipPanel } from './components/RelationshipPanel.js';
 import { SelectionPanel } from './components/SelectionPanel.js';
 import { useGraphData } from './hooks/useGraphData.js';
@@ -281,11 +281,9 @@ export default function App() {
             projectRoot={index.projectRoot}
             error={error}
           />
-          <FocusedTreePanel
+          <VisualTreePanel
             node={selectedNode}
             index={index}
-            folderSummary={folderSummary}
-            filters={dependencyFilters}
             selectedNodeId={selectedNodeId}
             onSelectNode={setSelectedNodeId}
           />
