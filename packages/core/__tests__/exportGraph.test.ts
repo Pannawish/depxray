@@ -13,7 +13,7 @@ function makeMeta(): ScanMetadata {
     totalFiles: 2,
     totalEdges: 1,
     circularCount: 0,
-    depxrayVersion: '0.3.0',
+    depxrayVersion: '0.3.1',
   };
 }
 
@@ -58,7 +58,7 @@ describe('exportGraphJSON', () => {
 
     const parsed = JSON.parse(exportGraphJSON(graph));
     expect(parsed.metadata).toBeDefined();
-    expect(parsed.metadata.depxrayVersion).toBe('0.3.0');
+    expect(parsed.metadata.depxrayVersion).toBe('0.3.1');
     expect(parsed.metadata.projectRoot).toBe(ROOT_DIR);
   });
 

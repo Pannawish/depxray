@@ -34,7 +34,7 @@ import { detectCircularDeps } from './detectCircularDeps.js';
 import { loadAliases } from './configLoader.js';
 
 // Read version from package.json at build time
-const DEPXRAY_VERSION = '0.3.0';
+const DEPXRAY_VERSION = '0.3.1';
 
 /**
  * Scan a React project and build its dependency graph.
