@@ -1,8 +1,61 @@
 # depxray (Dependency X-Ray)
 
-Analyze JavaScript and TypeScript codebases with an interactive dependency graph and structure explorer.
+Understand how a JavaScript or TypeScript codebase is wired together.
 
-`depxray` is a CLI tool for scanning project structure and module import graphs. It can open a local browser UI, print JSON output, export a standalone HTML bundle, and inspect import relationships for a single file.
+`depxray` scans your repository and shows structure, imports, dependents, and circular relationships in a local browser UI or machine-readable JSON. Use it to inspect one file, explore a large project, or generate a shareable static HTML report.
+
+## Why depxray
+
+- Explore a repo as a compact file tree instead of a noisy full-project graph
+- See what a file imports and what depends on it
+- Detect circular dependencies quickly
+- Export JSON for scripts, automation, and coding agents
+- Generate a standalone HTML report for local review or sharing
+
+## Quick Start
+
+Run it directly with `npx`:
+
+```bash
+npx depxray scan
+```
+
+Scan another project and open the local explorer:
+
+```bash
+npx depxray scan /path/to/project
+```
+
+Inspect one file:
+
+```bash
+npx depxray inspect src/components/Button.tsx
+```
+
+Export JSON:
+
+```bash
+npx depxray scan /path/to/project --json --mode dependencies --output dep-graph.json
+```
+
+Generate a standalone HTML bundle:
+
+```bash
+npx depxray scan /path/to/project --html
+```
+
+## For AI Agents
+
+`depxray` is also designed for coding agents and automation workflows that need machine-readable repository structure and dependency data.
+
+Common agent-oriented commands:
+
+```bash
+npx depxray scan /path/to/project --json
+npx depxray inspect src/components/Button.tsx --format json
+```
+
+Use `scan --json` when an agent needs full project structure or dependency graph data. Use `inspect --format json` when an agent needs outgoing imports and incoming dependents for one file.
 
 ## Install
 
@@ -17,44 +70,6 @@ Or install it globally:
 ```bash
 npm install -g depxray
 depxray scan
-```
-
-## Quick Start
-
-Scan the current project and open the local dashboard:
-
-```bash
-npx depxray scan
-```
-
-Scan a specific project:
-
-```bash
-npx depxray scan /path/to/project
-```
-
-Start in dependency mode:
-
-```bash
-npx depxray scan /path/to/project --mode dependencies
-```
-
-Export JSON:
-
-```bash
-npx depxray scan /path/to/project --json --mode dependencies --output dep-graph.json
-```
-
-Generate a standalone HTML bundle:
-
-```bash
-npx depxray scan --html
-```
-
-Inspect a single file:
-
-```bash
-npx depxray inspect src/components/Button.tsx
 ```
 
 ## Commands
@@ -89,8 +104,8 @@ depxray inspect <file> [options]
 
 ## Features
 
-- Structure explorer for directories and files
-- Dependency graph view for module relationships
+- File-tree-first repository explorer
+- Incoming and outgoing file relationships
 - Circular dependency detection
 - JSON output for automation and AI workflows
 - Standalone HTML export for sharing results

@@ -1,6 +1,6 @@
 {
   "name": "@depxray/core",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "Platform-agnostic scanner for JavaScript and TypeScript project structure and dependency graphs, including import analysis and circular detection.",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -26,11 +26,14 @@
     "@types/node": "^20.0.0"
   },
   "keywords": [
-    "react",
     "dependency-graph",
+    "dependency-analysis",
     "static-analysis",
+    "javascript",
+    "typescript",
     "imports",
-    "typescript"
+    "codebase",
+    "architecture"
   ],
   "license": "MIT"
 }

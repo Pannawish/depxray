@@ -1,6 +1,6 @@
 {
   "name": "depxray",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "Browser-first CLI for exploring JavaScript and TypeScript project structure and dependency graphs, with JSON and static HTML export.",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -23,7 +23,7 @@
     "prepublishOnly": "node ../../scripts/sync-versions.mjs && npm run build"
   },
   "devDependencies": {
-    "@depxray/core": "0.3.1",
+    "@depxray/core": "0.3.2",
     "@types/node": "^20.0.0",
     "commander": "^12.1.0",
     "esbuild": "^0.21.5",
@@ -32,10 +32,16 @@
     "vitest": "^1.6.0"
   },
   "keywords": [
-    "react",
     "dependency-graph",
-    "cli",
-    "static-analysis"
+    "dependency-analysis",
+    "static-analysis",
+    "javascript",
+    "typescript",
+    "imports",
+    "codebase",
+    "visualization",
+    "architecture",
+    "cli"
   ],
   "author": "Pannawish Kriengyakul",
   "license": "MIT",
