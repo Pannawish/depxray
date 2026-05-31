@@ -165,6 +165,20 @@ It supports:
 
 This repository is organized into three main workspaces:
 
+```mermaid
+graph TD
+  Core["@depxray/core
+Scanner and dependency engine"]
+  WebUI["@depxray/web-ui
+React browser UI"]
+  CLI["depxray
+Published CLI package"]
+
+  Core --> WebUI
+  Core --> CLI
+  WebUI -->|bundled web assets| CLI
+```
+
 - [`packages/core`](./packages/core): scanner and dependency-analysis engine
 - [`packages/web-ui`](./packages/web-ui): React browser UI
 - [`packages/cli`](./packages/cli): published `depxray` package with the embedded web UI
