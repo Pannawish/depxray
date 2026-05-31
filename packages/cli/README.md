@@ -75,6 +75,8 @@ Use `scan --json` when an agent needs project-wide context. Use `inspect --forma
 
 ## JSON Output Examples
 
+The examples below are shortened to show the stable shape. Real output includes full `nodes` and `edges` arrays.
+
 `scan --mode dependencies --json` returns graph data like:
 
 ```json
@@ -144,6 +146,8 @@ Common options:
 - `--html`: generate a standalone HTML bundle in `.depxray/`
 - `--mode <mode>`: `structure` or `dependencies`
 - `--ignore <patterns...>`: exclude paths from scanning
+- `--no-circular`: skip circular dependency detection in dependency mode
+- `--no-aliases`: skip `tsconfig.json` / `jsconfig.json` path alias resolution in dependency mode
 - `--extensions <exts...>`: choose scanned extensions in dependency mode
 - `--depth <depth>`: initial directory expansion depth; accepts any integer `>= 1` or `all`
 - `--port <port>`: preferred local dashboard port; falls back to the next free port if needed
