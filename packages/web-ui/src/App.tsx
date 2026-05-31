@@ -26,19 +26,8 @@ const SOURCE_LABELS = {
 
 
 function buildInitialExpandedIds(index: FileRelationshipIndex): Set<string> {
-  const expandedIds = new Set<string>();
-
-  for (const node of index.structureGraph?.nodes ?? []) {
-    if (node.kind === 'directory' && node.depth <= 1) {
-      expandedIds.add(node.id);
-    }
-  }
-
-  if (index.rootId) {
-    expandedIds.add(index.rootId);
-  }
-
-  return expandedIds;
+  void index;
+  return new Set<string>();
 }
 
 function firstSelectableNode(index: FileRelationshipIndex): ExplorerGraphNode | null {
