@@ -81,7 +81,7 @@ Common options:
 
 ### `inspect`
 
-Inspect import and export relationships for a single file.
+Inspect what a file imports and what imports it.
 
 ```bash
 depxray inspect <file> [options]
