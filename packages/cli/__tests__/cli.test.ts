@@ -51,7 +51,7 @@ describe('CLI Integration Tests', () => {
       expect(parsed.projectRoot).toBe(SIMPLE_PROJECT);
       expect(parsed.totalFiles).toBe(8);
       expect(parsed.totalDirs).toBe(5);
-      expect(parsed.totalImports).toBe(12);
+      expect(parsed.totalImports).toBe(0);
       expect(parsed.nodes.some((node: any) => node.relativePath === 'src')).toBe(true);
       expect(stderr).toContain(`Scanning ${SIMPLE_PROJECT}...`);
     });
@@ -208,6 +208,28 @@ describe('CLI Integration Tests', () => {
       expect(stdout).toContain('Usage: depxray');
       expect(stdout).toContain('scan [options]');
       expect(stdout).toContain('inspect [options]');
+      expect(stdout).not.toContain('legacy');
+    });
+
+    it('should document the accepted depth values in scan help', async () => {
+      const { stdout, exitCode } = await execa('node', [CLI_PATH, 'scan', '--help']);
+
+      expect(exitCode).toBe(0);
+      expect(stdout).toContain('integer >= 1 or all');
+    });
+
+    it('should accept depth values greater than 4', async () => {
+      const { stdout, exitCode } = await execa('node', [
+        CLI_PATH,
+        'scan',
+        SIMPLE_PROJECT,
+        '--json',
+        '--depth',
+        '5',
+      ]);
+
+      expect(exitCode).toBe(0);
+      expect(JSON.parse(stdout).mode).toBe('structure');
     });
   });
 });

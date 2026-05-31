@@ -8,7 +8,7 @@ export const sampleGraphData: ExplorerGraphData = {
   scannedAt: '2026-05-30T00:00:00.000Z',
   totalFiles: 7,
   totalDirs: 5,
-  totalImports: 11,
+  totalImports: 0,
   circularCount: 0,
   generatedBy: `depxray@${packageJson.version}`,
   errors: [],

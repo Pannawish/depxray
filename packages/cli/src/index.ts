@@ -33,8 +33,8 @@ program
   .name('depxray')
   .description(
     'Scan projects and generate structure or dependency graphs.\n\n' +
-      'Useful for understanding project structure in the browser, with the legacy inspect command\n' +
-      'and providing structured data to AI coding agents (Claude, Codex, Antigravity).',
+      'Useful for browsing project structure, inspecting file relationships,\n' +
+      'and providing structured data to AI coding agents.',
   )
   .version(packageJson.version);
 

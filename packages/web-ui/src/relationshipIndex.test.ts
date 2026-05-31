@@ -30,7 +30,7 @@ function makeDataSet(): ExplorerGraphSet {
         scannedAt: '2026-05-30T00:00:00.000Z',
         totalFiles: 5,
         totalDirs: 2,
-        totalImports: 5,
+        totalImports: 0,
         circularCount: 0,
         generatedBy: 'test',
         errors: [],

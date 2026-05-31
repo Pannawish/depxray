@@ -87,7 +87,7 @@ function parseDepth(value: string | undefined): number | 'all' {
 
   const parsed = Number.parseInt(value, 10);
   if (!Number.isInteger(parsed) || parsed < 1) {
-    throw new Error(`Invalid depth: ${value}. Use 1, 2, 3, 4, or "all".`);
+    throw new Error(`Invalid depth: ${value}. Use an integer >= 1 or "all".`);
   }
 
   return parsed;
@@ -179,7 +179,7 @@ function toStructureGraphData(graph: StructureGraph): ExplorerGraphData {
     scannedAt,
     totalFiles,
     totalDirs,
-    totalImports: graph.edges.length,
+    totalImports: 0,
     circularCount: 0,
     generatedBy: getGeneratedBy(),
     errors: [],
@@ -599,7 +599,7 @@ export function createScanCommand(): Command {
       '--extensions <exts...>',
       'File extensions to scan in dependency mode (default: .js .jsx .ts .tsx)',
     )
-    .option('--depth <depth>', 'Initial visible depth: 1, 2, 3, 4, or all', '2')
+    .option('--depth <depth>', 'Initial visible depth: integer >= 1 or all', '2')
     .option('--port <port>', 'Port for the local browser server', '5178')
     .option('--no-open', 'Do not open the browser automatically')
     .action(async (dir: string, rawOptions: ScanCommandOptions) => {
