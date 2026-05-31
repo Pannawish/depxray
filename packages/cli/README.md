@@ -1,20 +1,30 @@
 # depxray (Dependency X-Ray)
 
-Understand how a JavaScript or TypeScript codebase is wired together.
+Understand a JavaScript or TypeScript codebase through its file tree, imports, dependents, circular dependencies, JSON output, and static HTML reports.
 
-`depxray` scans your repository and shows structure, imports, dependents, and circular relationships in a local browser UI or machine-readable JSON. Use it to inspect one file, explore a large project, or generate a shareable static HTML report.
+`depxray` is a browser-first CLI for developers and AI coding agents that need repository context before editing code. It scans a project, builds structure and dependency data, and exposes that data through a local browser UI, machine-readable JSON, or a shareable static HTML export.
 
 ## Why depxray
 
 - Explore a repo as a compact file tree instead of a noisy full-project graph
 - See what a file imports and what depends on it
 - Detect circular dependencies quickly
-- Export JSON for scripts, automation, and coding agents
+- Export JSON for scripts, automation, and AI coding agents
 - Generate a standalone HTML report for local review or sharing
 
-## Quick Start
+## Fastest Way To Try It
 
 Run it directly with `npx`:
+
+```bash
+npx depxray scan
+```
+
+The default `scan` command starts a local browser UI. If port `5178` is busy, `depxray` automatically tries the next free port.
+
+## Quick Examples
+
+Open the current project in the browser UI:
 
 ```bash
 npx depxray scan
@@ -26,19 +36,19 @@ Scan another project and open the local explorer:
 npx depxray scan /path/to/project
 ```
 
-Inspect one file:
+Export dependency data to JSON:
 
 ```bash
-npx depxray inspect src/components/Button.tsx
+npx depxray scan /path/to/project --mode dependencies --json --output dep-graph.json
 ```
 
-Export JSON:
+Inspect one file and show its imports and dependents:
 
 ```bash
-npx depxray scan /path/to/project --json --mode dependencies --output dep-graph.json
+npx depxray inspect src/components/Button.tsx --dir /path/to/project
 ```
 
-Generate a standalone HTML bundle:
+Generate a standalone HTML report:
 
 ```bash
 npx depxray scan /path/to/project --html
@@ -46,16 +56,61 @@ npx depxray scan /path/to/project --html
 
 ## For AI Agents
 
-`depxray` is also designed for coding agents and automation workflows that need machine-readable repository structure and dependency data.
+Use `depxray` before making edits when an agent needs project structure or file-level dependency context.
 
-Common agent-oriented commands:
+Typical workflow:
+
+1. Run `scan --json` to get project structure or dependency graph data.
+2. Run `inspect --format json` on the file the agent plans to edit.
+3. Use incoming dependents and outgoing imports to avoid breaking connected files.
+
+Agent-oriented commands:
 
 ```bash
-npx depxray scan /path/to/project --json
-npx depxray inspect src/components/Button.tsx --format json
+npx depxray scan /path/to/project --mode dependencies --json --output dep-graph.json
+npx depxray inspect src/components/Button.tsx --dir /path/to/project --format json
 ```
 
-Use `scan --json` when an agent needs full project structure or dependency graph data. Use `inspect --format json` when an agent needs outgoing imports and incoming dependents for one file.
+Use `scan --json` when an agent needs project-wide context. Use `inspect --format json` when an agent needs focused context for one file.
+
+## JSON Output Examples
+
+`scan --mode dependencies --json` returns graph data like:
+
+```json
+{
+  "schemaVersion": "1.0.0",
+  "mode": "dependencies",
+  "projectRoot": "/path/to/project",
+  "totalFiles": 42,
+  "totalImports": 87,
+  "circularCount": 2,
+  "nodes": [],
+  "edges": []
+}
+```
+
+`inspect --format json` returns file-level dependency data like:
+
+```json
+{
+  "file": "src/App.tsx",
+  "extension": ".tsx",
+  "inDegree": 3,
+  "outDegree": 5,
+  "isCircular": false,
+  "imports": [
+    {
+      "file": "src/components/Header.tsx",
+      "specifier": "./components/Header",
+      "names": ["Header"],
+      "isTypeOnly": false,
+      "isDynamic": false
+    }
+  ],
+  "importedBy": []
+}
+```
 
 ## Install
 
@@ -94,6 +149,15 @@ Common options:
 - `--port <port>`: preferred local dashboard port; falls back to the next free port if needed
 - `--no-open`: do not open the browser automatically
 
+Examples:
+
+```bash
+depxray scan
+depxray scan /path/to/project --mode dependencies
+depxray scan /path/to/project --mode dependencies --json --output dep-graph.json
+depxray scan /path/to/project --html
+```
+
 ### `inspect`
 
 Inspect what a file imports and what imports it.
@@ -102,14 +166,34 @@ Inspect what a file imports and what imports it.
 depxray inspect <file> [options]
 ```
 
-## Features
+Options:
 
-- File-tree-first repository explorer
-- Incoming and outgoing file relationships
-- Circular dependency detection
-- JSON output for automation and AI workflows
-- Standalone HTML export for sharing results
-- Interactive local browser UI
+- `-d, --dir <dir>`: project root directory, default `.`
+- `-f, --format <format>`: `text` or `json`, default `text`
+
+Examples:
+
+```bash
+depxray inspect src/App.tsx --dir /path/to/project
+depxray inspect src/App.tsx --dir /path/to/project --format json
+```
+
+## Supported Analysis
+
+`depxray` performs static analysis for JavaScript and TypeScript projects.
+
+It supports:
+
+- `.js`, `.jsx`, `.ts`, `.tsx`
+- static imports
+- named imports
+- namespace imports
+- type-only imports
+- dynamic imports
+- CommonJS `require`
+- re-exports and barrel files
+- `tsconfig.json` and `jsconfig.json` path alias resolution
+- circular dependency detection
 
 ## Repository
 
