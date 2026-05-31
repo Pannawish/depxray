@@ -6,7 +6,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![NPM Version](https://img.shields.io/npm/v/depxray)](https://www.npmjs.com/package/depxray)
 
-`depxray` helps both developers and coding agents understand how a repository is structured and how files depend on each other. It scans a project, builds structure and dependency data, then lets you inspect imports, dependents, circular relationships, file details, and source code from a local browser UI or JSON output.
+`depxray` helps both developers and coding agents understand how a repository is structured and how files depend on each other. It scans a project, builds structure and dependency data, then lets you inspect imports, dependents, circular relationships, and file details from a local browser UI or JSON output, with inline source code available in the live browser UI.
 
 ## What It Does
 
@@ -64,7 +64,7 @@ Current UI capabilities include:
 - compact rows for large repos
 - file details such as relative path, absolute path, extension, depth, size, incoming count, outgoing count, and circular status
 - folder summaries such as total files, direct children, descendants, internal imports, incoming external references, outgoing external references, and circular files inside the folder
-- relationship badges for type-only and dynamic imports
+- dependency metadata for type-only and dynamic imports in exported graph data
 - layout swapping and resizable panels
 
 If the default port `5178` is busy, `depxray` automatically tries the next free local port and prints that change in the terminal.
@@ -87,7 +87,7 @@ Common options:
 - `--mode <mode>`: `structure` or `dependencies`
 - `--ignore <patterns...>`: exclude additional paths
 - `--extensions <exts...>`: choose scanned extensions in dependency mode
-- `--depth <depth>`: initial visible depth: `1`, `2`, `3`, `4`, or `all`
+- `--depth <depth>`: initial visible depth: any integer `>= 1` or `all`
 - `--port <port>`: preferred local dashboard port; falls back to the next free port if needed
 - `--no-open`: start the local server without opening a browser
 

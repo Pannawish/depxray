@@ -85,12 +85,12 @@ depxray scan [dir] [options]
 Common options:
 
 - `--json`: print graph data to `stdout`
-- `-o, --output <file>`: write JSON output to a file
+- `-o, --output <file>`: write JSON output to a file; only valid with `--json`
 - `--html`: generate a standalone HTML bundle in `.depxray/`
 - `--mode <mode>`: `structure` or `dependencies`
 - `--ignore <patterns...>`: exclude paths from scanning
 - `--extensions <exts...>`: choose scanned extensions in dependency mode
-- `--depth <depth>`: initial directory expansion depth
+- `--depth <depth>`: initial directory expansion depth; accepts any integer `>= 1` or `all`
 - `--port <port>`: preferred local dashboard port; falls back to the next free port if needed
 - `--no-open`: do not open the browser automatically
 
