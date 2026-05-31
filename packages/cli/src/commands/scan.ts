@@ -74,6 +74,7 @@ interface ScanCommandOptions {
 }
 
 const EXPORT_SCHEMA_VERSION = '1.0.0';
+const MAX_PORT_SEARCH_ATTEMPTS = 10;
 
 function parseDepth(value: string | undefined): number | 'all' {
   if (!value) {
@@ -92,7 +93,7 @@ function parseDepth(value: string | undefined): number | 'all' {
   return parsed;
 }
 
-function parsePort(value: string | undefined): number {
+export function parsePort(value: string | undefined): number {
   if (!value) {
     return 5178;
   }
@@ -103,6 +104,51 @@ function parsePort(value: string | undefined): number {
   }
 
   return parsed;
+}
+
+function isAddressInUseError(error: unknown): error is NodeJS.ErrnoException {
+  return error instanceof Error && 'code' in error && error.code === 'EADDRINUSE';
+}
+
+export async function listenOnAvailablePort(
+  server: http.Server,
+  requestedPort: number,
+  host = '127.0.0.1',
+  maxAttempts = MAX_PORT_SEARCH_ATTEMPTS,
+): Promise<number> {
+  const upperBound = Math.min(65535, requestedPort + maxAttempts - 1);
+
+  for (let port = requestedPort; port <= upperBound; port += 1) {
+    try {
+      await new Promise<void>((resolve, reject) => {
+        const onError = (error: Error) => {
+          server.off('listening', onListening);
+          reject(error);
+        };
+        const onListening = () => {
+          server.off('error', onError);
+          resolve();
+        };
+
+        server.once('error', onError);
+        server.once('listening', onListening);
+        server.listen(port, host);
+      });
+
+      return port;
+    } catch (error) {
+      if (!isAddressInUseError(error) || port === upperBound) {
+        if (isAddressInUseError(error)) {
+          throw new Error(
+            `No available port found between ${requestedPort} and ${upperBound}.`,
+          );
+        }
+        throw error;
+      }
+    }
+  }
+
+  throw new Error(`No available port found between ${requestedPort} and ${upperBound}.`);
 }
 
 function parseMode(value: string | undefined): GraphMode {
@@ -353,9 +399,9 @@ async function startGraphServer(
   rootDir: string,
   tree: FileTreeNode,
   graphSet: ExplorerGraphSet,
-  port: number,
+  requestedPort: number,
   initialDepth: number | 'all',
-): Promise<void> {
+): Promise<number> {
   const distDir = await requireWebUiDist();
   const treeJson = JSON.stringify(tree, null, 2);
   const graphSetJson = serializeGraphSet(graphSet);
@@ -449,13 +495,14 @@ async function startGraphServer(
     }
   });
 
-  await new Promise<void>((resolve, reject) => {
-    server.once('error', reject);
-    server.listen(port, '127.0.0.1', () => resolve());
-  });
-
+  const port = await listenOnAvailablePort(server, requestedPort);
   const url = `http://127.0.0.1:${port}?depth=${encodeURIComponent(initialDepthValue)}&mode=${encodeURIComponent(graphSet.defaultMode)}`;
   process.stderr.write(`Serving ${rootDir}\n`);
+  if (port !== requestedPort) {
+    process.stderr.write(
+      `Port ${requestedPort} is in use. Using ${port} instead.\n`,
+    );
+  }
   process.stderr.write(`Opening ${url}\n`);
 
   const shutdown = () => {
@@ -468,6 +515,7 @@ async function startGraphServer(
 
   process.once('SIGINT', shutdown);
   process.once('SIGTERM', shutdown);
+  return port;
 }
 
 async function buildSelectedGraphData(
@@ -594,9 +642,9 @@ export function createScanCommand(): Command {
         }
 
         const { tree, graphSet } = await buildGraphSet(rootDir, rawOptions);
-        await startGraphServer(rootDir, tree, graphSet, port, initialDepth);
+        const resolvedPort = await startGraphServer(rootDir, tree, graphSet, port, initialDepth);
         if (rawOptions.open !== false) {
-          const url = `http://127.0.0.1:${port}?depth=${encodeURIComponent(normalizeInitialDepth(initialDepth))}&mode=${encodeURIComponent(graphSet.defaultMode)}`;
+          const url = `http://127.0.0.1:${resolvedPort}?depth=${encodeURIComponent(normalizeInitialDepth(initialDepth))}&mode=${encodeURIComponent(graphSet.defaultMode)}`;
           await openBrowser(url);
         }
 

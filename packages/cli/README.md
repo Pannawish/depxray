@@ -91,7 +91,7 @@ Common options:
 - `--ignore <patterns...>`: exclude paths from scanning
 - `--extensions <exts...>`: choose scanned extensions in dependency mode
 - `--depth <depth>`: initial directory expansion depth
-- `--port <port>`: local dashboard port
+- `--port <port>`: preferred local dashboard port; falls back to the next free port if needed
 - `--no-open`: do not open the browser automatically
 
 ### `inspect`
