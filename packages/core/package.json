@@ -1,6 +1,6 @@
 {
   "name": "@depxray/core",
-  "version": "0.3.4",
+  "version": "0.3.5",
   "description": "Platform-agnostic scanner for JavaScript and TypeScript project structure and dependency graphs, including import analysis and circular detection.",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
