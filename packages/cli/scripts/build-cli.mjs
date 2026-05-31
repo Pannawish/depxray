@@ -1,4 +1,5 @@
 import * as path from 'node:path';
+import { chmod } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { build } from 'esbuild';
 
@@ -19,3 +20,5 @@ await build({
   },
   external: ['node:*'],
 });
+
+await chmod(path.join(cliDir, 'dist/index.js'), 0o755);

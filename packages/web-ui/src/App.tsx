@@ -26,8 +26,13 @@ const SOURCE_LABELS = {
 
 
 function buildInitialExpandedIds(index: FileRelationshipIndex): Set<string> {
-  void index;
-  return new Set<string>();
+  const expandedIds = new Set<string>();
+
+  if (index.rootId) {
+    expandedIds.add(index.rootId);
+  }
+
+  return expandedIds;
 }
 
 function firstSelectableNode(index: FileRelationshipIndex): ExplorerGraphNode | null {
@@ -140,7 +145,7 @@ export default function App() {
   const [activeCodeNodeId, setActiveCodeNodeId] = useState<string | null>(null);
   
   const [columnsOrder, setColumnsOrder] = useState<('explorer' | 'details')[]>(['explorer', 'details']);
-  const [rightColumnOrder, setRightColumnOrder] = useState<('details' | 'code')[]>(['details', 'code']);
+  const [rightColumnOrder, setRightColumnOrder] = useState<('details' | 'code')[]>(['code', 'details']);
   const [draggedType, setDraggedType] = useState<'explorer' | 'details' | 'code' | null>(null);
   
   const [leftWidth, setLeftWidth] = useState<number | null>(null);
