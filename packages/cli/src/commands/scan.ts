@@ -4,6 +4,7 @@ import * as fs from 'node:fs/promises';
 import * as http from 'node:http';
 import * as path from 'node:path';
 import { Command } from 'commander';
+import cliPackageJson from '../../package.json';
 import {
   buildStructureGraph,
   scanFileTree,
@@ -73,7 +74,6 @@ interface ScanCommandOptions {
 }
 
 const EXPORT_SCHEMA_VERSION = '1.0.0';
-const DEPXRAY_CLI_VERSION = '0.3.1';
 
 function parseDepth(value: string | undefined): number | 'all' {
   if (!value) {
@@ -118,7 +118,7 @@ function parseMode(value: string | undefined): GraphMode {
 }
 
 function getGeneratedBy(): string {
-  return `depxray@${DEPXRAY_CLI_VERSION}`;
+  return `depxray@${cliPackageJson.version}`;
 }
 
 function toStructureGraphData(graph: StructureGraph): ExplorerGraphData {

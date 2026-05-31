@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import packageJson from '../package.json';
 import { exportGraphJSON } from '../src/exportGraph.js';
 import { buildGraph } from '../src/buildGraph.js';
 import type { ResolvedImport, ScanMetadata } from '../src/types.js';
@@ -13,7 +14,7 @@ function makeMeta(): ScanMetadata {
     totalFiles: 2,
     totalEdges: 1,
     circularCount: 0,
-    depxrayVersion: '0.3.1',
+    depxrayVersion: packageJson.version,
   };
 }
 
@@ -58,7 +59,7 @@ describe('exportGraphJSON', () => {
 
     const parsed = JSON.parse(exportGraphJSON(graph));
     expect(parsed.metadata).toBeDefined();
-    expect(parsed.metadata.depxrayVersion).toBe('0.3.1');
+    expect(parsed.metadata.depxrayVersion).toBe(packageJson.version);
     expect(parsed.metadata.projectRoot).toBe(ROOT_DIR);
   });
 

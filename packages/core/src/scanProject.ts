@@ -18,6 +18,7 @@
 
 import * as fs from 'fs/promises';
 import * as path from 'path';
+import packageJson from '../package.json';
 import type {
   ScanOptions,
   ScanResult,
@@ -32,9 +33,6 @@ import { resolveImports } from './resolveImports.js';
 import { buildGraph } from './buildGraph.js';
 import { detectCircularDeps } from './detectCircularDeps.js';
 import { loadAliases } from './configLoader.js';
-
-// Read version from package.json at build time
-const DEPXRAY_VERSION = '0.3.1';
 
 /**
  * Scan a React project and build its dependency graph.
@@ -127,7 +125,7 @@ export async function scanProject(options: ScanOptions): Promise<ScanResult> {
       totalFiles: 0,
       totalEdges: 0,
       circularCount: 0,
-      depxrayVersion: DEPXRAY_VERSION,
+      depxrayVersion: packageJson.version,
     };
 
     return {
@@ -203,7 +201,7 @@ export async function scanProject(options: ScanOptions): Promise<ScanResult> {
     totalFiles: filePaths.length,
     totalEdges: 0, // Will be updated after buildGraph
     circularCount: 0, // Will be updated after detectCircularDeps
-    depxrayVersion: DEPXRAY_VERSION,
+    depxrayVersion: packageJson.version,
   };
 
   let graph = buildGraph(fileImportsMap, resolvedRoot, metadata);

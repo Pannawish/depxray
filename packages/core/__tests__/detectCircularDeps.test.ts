@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import packageJson from '../package.json';
 import { detectCircularDeps } from '../src/detectCircularDeps.js';
 import { buildGraph } from '../src/buildGraph.js';
 import type { ResolvedImport, ScanMetadata, DependencyGraph } from '../src/types.js';
@@ -13,7 +14,7 @@ function makeMeta(): ScanMetadata {
     totalFiles: 0,
     totalEdges: 0,
     circularCount: 0,
-    depxrayVersion: '0.3.1',
+    depxrayVersion: packageJson.version,
   };
 }
 

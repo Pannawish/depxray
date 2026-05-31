@@ -23,6 +23,7 @@
 // ============================================================================
 
 import { Command } from 'commander';
+import packageJson from '../package.json';
 import { createScanCommand } from './commands/scan.js';
 import { createInspectCommand } from './commands/inspect.js';
 
@@ -35,7 +36,7 @@ program
       'Useful for understanding project structure in the browser, with the legacy inspect command\n' +
       'and providing structured data to AI coding agents (Claude, Codex, Antigravity).',
   )
-  .version('0.3.1');
+  .version(packageJson.version);
 
 // Register commands
 program.addCommand(createScanCommand());

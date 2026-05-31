@@ -1,4 +1,5 @@
 import type { ExplorerGraphData, ExplorerGraphSet } from './types.js';
+import packageJson from '../package.json';
 
 export const sampleGraphData: ExplorerGraphData = {
   schemaVersion: '1.0.0',
@@ -9,7 +10,7 @@ export const sampleGraphData: ExplorerGraphData = {
   totalDirs: 5,
   totalImports: 11,
   circularCount: 0,
-  generatedBy: 'depxray@0.3.1',
+  generatedBy: `depxray@${packageJson.version}`,
   errors: [],
   nodes: [
     {

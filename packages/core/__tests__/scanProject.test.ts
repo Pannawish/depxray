@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import packageJson from '../package.json';
 import * as path from 'path';
 import { scanProject } from '../src/scanProject.js';
 import { exportGraphJSON } from '../src/exportGraph.js';
@@ -180,7 +181,7 @@ describe('scanProject — integration', () => {
     expect(parsed.version).toBe('1.0.0');
     expect(parsed.nodes.length).toBe(result.totalFiles);
     expect(parsed.edges.length).toBe(result.totalImports);
-    expect(parsed.metadata.depxrayVersion).toBe('0.3.1');
+    expect(parsed.metadata.depxrayVersion).toBe(packageJson.version);
   });
 
   // ─── Error handling ──────────────────────────────────────────────────
@@ -213,6 +214,6 @@ describe('scanProject — integration', () => {
     expect(result.graph.metadata.projectRoot).toBe(
       path.resolve(SIMPLE_PROJECT),
     );
-    expect(result.graph.metadata.depxrayVersion).toBe('0.3.1');
+    expect(result.graph.metadata.depxrayVersion).toBe(packageJson.version);
   });
 });

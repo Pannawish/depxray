@@ -4,7 +4,9 @@
   "description": "Platform-agnostic scanner for JavaScript and TypeScript project structure and dependency graphs, including import analysis and circular detection.",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsc",
     "dev": "tsc --watch",

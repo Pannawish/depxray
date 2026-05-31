@@ -9,7 +9,8 @@
     "packages/web-ui"
   ],
   "scripts": {
-    "build": "npm run build --workspace @depxray/core && npm run build --workspace @depxray/web-ui && npm run build --workspace depxray",
+    "version:sync": "node ./scripts/sync-versions.mjs",
+    "build": "npm run version:sync && npm run build --workspace @depxray/core && npm run build --workspace @depxray/web-ui && npm run build --workspace depxray",
     "test": "npm run test --workspaces --if-present",
     "clean": "npm run clean --workspaces --if-present",
     "lint": "eslint packages/*/src/**/*.ts"

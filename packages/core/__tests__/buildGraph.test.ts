@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import packageJson from '../package.json';
 import * as path from 'path';
 import { buildGraph } from '../src/buildGraph.js';
 import type { ResolvedImport, ScanMetadata } from '../src/types.js';
@@ -13,7 +14,7 @@ function makeMeta(): ScanMetadata {
     totalFiles: 0,
     totalEdges: 0,
     circularCount: 0,
-    depxrayVersion: '0.3.1',
+    depxrayVersion: packageJson.version,
   };
 }
 
