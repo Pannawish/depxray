@@ -58,7 +58,7 @@ The default `scan` command starts a local server and opens a browser UI with thr
 - Center: dependency tracing with imports and dependents
 - Right: code viewer and file or folder details
 
-Current UI capabilities include:
+Current UI and graph-data capabilities include:
 
 - file tree search by path
 - compact rows for large repos
@@ -86,6 +86,8 @@ Common options:
 - `--html`: generate a static HTML export in `.depxray/`
 - `--mode <mode>`: `structure` or `dependencies`
 - `--ignore <patterns...>`: exclude additional paths
+- `--no-circular`: skip circular dependency detection in dependency mode
+- `--no-aliases`: skip `tsconfig.json` / `jsconfig.json` path alias resolution in dependency mode
 - `--extensions <exts...>`: choose scanned extensions in dependency mode
 - `--depth <depth>`: initial visible depth: any integer `>= 1` or `all`
 - `--port <port>`: preferred local dashboard port; falls back to the next free port if needed
@@ -133,7 +135,8 @@ npx depxray inspect src/App.tsx --dir /path/to/project --format json
 
 Use cases:
 
-- generate project-wide structure or dependency data with `scan --json`
+- generate project-wide structure data with `scan --json`
+- generate project-wide dependency data with `scan --mode dependencies --json`
 - inspect one file's outgoing imports and incoming dependents with `inspect --format json`
 - save JSON into agent context files or use it in automated review pipelines
 
