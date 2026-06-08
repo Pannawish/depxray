@@ -1,12 +1,13 @@
 # depxray (Dependency X-Ray)
 
-Understand a JavaScript or TypeScript codebase through its file tree, imports, dependents, circular dependencies, JSON output, and static HTML reports.
+Understand a JavaScript or TypeScript codebase through an interactive graph view, file tree, imports, dependents, circular dependencies, JSON output, and static HTML reports.
 
 `depxray` is a browser-first CLI for developers and AI coding agents that need repository context before editing code. It scans a project, builds structure and dependency data, and exposes that data through a local browser UI, machine-readable JSON, or a shareable static HTML export.
 
 ## Why depxray
 
 - Explore a repo as a compact file tree instead of a noisy full-project graph
+- Navigate an interactive force-directed graph for dependency and structure data
 - See what a file imports and what depends on it
 - Detect circular dependencies quickly
 - Detect orphan files with no incoming imports
@@ -22,6 +23,8 @@ npx depxray scan
 ```
 
 The default `scan` command starts a local browser UI. If port `5178` is busy, `depxray` automatically tries the next free port.
+
+The browser UI opens with the graph view in the center panel. Use the toolbar to switch between **Graph** and **Miller** views. In graph view, you can zoom, pan, drag nodes, click nodes to select files, and switch label visibility between **Smart**, **All**, and **None**.
 
 ## Quick Examples
 
@@ -211,6 +214,7 @@ It supports:
 - `tsconfig.json` and `jsconfig.json` path alias resolution
 - circular dependency detection
 - orphan file detection with configurable entry point exclusions
+- interactive force-directed dependency and structure graph visualization
 
 ## Repository
 

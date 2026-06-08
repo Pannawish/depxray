@@ -171,8 +171,69 @@ button {
 .toolbar-actions {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 10px;
   flex-shrink: 0;
+}
+
+.center-view-toggle {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 32px;
+  padding: 2px;
+  border: 1px solid var(--border);
+  border-radius: 99px;
+  background: var(--panel-subtle);
+}
+
+.center-view-toggle button {
+  height: 26px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 99px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 0.78rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.center-view-toggle button:hover {
+  color: var(--text);
+}
+
+.center-view-toggle button.active {
+  background: #ffffff;
+  color: var(--accent);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.graph-label-select {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 8px;
+  border: 1px solid var(--border);
+  border-radius: 99px;
+  background: #ffffff;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.graph-label-select select {
+  height: 24px;
+  min-width: 76px;
+  border: 0;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  font-size: 0.78rem;
+  font-weight: 700;
+  outline: none;
 }
 
 .cycles-toggle-btn,
@@ -388,7 +449,8 @@ button {
 .tree-panel,
 .details-panel,
 .ai-context-panel,
-.miller-panel {
+.miller-panel,
+.force-graph-panel {
   min-height: 0;
   overflow: hidden;
 }
@@ -396,7 +458,9 @@ button {
 .center-column {
   display: flex;
   flex-direction: column;
+  height: 100%;
   min-height: 0;
+  overflow: hidden;
 }
 
 .right-column {
@@ -698,6 +762,73 @@ button {
   border: 1px solid var(--border);
   border-radius: 8px;
   overflow: hidden;
+}
+
+/* Force Graph Panel */
+.force-graph-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel);
+}
+
+.force-graph-panel.empty-state {
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  text-align: center;
+}
+
+.force-graph-canvas {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  contain: paint;
+  touch-action: none;
+  background:
+    linear-gradient(#f8fafc 1px, transparent 1px),
+    linear-gradient(90deg, #f8fafc 1px, transparent 1px),
+    #ffffff;
+  background-size: 20px 20px;
+}
+
+.force-graph-canvas > div {
+  width: 100% !important;
+  height: 100% !important;
+  overflow: hidden;
+}
+
+.force-graph-canvas canvas {
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+}
+
+.graph-summary {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.graph-summary span {
+  padding: 4px 8px;
+  border-radius: 99px;
+  background: var(--panel-subtle);
+  white-space: nowrap;
+}
+
+.graph-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .miller-panel.empty-state {

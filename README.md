@@ -1,16 +1,17 @@
 # depxray (Dependency X-Ray)
 
-> Explore JavaScript and TypeScript codebases through a file-tree-first browser UI, machine-readable JSON, and a shareable static HTML export.
+> Explore JavaScript and TypeScript codebases through an interactive browser graph, machine-readable JSON, and AI-agent-friendly dependency context.
 
 [![GitHub Repo](https://img.shields.io/badge/GitHub-Pannawish%2Fdepxray-blue?logo=github)](https://github.com/Pannawish/depxray)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![NPM Version](https://img.shields.io/npm/v/depxray)](https://www.npmjs.com/package/depxray)
 
-`depxray` helps both developers and coding agents understand how a repository is structured and how files depend on each other. It scans a project, builds structure and dependency data, then lets you inspect imports, dependents, circular relationships, and file details from a local browser UI or JSON output, with inline source code available in the live browser UI.
+`depxray` helps developers and AI coding agents understand how a repository is structured and how files depend on each other. It scans a project, builds structure and dependency data, then lets you inspect imports, dependents, circular relationships, orphan files, and file details from a local browser UI or JSON output, with inline source code available in the live browser UI.
 
 ## What It Does
 
 - Browse a repo as a compact collapsible file tree
+- Explore dependencies in an interactive force-directed graph
 - Inspect outgoing imports and incoming dependents for a file
 - View file details, folder summaries, and inline source code
 - Detect circular dependencies
@@ -56,13 +57,18 @@ depxray scan
 The default `scan` command starts a local server and opens a browser UI with three working areas:
 
 - Left: file tree with expand/collapse, search, circular-only filtering, and orphan-only filtering
-- Center: dependency tracing with imports and dependents
+- Center: interactive graph view by default, with a Miller-column dependency tracing view available from the toolbar
 - Right: code viewer and file or folder details
 
 Current UI and graph-data capabilities include:
 
 - file tree search by path
 - compact rows for large repos
+- force-directed graph view for dependency and structure data
+- graph zoom, pan, node dragging, click-to-select, and selected-node centering
+- graph node labels with Smart, All, and None label visibility modes
+- graph node coloring by file extension, circular status, and orphan status
+- directional dependency arrows with circular relationships highlighted
 - file details such as relative path, absolute path, extension, depth, size, incoming count, outgoing count, circular status, and orphan status
 - folder summaries such as total files, direct children, descendants, internal imports, incoming external references, outgoing external references, circular files, and orphan files inside the folder
 - dependency metadata for type-only and dynamic imports in exported graph data
@@ -173,6 +179,7 @@ It supports:
 - `tsconfig.json` and `jsconfig.json` path alias resolution
 - circular dependency detection
 - orphan file detection with configurable entry point exclusions
+- interactive force-directed dependency and structure graph visualization
 
 ## Monorepo Layout
 

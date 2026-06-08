@@ -11,9 +11,11 @@ interface ExplorerToolbarProps {
   visibleRows: number;
   circularOnly: boolean;
   orphanOnly: boolean;
+  centerViewMode: 'miller' | 'graph';
   onSearchChange: (searchTerm: string) => void;
   onCircularOnlyChange: (circularOnly: boolean) => void;
   onOrphanOnlyChange: (orphanOnly: boolean) => void;
+  onCenterViewModeChange: (viewMode: 'miller' | 'graph') => void;
 }
 
 export function ExplorerToolbar({
@@ -27,9 +29,11 @@ export function ExplorerToolbar({
   visibleRows,
   circularOnly,
   orphanOnly,
+  centerViewMode,
   onSearchChange,
   onCircularOnlyChange,
   onOrphanOnlyChange,
+  onCenterViewModeChange,
 }: ExplorerToolbarProps) {
   return (
     <header className="explorer-toolbar">
@@ -65,6 +69,25 @@ export function ExplorerToolbar({
 
       {/* Action Controls & Stats */}
       <div className="toolbar-actions">
+        <div className="center-view-toggle" aria-label="Center view mode">
+          <button
+            className={centerViewMode === 'miller' ? 'active' : ''}
+            onClick={() => onCenterViewModeChange('miller')}
+            title="Show dependency drill-down columns"
+            type="button"
+          >
+            Miller
+          </button>
+          <button
+            className={centerViewMode === 'graph' ? 'active' : ''}
+            onClick={() => onCenterViewModeChange('graph')}
+            title="Show force-directed graph"
+            type="button"
+          >
+            Graph
+          </button>
+        </div>
+
         {/* Cycles Pill Toggle */}
         <button
           className={`cycles-toggle-btn ${circularOnly ? 'active' : ''} ${circularCount > 0 ? 'has-cycles' : ''}`}

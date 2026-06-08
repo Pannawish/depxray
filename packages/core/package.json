@@ -1,7 +1,7 @@
 {
   "name": "@depxray/core",
-  "version": "1.1.0",
-  "description": "Platform-agnostic scanner for JavaScript and TypeScript project structure and dependency graphs, including import analysis and circular detection.",
+  "version": "1.2.0",
+  "description": "Static analysis engine for JavaScript and TypeScript dependency graphs, codebase context, and AI-agent tooling.",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "files": [
@@ -33,7 +33,12 @@
     "typescript",
     "imports",
     "codebase",
-    "architecture"
+    "codebase-explorer",
+    "architecture",
+    "ai-agent",
+    "coding-agent",
+    "agentic-ai",
+    "llm"
   ],
   "license": "MIT"
 }

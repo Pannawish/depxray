@@ -2,6 +2,7 @@ import { Fragment, startTransition, useDeferredValue, useEffect, useMemo, useSta
 import { ExplorerToolbar } from './components/ExplorerToolbar.js';
 import { FileTreeView, type FileTreeRowData } from './components/FileTreeView.js';
 import { MillerColumnsPanel } from './components/MillerColumnsPanel.js';
+import { ForceGraphView } from './components/ForceGraphView.js';
 import { FileCodeViewer } from './components/FileCodeViewer.js';
 import { SelectionPanel } from './components/SelectionPanel.js';
 import { useGraphData } from './hooks/useGraphData.js';
@@ -148,12 +149,74 @@ function buildTreeRows(
   return rows;
 }
 
+function buildGraphNodes(
+  index: FileRelationshipIndex,
+  graphMode: GraphMode,
+  searchTerm: string,
+  filters: DependencyFilters,
+): ExplorerGraphNode[] {
+  const sourceNodes = graphMode === 'dependencies'
+    ? (index.dependencyGraph?.nodes ?? [])
+    : (index.structureGraph?.nodes ?? []);
+  const normalizedSearch = searchTerm.trim().toLowerCase();
+  const visibleIds = new Set<string>();
+
+  if (!normalizedSearch && !filters.circularOnly && !filters.orphanOnly) {
+    return sourceNodes;
+  }
+
+  if (normalizedSearch) {
+    for (const node of sourceNodes) {
+      if (
+        node.label.toLowerCase().includes(normalizedSearch) ||
+        node.relativePath.toLowerCase().includes(normalizedSearch)
+      ) {
+        visibleIds.add(node.id);
+
+        if (graphMode === 'structure') {
+          for (const ancestorId of getAncestorIds(node.id, index)) {
+            visibleIds.add(ancestorId);
+          }
+        }
+      }
+    }
+  }
+
+  if (filters.circularOnly) {
+    for (const nodeId of index.circularNodeIds) {
+      visibleIds.add(nodeId);
+
+      if (graphMode === 'structure') {
+        for (const ancestorId of getAncestorIds(nodeId, index)) {
+          visibleIds.add(ancestorId);
+        }
+      }
+    }
+  }
+
+  if (filters.orphanOnly) {
+    for (const nodeId of index.orphanNodeIds) {
+      visibleIds.add(nodeId);
+
+      if (graphMode === 'structure') {
+        for (const ancestorId of getAncestorIds(nodeId, index)) {
+          visibleIds.add(ancestorId);
+        }
+      }
+    }
+  }
+
+  return sourceNodes.filter((node) => visibleIds.has(node.id));
+}
+
 export default function App() {
   const { dataSet, loading, error, source } = useGraphData();
   const index = useRelationshipIndex(dataSet);
   const [searchTerm, setSearchTerm] = useState('');
   const [circularOnly, setCircularOnly] = useState<boolean>(false);
   const [orphanOnly, setOrphanOnly] = useState<boolean>(false);
+  const [centerViewMode, setCenterViewMode] = useState<'miller' | 'graph'>('graph');
+  const [graphLabelMode, setGraphLabelMode] = useState<'smart' | 'all' | 'none'>('smart');
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   
@@ -281,6 +344,22 @@ export default function App() {
   const visibleRows = useMemo(() => (
     buildTreeRows(index, expandedIds, deferredSearchTerm, { showTypeOnlyEdges: true, showDynamicEdges: true, circularOnly, orphanOnly })
   ), [deferredSearchTerm, circularOnly, orphanOnly, expandedIds, index]);
+  const graphMode: GraphMode = dataSet?.defaultMode === 'dependencies' && index.dependencyGraph
+    ? 'dependencies'
+    : 'structure';
+  const visibleGraphNodes = useMemo(() => (
+    buildGraphNodes(index, graphMode, deferredSearchTerm, {
+      showTypeOnlyEdges: true,
+      showDynamicEdges: true,
+      circularOnly,
+      orphanOnly,
+    })
+  ), [circularOnly, deferredSearchTerm, graphMode, index, orphanOnly]);
+  const visibleGraphEdges = useMemo(() => (
+    graphMode === 'dependencies'
+      ? index.dependencyEdges
+      : (index.structureGraph?.edges ?? [])
+  ), [graphMode, index.dependencyEdges, index.structureGraph]);
 
   useEffect(() => {
     if (selectedNodeId) {
@@ -411,11 +490,13 @@ export default function App() {
         visibleRows={visibleRows.length}
         circularOnly={circularOnly}
         orphanOnly={orphanOnly}
+        centerViewMode={centerViewMode}
         onSearchChange={(nextSearch) => {
           startTransition(() => setSearchTerm(nextSearch));
         }}
         onCircularOnlyChange={setCircularOnly}
         onOrphanOnlyChange={setOrphanOnly}
+        onCenterViewModeChange={setCenterViewMode}
       />
 
       <div 
@@ -494,13 +575,27 @@ export default function App() {
 
         {/* Column 2 (Center) - Anchored Miller Columns */}
         <div className="center-column">
-          <MillerColumnsPanel
-            node={selectedNode}
-            index={index}
-            chain={millerChain}
-            onChainChange={setMillerChain}
-            onActiveNodeChange={setActiveCodeNodeId}
-          />
+          {centerViewMode === 'miller' ? (
+            <MillerColumnsPanel
+              node={selectedNode}
+              index={index}
+              chain={millerChain}
+              onChainChange={setMillerChain}
+              onActiveNodeChange={setActiveCodeNodeId}
+            />
+          ) : (
+            <ForceGraphView
+              nodes={visibleGraphNodes}
+              edges={visibleGraphEdges}
+              selectedNodeId={selectedNodeId}
+              circularNodeIds={index.circularNodeIds}
+              orphanNodeIds={index.orphanNodeIds}
+              graphMode={graphMode}
+              labelMode={graphLabelMode}
+              onLabelModeChange={setGraphLabelMode}
+              onSelectNode={selectAndExpandNode}
+            />
+          )}
         </div>
 
         {/* Resizer 2 */}

@@ -1,7 +1,7 @@
 {
   "name": "depxray",
-  "version": "1.1.0",
-  "description": "Browser-first CLI for exploring JavaScript and TypeScript project structure and dependency graphs, with JSON and static HTML export.",
+  "version": "1.2.0",
+  "description": "Interactive dependency explorer for JavaScript and TypeScript codebases, with browser graphs, JSON output, and AI-agent context.",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "bin": {
@@ -23,7 +23,7 @@
     "prepublishOnly": "node ../../scripts/sync-versions.mjs && npm run build"
   },
   "devDependencies": {
-    "@depxray/core": "1.1.0",
+    "@depxray/core": "1.2.0",
     "@types/node": "^20.0.0",
     "commander": "^12.1.0",
     "esbuild": "^0.21.5",
@@ -39,7 +39,15 @@
     "typescript",
     "imports",
     "codebase",
+    "codebase-explorer",
     "visualization",
+    "graph",
+    "browser-ui",
+    "ai-agent",
+    "ai-coding",
+    "coding-agent",
+    "agentic-ai",
+    "llm",
     "architecture",
     "cli"
   ],
