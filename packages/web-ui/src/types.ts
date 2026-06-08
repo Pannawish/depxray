@@ -19,6 +19,7 @@ export interface ExplorerGraphNode extends StructureGraphNode {
   inDegree?: number;
   outDegree?: number;
   isCircular?: boolean;
+  isOrphan?: boolean;
   componentName?: string;
 }
 
@@ -39,6 +40,7 @@ export interface ExplorerGraphData {
   totalDirs: number;
   totalImports: number;
   circularCount: number;
+  orphanFiles: string[];
   generatedBy: string;
   errors: Array<{ filePath: string; error: string }>;
   nodes: ExplorerGraphNode[];
@@ -59,6 +61,7 @@ export interface DependencyFilters {
   showTypeOnlyEdges: boolean;
   showDynamicEdges: boolean;
   circularOnly: boolean;
+  orphanOnly: boolean;
 }
 
 declare global {

@@ -10,7 +10,8 @@
 //   4. Resolve import paths
 //   5. Build the dependency graph
 //   6. Detect circular dependencies (optional)
-//   7. Return the complete ScanResult
+//   7. Detect orphan files
+//   8. Return the complete ScanResult
 //
 // This function is platform-agnostic — it works in Node.js without any
 // dependency on CLI frameworks or browser APIs.
@@ -32,6 +33,7 @@ import { parseImports } from './parseImports.js';
 import { resolveImports } from './resolveImports.js';
 import { buildGraph } from './buildGraph.js';
 import { detectCircularDeps } from './detectCircularDeps.js';
+import { detectOrphanFiles } from './detectOrphanFiles.js';
 import { loadAliases } from './configLoader.js';
 
 /**
@@ -84,6 +86,7 @@ export async function scanProject(options: ScanOptions): Promise<ScanResult> {
     maxDepth = Infinity,
     includeTypeImports = true,
     includeDynamicImports = true,
+    entryPointPatterns,
   } = options;
 
   // Validate rootDir
@@ -139,6 +142,7 @@ export async function scanProject(options: ScanOptions): Promise<ScanResult> {
       totalFiles: 0,
       totalImports: 0,
       circularCount: 0,
+      orphanFiles: [],
       errors: [],
       durationMs: emptyMetadata.scanDurationMs,
     };
@@ -214,6 +218,9 @@ export async function scanProject(options: ScanOptions): Promise<ScanResult> {
     graph = detectCircularDeps(graph);
   }
 
+  // ── Step 7: Detect orphan files ─────────────────────────────────────
+  const orphanFiles = detectOrphanFiles(graph, { entryPointPatterns });
+
   // ── Return the complete result ───────────────────────────────────────
   const finalDurationMs = performance.now() - startTime;
   graph.metadata.scanDurationMs = finalDurationMs;
@@ -223,6 +230,7 @@ export async function scanProject(options: ScanOptions): Promise<ScanResult> {
     totalFiles: graph.nodes.length,
     totalImports: graph.edges.length,
     circularCount: graph.circularDependencies.length,
+    orphanFiles,
     errors,
     durationMs: finalDurationMs,
   };

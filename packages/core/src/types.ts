@@ -253,6 +253,20 @@ export interface ScanOptions {
    * @default true
    */
   includeDynamicImports?: boolean;
+
+  /**
+   * Patterns for known entry points to exclude from orphan detection.
+   * Uses lightweight glob matching against relative paths.
+   */
+  entryPointPatterns?: string[];
+}
+
+/**
+ * Options for detecting files that have no incoming import edges.
+ */
+export interface OrphanDetectionOptions {
+  /** Patterns for known entry points to exclude from orphan detection */
+  entryPointPatterns?: string[];
 }
 
 /**
@@ -289,6 +303,9 @@ export interface ScanResult {
 
   /** Total number of circular dependency chains */
   circularCount: number;
+
+  /** Relative paths of files with no incoming imports, excluding entry points */
+  orphanFiles: string[];
 
   /** Files that could not be parsed, with error details */
   errors: ScanError[];
@@ -406,3 +423,18 @@ export const DEFAULT_IGNORE_PATTERNS: string[] = [
  * Default file extensions to scan.
  */
 export const DEFAULT_EXTENSIONS: string[] = ['.js', '.jsx', '.ts', '.tsx'];
+
+/**
+ * Default entry points excluded from orphan detection.
+ */
+export const DEFAULT_ENTRY_POINT_PATTERNS: string[] = [
+  '**/index.*',
+  '**/main.*',
+  '**/app.*',
+  '**/App.*',
+  '**/*.test.*',
+  '**/*.spec.*',
+  '**/*.config.*',
+  '**/vite.config.*',
+  '**/next.config.*',
+];

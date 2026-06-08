@@ -14,6 +14,7 @@
 - Inspect outgoing imports and incoming dependents for a file
 - View file details, folder summaries, and inline source code
 - Detect circular dependencies
+- Detect orphan files with no incoming imports in dependency mode
 - Export machine-readable JSON for scripts and AI workflows
 - Generate a static HTML report in `.depxray/`
 
@@ -54,7 +55,7 @@ depxray scan
 
 The default `scan` command starts a local server and opens a browser UI with three working areas:
 
-- Left: file tree with expand/collapse, search, and circular-only filtering
+- Left: file tree with expand/collapse, search, circular-only filtering, and orphan-only filtering
 - Center: dependency tracing with imports and dependents
 - Right: code viewer and file or folder details
 
@@ -62,8 +63,8 @@ Current UI and graph-data capabilities include:
 
 - file tree search by path
 - compact rows for large repos
-- file details such as relative path, absolute path, extension, depth, size, incoming count, outgoing count, and circular status
-- folder summaries such as total files, direct children, descendants, internal imports, incoming external references, outgoing external references, and circular files inside the folder
+- file details such as relative path, absolute path, extension, depth, size, incoming count, outgoing count, circular status, and orphan status
+- folder summaries such as total files, direct children, descendants, internal imports, incoming external references, outgoing external references, circular files, and orphan files inside the folder
 - dependency metadata for type-only and dynamic imports in exported graph data
 - layout swapping and resizable panels
 
@@ -88,6 +89,8 @@ Common options:
 - `--ignore <patterns...>`: exclude additional paths
 - `--no-circular`: skip circular dependency detection in dependency mode
 - `--no-aliases`: skip `tsconfig.json` / `jsconfig.json` path alias resolution in dependency mode
+- `--orphans`: print orphan files to `stderr` after dependency scanning
+- `--entry-points <patterns...>`: glob patterns to exclude from orphan detection
 - `--extensions <exts...>`: choose scanned extensions in dependency mode
 - `--depth <depth>`: initial visible depth: any integer `>= 1` or `all`
 - `--port <port>`: preferred local dashboard port; falls back to the next free port if needed
@@ -104,6 +107,12 @@ npx depxray scan --ignore "**/dist/**" "**/coverage/**"
 
 # Export dependency-mode JSON
 npx depxray scan /path/to/project --mode dependencies --json --output dep-graph.json
+
+# Print files with no incoming imports
+npx depxray scan /path/to/project --mode dependencies --orphans
+
+# Treat custom files as entry points instead of orphans
+npx depxray scan /path/to/project --mode dependencies --orphans --entry-points "src/routes/**" "src/bootstrap.ts"
 
 # Generate a static HTML report bundle
 npx depxray scan /path/to/project --html
@@ -163,6 +172,7 @@ It supports:
 - re-exports and barrel files
 - `tsconfig.json` and `jsconfig.json` path alias resolution
 - circular dependency detection
+- orphan file detection with configurable entry point exclusions
 
 ## Monorepo Layout
 

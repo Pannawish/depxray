@@ -9,6 +9,7 @@ Understand a JavaScript or TypeScript codebase through its file tree, imports, d
 - Explore a repo as a compact file tree instead of a noisy full-project graph
 - See what a file imports and what depends on it
 - Detect circular dependencies quickly
+- Detect orphan files with no incoming imports
 - Export JSON for scripts, automation, and AI coding agents
 - Generate a standalone HTML report for local review or sharing
 
@@ -40,6 +41,12 @@ Export dependency data to JSON:
 
 ```bash
 npx depxray scan /path/to/project --mode dependencies --json --output dep-graph.json
+```
+
+Print orphan files:
+
+```bash
+npx depxray scan /path/to/project --mode dependencies --orphans
 ```
 
 Inspect one file and show its imports and dependents:
@@ -87,6 +94,7 @@ The examples below are shortened to show the stable shape. Real output includes 
   "totalFiles": 42,
   "totalImports": 87,
   "circularCount": 2,
+  "orphanFiles": ["src/legacy/UnusedView.tsx"],
   "nodes": [],
   "edges": []
 }
@@ -148,6 +156,8 @@ Common options:
 - `--ignore <patterns...>`: exclude paths from scanning
 - `--no-circular`: skip circular dependency detection in dependency mode
 - `--no-aliases`: skip `tsconfig.json` / `jsconfig.json` path alias resolution in dependency mode
+- `--orphans`: print orphan files to `stderr` after dependency scanning
+- `--entry-points <patterns...>`: glob patterns to exclude from orphan detection
 - `--extensions <exts...>`: choose scanned extensions in dependency mode
 - `--depth <depth>`: initial directory expansion depth; accepts any integer `>= 1` or `all`
 - `--port <port>`: preferred local dashboard port; falls back to the next free port if needed
@@ -159,6 +169,8 @@ Examples:
 depxray scan
 depxray scan /path/to/project --mode dependencies
 depxray scan /path/to/project --mode dependencies --json --output dep-graph.json
+depxray scan /path/to/project --mode dependencies --orphans
+depxray scan /path/to/project --mode dependencies --orphans --entry-points "src/routes/**" "src/bootstrap.ts"
 depxray scan /path/to/project --html
 ```
 
@@ -198,6 +210,7 @@ It supports:
 - re-exports and barrel files
 - `tsconfig.json` and `jsconfig.json` path alias resolution
 - circular dependency detection
+- orphan file detection with configurable entry point exclusions
 
 ## Repository
 

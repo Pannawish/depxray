@@ -156,6 +156,19 @@ export function Toolbar({
               />
               <span>Cycles only</span>
             </label>
+            <label className="toolbar-check">
+              <input
+                checked={dependencyFilters.orphanOnly}
+                onChange={(event) => {
+                  onDependencyFiltersChange({
+                    ...dependencyFilters,
+                    orphanOnly: event.target.checked,
+                  });
+                }}
+                type="checkbox"
+              />
+              <span>Orphans only</span>
+            </label>
           </div>
         ) : null}
 

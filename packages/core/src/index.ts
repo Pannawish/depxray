@@ -17,6 +17,7 @@ export { parseImports } from './parseImports.js';
 export { resolveImport, resolveImports } from './resolveImports.js';
 export { buildGraph } from './buildGraph.js';
 export { detectCircularDeps } from './detectCircularDeps.js';
+export { detectOrphanFiles, matchesAnyPattern } from './detectOrphanFiles.js';
 export { discoverFiles } from './fileDiscovery.js';
 export { loadAliases } from './configLoader.js';
 
@@ -31,6 +32,7 @@ export type {
   CircularChain,
   DependencyGraph,
   ScanOptions,
+  OrphanDetectionOptions,
   ScanFileTreeOptions,
   ScanResult,
   ScanError,
@@ -43,5 +45,6 @@ export type {
 // ─── Constants ─────────────────────────────────────────────────────────────
 export {
   DEFAULT_EXTENSIONS,
+  DEFAULT_ENTRY_POINT_PATTERNS,
   DEFAULT_IGNORE_PATTERNS,
 } from './types.js';

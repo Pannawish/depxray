@@ -91,6 +91,26 @@ describe('scanProject — integration', () => {
     expect(result.graph.circularDependencies).toHaveLength(0);
   });
 
+  it('should expose orphan files while excluding default entry points', async () => {
+    const simpleResult = await scanProject({ rootDir: SIMPLE_PROJECT });
+    expect(simpleResult.orphanFiles).toEqual([]);
+
+    const circularResult = await scanProject({ rootDir: CIRCULAR_PROJECT });
+    expect(circularResult.orphanFiles).toContain('src/standalone.ts');
+  });
+
+  it('should respect custom orphan entry point patterns', async () => {
+    const result = await scanProject({
+      rootDir: SIMPLE_PROJECT,
+      entryPointPatterns: [],
+    });
+
+    expect(result.orphanFiles).toEqual([
+      'src/App.tsx',
+      'src/components/index.ts',
+    ]);
+  });
+
   // ─── Circular project ────────────────────────────────────────────────
 
   it('should detect circular dependencies in circular-project', async () => {

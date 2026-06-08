@@ -152,6 +152,13 @@ export function useTreeState(
         .map((node) => node.id),
     )
     : new Set<string>();
+  const orphanNodeIds = mode === 'dependencies'
+    ? new Set(
+      data.nodes
+        .filter((node) => node.isOrphan)
+        .map((node) => node.id),
+    )
+    : new Set<string>();
 
   const visibleNodes = data.nodes
     .filter((node) => (
@@ -159,7 +166,8 @@ export function useTreeState(
       (mode === 'structure'
         ? isVisible(node, parentById, collapsedIds, maxDepth) || emphasizedNodeIds.has(node.id)
         : true) &&
-      (!dependencyFilters.circularOnly || circularNodeIds.has(node.id) || emphasizedNodeIds.has(node.id))
+      (!dependencyFilters.circularOnly || circularNodeIds.has(node.id) || emphasizedNodeIds.has(node.id)) &&
+      (!dependencyFilters.orphanOnly || orphanNodeIds.has(node.id) || emphasizedNodeIds.has(node.id))
     ))
     .map((node) => ({
       ...node,

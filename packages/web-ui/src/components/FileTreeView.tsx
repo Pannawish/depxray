@@ -7,6 +7,7 @@ export interface FileTreeRowData {
   expanded: boolean;
   matched: boolean;
   circular: boolean;
+  orphan: boolean;
 }
 
 interface FileTreeViewProps {
@@ -102,6 +103,7 @@ export function FileTreeView({
               selectedNodeId === row.node.id ? 'selected' : '',
               row.matched ? 'matched' : '',
               row.circular ? 'circular' : '',
+              row.orphan ? 'orphan' : '',
             ].filter(Boolean).join(' ')}
             key={row.node.id}
             onClick={() => onSelectNode(row.node.id)}
@@ -125,6 +127,8 @@ export function FileTreeView({
             <span className="tree-label">{row.node.label}</span>
             {row.node.kind === 'directory' ? (
               <span className="tree-meta">{row.node.childCount}</span>
+            ) : row.orphan ? (
+              <span className="tree-meta orphan-badge" title="No incoming imports">orphan</span>
             ) : (
               <span className="tree-meta">{row.node.extension ?? 'file'}</span>
             )}

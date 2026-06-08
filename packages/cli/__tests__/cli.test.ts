@@ -115,7 +115,29 @@ describe('CLI Integration Tests', () => {
       expect(parsed.totalFiles).toBe(7);
       expect(parsed.totalImports).toBeGreaterThanOrEqual(8);
       expect(parsed.totalDirs).toBe(0);
+      expect(parsed.orphanFiles).toEqual([]);
       expect(parsed.nodes.some((node: any) => node.outDegree >= 1)).toBe(true);
+    });
+
+    it('should include and print orphan files in dependency mode', async () => {
+      const { stdout, stderr, exitCode } = await execa('node', [
+        CLI_PATH,
+        'scan',
+        CIRCULAR_PROJECT,
+        '--mode',
+        'dependencies',
+        '--json',
+        '--orphans',
+      ]);
+
+      expect(exitCode).toBe(0);
+      const parsed = JSON.parse(stdout);
+      expect(parsed.orphanFiles).toContain('src/standalone.ts');
+      expect(parsed.nodes.some((node: any) => (
+        node.relativePath === 'src/standalone.ts' && node.isOrphan
+      ))).toBe(true);
+      expect(stderr).toContain('Orphan files');
+      expect(stderr).toContain('src/standalone.ts');
     });
 
     it('should include circular dependency metadata in dependency mode', async () => {

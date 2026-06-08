@@ -19,6 +19,7 @@ export interface FileRelationshipIndex {
   importsBySourceId: Map<string, ExplorerGraphEdge[]>;
   importedByTargetId: Map<string, ExplorerGraphEdge[]>;
   circularNodeIds: Set<string>;
+  orphanNodeIds: Set<string>;
   descendantsById: Map<string, string[]>;
   filesByFolderId: Map<string, string[]>;
   dependencyEdges: ExplorerGraphEdge[];
@@ -33,12 +34,14 @@ export interface FolderSummary {
   incomingExternal: ExplorerGraphEdge[];
   outgoingExternal: ExplorerGraphEdge[];
   circularFiles: ExplorerGraphNode[];
+  orphanFiles: ExplorerGraphNode[];
 }
 
 const EMPTY_FILTERS: DependencyFilters = {
   showTypeOnlyEdges: true,
   showDynamicEdges: true,
   circularOnly: false,
+  orphanOnly: false,
 };
 
 function sortTreeNodes(nodes: ExplorerGraphNode[]): ExplorerGraphNode[] {
@@ -64,6 +67,7 @@ function mergeNode(
     inDegree: dependencyNode.inDegree,
     outDegree: dependencyNode.outDegree,
     isCircular: dependencyNode.isCircular,
+    isOrphan: dependencyNode.isOrphan,
     componentName: dependencyNode.componentName,
   };
 }
@@ -129,6 +133,7 @@ export function buildRelationshipIndex(
   const importsBySourceId = new Map<string, ExplorerGraphEdge[]>();
   const importedByTargetId = new Map<string, ExplorerGraphEdge[]>();
   const circularNodeIds = new Set<string>();
+  const orphanNodeIds = new Set<string>();
   const descendantsById = new Map<string, string[]>();
   const filesByFolderId = new Map<string, string[]>();
 
@@ -143,6 +148,10 @@ export function buildRelationshipIndex(
 
     if (node.isCircular) {
       circularNodeIds.add(node.id);
+    }
+
+    if (node.isOrphan) {
+      orphanNodeIds.add(node.id);
     }
   }
 
@@ -196,6 +205,7 @@ export function buildRelationshipIndex(
     importsBySourceId,
     importedByTargetId,
     circularNodeIds,
+    orphanNodeIds,
     descendantsById,
     filesByFolderId,
     dependencyEdges,
@@ -238,6 +248,10 @@ export function getFolderSummary(
     .filter((fileId) => index.circularNodeIds.has(fileId))
     .map((fileId) => index.nodeById.get(fileId))
     .filter((node): node is ExplorerGraphNode => Boolean(node));
+  const orphanFiles = Array.from(fileIds)
+    .filter((fileId) => index.orphanNodeIds.has(fileId))
+    .map((fileId) => index.nodeById.get(fileId))
+    .filter((node): node is ExplorerGraphNode => Boolean(node));
 
   return {
     folderId,
@@ -254,5 +268,6 @@ export function getFolderSummary(
       fileIds.has(edge.source) && !fileIds.has(edge.target)
     )),
     circularFiles,
+    orphanFiles,
   };
 }

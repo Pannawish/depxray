@@ -32,6 +32,7 @@ function makeDataSet(): ExplorerGraphSet {
         totalDirs: 2,
         totalImports: 0,
         circularCount: 0,
+        orphanFiles: [],
         generatedBy: 'test',
         errors: [],
         nodes: [
@@ -145,6 +146,7 @@ function makeDataSet(): ExplorerGraphSet {
         totalDirs: 0,
         totalImports: 5,
         circularCount: 2,
+        orphanFiles: ['external.ts'],
         generatedBy: 'test',
         errors: [],
         nodes: [
@@ -227,6 +229,7 @@ function makeDataSet(): ExplorerGraphSet {
             inDegree: 0,
             outDegree: 1,
             isCircular: false,
+            isOrphan: true,
           },
         ],
         edges: [
@@ -308,6 +311,8 @@ describe('relationship index', () => {
       'external-header',
     ]);
     expect(Array.from(index.circularNodeIds)).toEqual([app, header]);
+    expect(Array.from(index.orphanNodeIds)).toEqual([external]);
+    expect(index.nodeById.get(external)?.isOrphan).toBe(true);
   });
 
   it('filters type-only and dynamic edges', () => {
@@ -337,5 +342,13 @@ describe('relationship index', () => {
     expect(summary.incomingExternal.map((edge) => edge.id)).toEqual(['external-header']);
     expect(summary.outgoingExternal).toEqual([]);
     expect(summary.circularFiles.map((node) => node.id)).toEqual([app, header]);
+    expect(summary.orphanFiles).toEqual([]);
+  });
+
+  it('summarizes orphan files under folders', () => {
+    const index = buildRelationshipIndex(makeDataSet());
+    const summary = getFolderSummary(root, index);
+
+    expect(summary.orphanFiles.map((node) => node.id)).toEqual([external]);
   });
 });

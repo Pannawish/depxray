@@ -55,6 +55,7 @@ function buildTreeRows(
   const searchMatchedIds = new Set<string>();
   const searchVisibleIds = new Set<string>();
   const circularVisibleIds = new Set<string>();
+  const orphanVisibleIds = new Set<string>();
 
   if (normalizedSearch) {
     for (const node of structureNodes) {
@@ -80,12 +81,25 @@ function buildTreeRows(
     }
   }
 
+  if (filters.orphanOnly) {
+    for (const nodeId of index.orphanNodeIds) {
+      orphanVisibleIds.add(nodeId);
+      for (const ancestorId of getAncestorIds(nodeId, index)) {
+        orphanVisibleIds.add(ancestorId);
+      }
+    }
+  }
+
   function shouldShowNode(nodeId: string): boolean {
     if (normalizedSearch && !searchVisibleIds.has(nodeId)) {
       return false;
     }
 
     if (filters.circularOnly && !circularVisibleIds.has(nodeId)) {
+      return false;
+    }
+
+    if (filters.orphanOnly && !orphanVisibleIds.has(nodeId)) {
       return false;
     }
 
@@ -98,7 +112,7 @@ function buildTreeRows(
     }
 
     const children = index.childrenByParentId.get(node.id) ?? [];
-    const forceExpanded = Boolean(normalizedSearch) || filters.circularOnly;
+    const forceExpanded = Boolean(normalizedSearch) || filters.circularOnly || filters.orphanOnly;
     const expanded = expandedIds.has(node.id) || forceExpanded;
 
     rows.push({
@@ -108,6 +122,7 @@ function buildTreeRows(
       expanded,
       matched: searchMatchedIds.has(node.id),
       circular: index.circularNodeIds.has(node.id),
+      orphan: index.orphanNodeIds.has(node.id),
     });
 
     if (!children.length || !expanded) {
@@ -138,6 +153,7 @@ export default function App() {
   const index = useRelationshipIndex(dataSet);
   const [searchTerm, setSearchTerm] = useState('');
   const [circularOnly, setCircularOnly] = useState<boolean>(false);
+  const [orphanOnly, setOrphanOnly] = useState<boolean>(false);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   
@@ -260,11 +276,11 @@ export default function App() {
   const activeCodeNode = activeCodeNodeId ? (index.nodeById.get(activeCodeNodeId) ?? null) : null;
 
   const folderSummary = activeCodeNode?.kind === 'directory'
-    ? getFolderSummary(activeCodeNode.id, index, { showTypeOnlyEdges: true, showDynamicEdges: true, circularOnly })
+    ? getFolderSummary(activeCodeNode.id, index, { showTypeOnlyEdges: true, showDynamicEdges: true, circularOnly, orphanOnly })
     : null;
   const visibleRows = useMemo(() => (
-    buildTreeRows(index, expandedIds, deferredSearchTerm, { showTypeOnlyEdges: true, showDynamicEdges: true, circularOnly })
-  ), [deferredSearchTerm, circularOnly, expandedIds, index]);
+    buildTreeRows(index, expandedIds, deferredSearchTerm, { showTypeOnlyEdges: true, showDynamicEdges: true, circularOnly, orphanOnly })
+  ), [deferredSearchTerm, circularOnly, orphanOnly, expandedIds, index]);
 
   useEffect(() => {
     if (selectedNodeId) {
@@ -391,12 +407,15 @@ export default function App() {
         totalDirs={index.structureGraph?.totalDirs ?? 0}
         totalImports={index.dependencyGraph?.totalImports ?? 0}
         circularCount={index.circularNodeIds.size}
+        orphanCount={index.orphanNodeIds.size}
         visibleRows={visibleRows.length}
         circularOnly={circularOnly}
+        orphanOnly={orphanOnly}
         onSearchChange={(nextSearch) => {
           startTransition(() => setSearchTerm(nextSearch));
         }}
         onCircularOnlyChange={setCircularOnly}
+        onOrphanOnlyChange={setOrphanOnly}
       />
 
       <div 

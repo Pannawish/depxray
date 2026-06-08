@@ -97,6 +97,9 @@ export function SelectionPanel({
   const hasCircular = isDirectory
     ? Boolean(folderSummary && folderSummary.circularFiles.length > 0)
     : node.isCircular;
+  const hasOrphans = isDirectory
+    ? Boolean(folderSummary && folderSummary.orphanFiles.length > 0)
+    : node.isOrphan;
 
   return (
     <section className="details-panel">
@@ -141,6 +144,25 @@ export function SelectionPanel({
               ⚠️ Circular
             </span>
           )}
+          {hasOrphans && (
+            <span
+              style={{
+                fontSize: '0.72rem',
+                fontWeight: 'bold',
+                textTransform: 'uppercase',
+                padding: '4px 10px',
+                borderRadius: '99px',
+                background: 'var(--warning-soft)',
+                color: 'var(--warning)',
+                border: '1px solid rgba(154, 91, 20, 0.2)',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '4px'
+              }}
+            >
+              Orphan
+            </span>
+          )}
           <button 
             className="swap-layout-btn"
             onClick={onSwapVertical}
@@ -165,6 +187,7 @@ export function SelectionPanel({
         <span>depth {node.depth}</span>
         {node.extension ? <span>{node.extension}</span> : null}
         {node.isCircular ? <span className="danger">circular</span> : null}
+        {node.isOrphan ? <span className="warning">orphan</span> : null}
       </div>
 
       <dl className="detail-list">
@@ -181,12 +204,14 @@ export function SelectionPanel({
             <DetailRow label="Incoming external refs" value={folderSummary.incomingExternal.length} />
             <DetailRow label="Outgoing external refs" value={folderSummary.outgoingExternal.length} />
             <DetailRow label="Circular files" value={folderSummary.circularFiles.length} />
+            <DetailRow label="Orphan files" value={folderSummary.orphanFiles.length} />
           </>
         ) : (
           <>
             <DetailRow label="Outgoing imports" value={imports.length} />
             <DetailRow label="Incoming imports" value={importedBy.length} />
             <DetailRow label="Circular" value={node.isCircular ? 'yes' : 'no'} />
+            <DetailRow label="Orphan" value={node.isOrphan ? 'yes' : 'no'} />
             {node.componentName ? <DetailRow label="Component" value={node.componentName} /> : null}
           </>
         )}

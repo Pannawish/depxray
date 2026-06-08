@@ -23,6 +23,7 @@ interface ExplorerGraphNode extends StructureGraphNode {
   inDegree?: number;
   outDegree?: number;
   isCircular?: boolean;
+  isOrphan?: boolean;
   componentName?: string;
 }
 
@@ -43,6 +44,7 @@ interface ExplorerGraphData {
   totalDirs: number;
   totalImports: number;
   circularCount: number;
+  orphanFiles: string[];
   generatedBy: string;
   errors: ScanError[];
   nodes: ExplorerGraphNode[];
@@ -70,6 +72,8 @@ interface ScanCommandOptions {
   circular?: boolean;
   aliases?: boolean;
   extensions?: string[];
+  orphans?: boolean;
+  entryPoints?: string[];
   open?: boolean;
 }
 
@@ -181,6 +185,7 @@ function toStructureGraphData(graph: StructureGraph): ExplorerGraphData {
     totalDirs,
     totalImports: 0,
     circularCount: 0,
+    orphanFiles: [],
     generatedBy: getGeneratedBy(),
     errors: [],
     nodes: graph.nodes,
@@ -192,6 +197,7 @@ function toStructureGraphData(graph: StructureGraph): ExplorerGraphData {
 }
 
 function toDependencyGraphData(result: ScanResult): ExplorerGraphData {
+  const orphanFileSet = new Set(result.orphanFiles);
   const nodes: ExplorerGraphNode[] = result.graph.nodes.map((node) => ({
     id: node.id,
     label: path.basename(node.relativePath),
@@ -207,6 +213,7 @@ function toDependencyGraphData(result: ScanResult): ExplorerGraphData {
     inDegree: node.inDegree,
     outDegree: node.outDegree,
     isCircular: node.isCircular,
+    isOrphan: orphanFileSet.has(node.relativePath),
     ...(node.componentName ? { componentName: node.componentName } : {}),
   }));
 
@@ -230,6 +237,7 @@ function toDependencyGraphData(result: ScanResult): ExplorerGraphData {
     totalDirs: 0,
     totalImports: result.totalImports,
     circularCount: result.circularCount,
+    orphanFiles: result.orphanFiles,
     generatedBy: getGeneratedBy(),
     errors: result.errors,
     nodes,
@@ -243,6 +251,18 @@ function serializeGraphData(data: ExplorerGraphData): string {
 
 function serializeGraphSet(data: ExplorerGraphSet): string {
   return JSON.stringify(data, null, 2);
+}
+
+function printOrphanFiles(orphanFiles: string[]): void {
+  if (orphanFiles.length === 0) {
+    process.stderr.write('No orphan files found.\n');
+    return;
+  }
+
+  process.stderr.write(`Orphan files (${orphanFiles.length}):\n`);
+  for (const orphanFile of orphanFiles) {
+    process.stderr.write(`  ${orphanFile}\n`);
+  }
 }
 
 async function ensureDirectory(dirPath: string): Promise<void> {
@@ -538,6 +558,7 @@ async function buildSelectedGraphData(
     detectCircular: options.circular !== false,
     resolveAliases: options.aliases !== false,
     extensions: options.extensions,
+    entryPointPatterns: options.entryPoints,
   });
 
   return toDependencyGraphData(result);
@@ -557,6 +578,7 @@ async function buildGraphSet(
     detectCircular: options.circular !== false,
     resolveAliases: options.aliases !== false,
     extensions: options.extensions,
+    entryPointPatterns: options.entryPoints,
   });
 
   const structureData = toStructureGraphData(structureGraph);
@@ -595,6 +617,11 @@ export function createScanCommand(): Command {
     .option('--ignore <patterns...>', 'Additional directory/file patterns to ignore')
     .option('--no-circular', 'Skip circular dependency detection in dependency mode')
     .option('--no-aliases', 'Skip tsconfig/jsconfig path alias resolution in dependency mode')
+    .option('--orphans', 'Print orphan files to stderr after dependency scanning')
+    .option(
+      '--entry-points <patterns...>',
+      'Entry point glob patterns to exclude from orphan detection',
+    )
     .option(
       '--extensions <exts...>',
       'File extensions to scan in dependency mode (default: .js .jsx .ts .tsx)',
@@ -621,6 +648,9 @@ export function createScanCommand(): Command {
 
         if (rawOptions.json) {
           const graphData = await buildSelectedGraphData(rootDir, rawOptions);
+          if (rawOptions.orphans && graphData.mode === 'dependencies') {
+            printOrphanFiles(graphData.orphanFiles);
+          }
           const output = serializeGraphData(graphData);
           if (rawOptions.output) {
             const outputPath = path.resolve(rawOptions.output);
@@ -642,6 +672,9 @@ export function createScanCommand(): Command {
         }
 
         const { tree, graphSet } = await buildGraphSet(rootDir, rawOptions);
+        if (rawOptions.orphans) {
+          printOrphanFiles(graphSet.graphs.dependencies?.orphanFiles ?? []);
+        }
         const resolvedPort = await startGraphServer(rootDir, tree, graphSet, port, initialDepth);
         if (rawOptions.open !== false) {
           const url = `http://127.0.0.1:${resolvedPort}?depth=${encodeURIComponent(normalizeInitialDepth(initialDepth))}&mode=${encodeURIComponent(graphSet.defaultMode)}`;

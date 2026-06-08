@@ -7,10 +7,13 @@ interface ExplorerToolbarProps {
   totalDirs: number;
   totalImports: number;
   circularCount: number;
+  orphanCount: number;
   visibleRows: number;
   circularOnly: boolean;
+  orphanOnly: boolean;
   onSearchChange: (searchTerm: string) => void;
   onCircularOnlyChange: (circularOnly: boolean) => void;
+  onOrphanOnlyChange: (orphanOnly: boolean) => void;
 }
 
 export function ExplorerToolbar({
@@ -20,10 +23,13 @@ export function ExplorerToolbar({
   totalDirs,
   totalImports,
   circularCount,
+  orphanCount,
   visibleRows,
   circularOnly,
+  orphanOnly,
   onSearchChange,
   onCircularOnlyChange,
+  onOrphanOnlyChange,
 }: ExplorerToolbarProps) {
   return (
     <header className="explorer-toolbar">
@@ -69,6 +75,17 @@ export function ExplorerToolbar({
           <span className="cycles-dot"></span>
           Cycles Only
           {circularCount > 0 && <span className="cycles-count-badge">{circularCount}</span>}
+        </button>
+
+        <button
+          className={`orphans-toggle-btn ${orphanOnly ? 'active' : ''} ${orphanCount > 0 ? 'has-orphans' : ''}`}
+          onClick={() => onOrphanOnlyChange(!orphanOnly)}
+          type="button"
+          title="Filter project tree to show orphan files only"
+        >
+          <span className="orphans-dot"></span>
+          Orphans Only
+          {orphanCount > 0 && <span className="orphans-count-badge">{orphanCount}</span>}
         </button>
 
         {/* Low-profile Summary Stats */}

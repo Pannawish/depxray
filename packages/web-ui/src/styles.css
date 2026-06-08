@@ -175,7 +175,8 @@ button {
   flex-shrink: 0;
 }
 
-.cycles-toggle-btn {
+.cycles-toggle-btn,
+.orphans-toggle-btn {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -191,13 +192,15 @@ button {
   height: 32px;
 }
 
-.cycles-toggle-btn:hover {
+.cycles-toggle-btn:hover,
+.orphans-toggle-btn:hover {
   border-color: var(--border-strong);
   background: var(--panel-subtle);
   color: var(--text);
 }
 
-.cycles-dot {
+.cycles-dot,
+.orphans-dot {
   width: 8px;
   height: 8px;
   border-radius: 50%;
@@ -212,12 +215,25 @@ button {
   box-shadow: 0 0 8px rgba(179, 58, 50, 0.12);
 }
 
+.orphans-toggle-btn.active {
+  border-color: var(--warning);
+  background: var(--warning-soft);
+  color: var(--warning);
+  box-shadow: 0 0 8px rgba(154, 91, 20, 0.12);
+}
+
 .cycles-toggle-btn.active .cycles-dot {
   background: var(--danger);
   animation: pulse-dot 1.6s infinite;
 }
 
-.cycles-count-badge {
+.orphans-toggle-btn.active .orphans-dot {
+  background: var(--warning);
+  animation: pulse-dot-warning 1.6s infinite;
+}
+
+.cycles-count-badge,
+.orphans-count-badge {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -233,6 +249,16 @@ button {
 
 .cycles-toggle-btn.active .cycles-count-badge {
   background: var(--danger);
+  color: #ffffff;
+}
+
+.orphans-count-badge {
+  background: rgba(154, 91, 20, 0.12);
+  color: var(--warning);
+}
+
+.orphans-toggle-btn.active .orphans-count-badge {
+  background: var(--warning);
   color: #ffffff;
 }
 
@@ -313,6 +339,13 @@ button {
   color: var(--danger);
 }
 
+.badge-row .warning,
+.tree-row.orphan .tree-meta,
+.tree-meta.orphan-badge {
+  background: var(--warning-soft);
+  color: var(--warning);
+}
+
 @keyframes pulse-dot {
   0% {
     transform: scale(0.9);
@@ -325,6 +358,21 @@ button {
   100% {
     transform: scale(0.9);
     box-shadow: 0 0 0 0 rgba(179, 58, 50, 0);
+  }
+}
+
+@keyframes pulse-dot-warning {
+  0% {
+    transform: scale(0.9);
+    box-shadow: 0 0 0 0 rgba(154, 91, 20, 0.7);
+  }
+  70% {
+    transform: scale(1);
+    box-shadow: 0 0 0 5px rgba(154, 91, 20, 0);
+  }
+  100% {
+    transform: scale(0.9);
+    box-shadow: 0 0 0 0 rgba(154, 91, 20, 0);
   }
 }
 
@@ -498,6 +546,10 @@ button {
 
 .tree-row.matched .tree-label {
   font-weight: 800;
+}
+
+.tree-row.orphan:not(.selected) {
+  opacity: 0.72;
 }
 
 .tree-toggle {
