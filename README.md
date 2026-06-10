@@ -20,6 +20,7 @@
 - Detect unused and unlisted npm dependencies
 - Detect workspace ownership and cross-package imports in monorepos
 - Export machine-readable JSON for scripts and AI workflows
+- Export Mermaid and DOT dependency graphs for docs and PRs
 - Expose dependency-analysis tools to AI clients through `@depxray/mcp`
 - Generate Markdown project health reports
 - Generate a static HTML report in `.depxray/`
@@ -108,9 +109,10 @@ depxray scan [dir] [options]
 Common options:
 
 - `--json`: print graph JSON to `stdout`
-- `-o, --output <file>`: write JSON output to a file; only valid with `--json`
+- `-o, --output <file>`: write output to a file; only valid with `--json`
 - `--html`: generate a static HTML export in `.depxray/`
 - `--mode <mode>`: `structure` or `dependencies`
+- `--format <format>`: `json`, `mermaid`, or `dot`; Mermaid/DOT require `--mode dependencies --json`
 - `--ignore <patterns...>`: exclude additional paths
 - `--no-circular`: skip circular dependency detection in dependency mode
 - `--no-aliases`: skip `tsconfig.json` / `jsconfig.json` path alias resolution in dependency mode
@@ -134,6 +136,12 @@ npx depxray scan --ignore "**/dist/**" "**/coverage/**"
 
 # Export dependency-mode JSON
 npx depxray scan /path/to/project --mode dependencies --json --output dep-graph.json
+
+# Export a Mermaid graph for Markdown docs
+npx depxray scan /path/to/project --mode dependencies --json --format mermaid --output graph.mmd
+
+# Export Graphviz DOT
+npx depxray scan /path/to/project --mode dependencies --json --format dot --output graph.dot
 
 # Print files with no incoming imports
 npx depxray scan /path/to/project --mode dependencies --orphans

@@ -6,6 +6,8 @@ import * as path from 'node:path';
 import { Command } from 'commander';
 import { WebSocketServer, type WebSocket } from 'ws';
 import cliPackageJson from '../../package.json';
+import { formatAsDot } from '../formatters/dot.js';
+import { formatAsMermaid } from '../formatters/mermaid.js';
 import {
   buildStructureGraph,
   DEFAULT_IGNORE_PATTERNS,
@@ -23,6 +25,7 @@ import {
 } from '@depxray/core';
 
 type GraphMode = 'structure' | 'dependencies';
+type ScanOutputFormat = 'json' | 'mermaid' | 'dot';
 
 interface ExplorerGraphNode extends StructureGraphNode {
   inDegree?: number;
@@ -78,6 +81,7 @@ interface ScanCommandOptions {
   depth?: string;
   port?: string;
   mode?: string;
+  format?: string;
   circular?: boolean;
   aliases?: boolean;
   extensions?: string[];
@@ -237,6 +241,18 @@ function parseMode(value: string | undefined): GraphMode {
   }
 
   throw new Error(`Invalid mode: ${value}. Use "structure" or "dependencies".`);
+}
+
+function parseOutputFormat(value: string | undefined): ScanOutputFormat {
+  if (!value || value === 'json') {
+    return 'json';
+  }
+
+  if (value === 'mermaid' || value === 'dot') {
+    return value;
+  }
+
+  throw new Error(`Invalid format: ${value}. Use "json", "mermaid", or "dot".`);
 }
 
 function getGeneratedBy(): string {
@@ -788,6 +804,21 @@ async function buildSelectedGraphData(
   return toDependencyGraphData(result);
 }
 
+async function buildDependencyScanResult(
+  rootDir: string,
+  options: ScanCommandOptions,
+): Promise<ScanResult> {
+  return scanProject({
+    rootDir,
+    ignorePatterns: options.ignore,
+    detectCircular: options.circular !== false,
+    resolveAliases: options.aliases !== false,
+    extensions: options.extensions,
+    entryPointPatterns: options.entryPoints,
+    detectUnusedDeps: options.deps,
+  });
+}
+
 async function buildGraphSet(
   rootDir: string,
   options: ScanCommandOptions,
@@ -837,8 +868,9 @@ export function createScanCommand(): Command {
     )
     .option('--json', 'Print the graph JSON to stdout')
     .option('--html', 'Generate a static HTML export in .depxray/')
-    .option('-o, --output <file>', 'Write JSON output to a file instead of stdout')
+    .option('-o, --output <file>', 'Write output to a file instead of stdout')
     .option('--mode <mode>', 'Graph mode: structure | dependencies', 'structure')
+    .option('--format <format>', 'Output format for --json: json | mermaid | dot', 'json')
     .option('--ignore <patterns...>', 'Additional directory/file patterns to ignore')
     .option('--no-circular', 'Skip circular dependency detection in dependency mode')
     .option('--no-aliases', 'Skip tsconfig/jsconfig path alias resolution in dependency mode')
@@ -867,6 +899,7 @@ export function createScanCommand(): Command {
         );
         const initialDepth = parseDepth(options.depth);
         const port = parsePort(options.port);
+        const outputFormat = parseOutputFormat(options.format);
 
         if (options.json && options.html) {
           throw new Error('Choose only one output mode: --json or --html.');
@@ -884,15 +917,34 @@ export function createScanCommand(): Command {
           throw new Error('--deps is only supported with --mode dependencies when using --json.');
         }
 
+        if (outputFormat !== 'json' && !options.json) {
+          throw new Error('--format is only supported together with --json.');
+        }
+
+        if (outputFormat !== 'json' && parseMode(options.mode) !== 'dependencies') {
+          throw new Error('--format mermaid|dot is only supported with --mode dependencies.');
+        }
+
         await verifyDirectory(rootDir);
         process.stderr.write(`Scanning ${rootDir}...\n`);
 
         if (options.json) {
-          const graphData = await buildSelectedGraphData(rootDir, options);
-          if (options.orphans && graphData.mode === 'dependencies') {
-            printOrphanFiles(graphData.orphanFiles);
+          let output: string;
+          if (outputFormat === 'json') {
+            const graphData = await buildSelectedGraphData(rootDir, options);
+            if (options.orphans && graphData.mode === 'dependencies') {
+              printOrphanFiles(graphData.orphanFiles);
+            }
+            output = serializeGraphData(graphData);
+          } else {
+            const result = await buildDependencyScanResult(rootDir, options);
+            if (options.orphans) {
+              printOrphanFiles(result.orphanFiles);
+            }
+            output = outputFormat === 'mermaid'
+              ? formatAsMermaid(result)
+              : formatAsDot(result);
           }
-          const output = serializeGraphData(graphData);
           if (options.output) {
             const outputPath = path.resolve(options.output);
             await ensureDirectory(path.dirname(outputPath));

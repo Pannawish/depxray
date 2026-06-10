@@ -80,15 +80,20 @@ export function formatAsDot(result: ScanResult): string {
       ? '#666688'
       : edge.isDynamic
         ? '#FFaa00'
+        : edge.isCrossPackage
+          ? '#94A3B8'
         : '#555577';
     const style = edge.isTypeOnly
       ? 'dashed'
       : edge.isDynamic
         ? 'dotted'
+        : edge.isCrossPackage
+          ? 'dashed'
         : 'solid';
+    const penwidth = edge.isCrossPackage ? '2.0' : '1.0';
 
     lines.push(
-      `  "${escapeLabel(edge.source)}" -> "${escapeLabel(edge.target)}" [color="${color}", style=${style}];`,
+      `  "${escapeLabel(edge.source)}" -> "${escapeLabel(edge.target)}" [color="${color}", style=${style}, penwidth=${penwidth}];`,
     );
   }
 

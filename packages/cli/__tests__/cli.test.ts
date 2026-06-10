@@ -127,6 +127,65 @@ describe('CLI Integration Tests', () => {
       expect(parsed.nodes.some((node: any) => node.metrics?.loc > 0)).toBe(true);
     });
 
+    it('should output Mermaid dependency graph format', async () => {
+      const { stdout, exitCode } = await execa('node', [
+        CLI_PATH,
+        'scan',
+        SIMPLE_PROJECT,
+        '--mode',
+        'dependencies',
+        '--json',
+        '--format',
+        'mermaid',
+      ]);
+
+      expect(exitCode).toBe(0);
+      expect(stdout).toContain('flowchart LR');
+      expect(stdout).toContain('src/App.tsx');
+      expect(stdout).toContain('-->');
+    });
+
+    it('should output DOT dependency graph format', async () => {
+      const { stdout, exitCode } = await execa('node', [
+        CLI_PATH,
+        'scan',
+        SIMPLE_PROJECT,
+        '--mode',
+        'dependencies',
+        '--json',
+        '--format',
+        'dot',
+      ]);
+
+      expect(exitCode).toBe(0);
+      expect(stdout).toContain('digraph DependencyGraph');
+      expect(stdout).toContain('rankdir=LR');
+      expect(stdout).toContain('->');
+    });
+
+    it('should write Mermaid output to file', async () => {
+      await fs.mkdir(TEMP_DIR, { recursive: true });
+      const outputPath = path.join(TEMP_DIR, 'graph.mmd');
+
+      const { stdout, stderr, exitCode } = await execa('node', [
+        CLI_PATH,
+        'scan',
+        SIMPLE_PROJECT,
+        '--mode',
+        'dependencies',
+        '--json',
+        '--format',
+        'mermaid',
+        '--output',
+        outputPath,
+      ]);
+
+      expect(exitCode).toBe(0);
+      expect(stdout.trim()).toBe('');
+      expect(stderr).toContain(`Output written to ${outputPath}`);
+      expect(await fs.readFile(outputPath, 'utf-8')).toContain('flowchart LR');
+    });
+
     it('should include and print orphan files in dependency mode', async () => {
       const { stdout, stderr, exitCode } = await execa('node', [
         CLI_PATH,
@@ -271,6 +330,23 @@ describe('CLI Integration Tests', () => {
       } catch (err: any) {
         expect(err.exitCode).toBe(1);
         expect(err.stderr).toContain('--deps is only supported with --mode dependencies');
+      }
+    });
+
+    it('should reject graph export formats outside dependency JSON output', async () => {
+      try {
+        await execa('node', [
+          CLI_PATH,
+          'scan',
+          SIMPLE_PROJECT,
+          '--json',
+          '--format',
+          'mermaid',
+        ]);
+        expect.fail('Should have thrown an error');
+      } catch (err: any) {
+        expect(err.exitCode).toBe(1);
+        expect(err.stderr).toContain('--format mermaid|dot is only supported with --mode dependencies');
       }
     });
 

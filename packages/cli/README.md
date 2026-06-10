@@ -17,6 +17,7 @@ For MCP-compatible AI clients, use the companion package `@depxray/mcp`.
 - Detect unused and unlisted npm dependencies
 - Detect workspace ownership and cross-package imports in monorepos
 - Export JSON for scripts, automation, and AI coding agents
+- Export Mermaid and DOT dependency graphs for docs and PRs
 - Generate Markdown project health reports
 - Generate a standalone HTML report for local review or sharing
 
@@ -200,9 +201,10 @@ depxray scan [dir] [options]
 Common options:
 
 - `--json`: print graph data to `stdout`
-- `-o, --output <file>`: write JSON output to a file; only valid with `--json`
+- `-o, --output <file>`: write output to a file; only valid with `--json`
 - `--html`: generate a standalone HTML bundle in `.depxray/`
 - `--mode <mode>`: `structure` or `dependencies`
+- `--format <format>`: `json`, `mermaid`, or `dot`; Mermaid/DOT require `--mode dependencies --json`
 - `--ignore <patterns...>`: exclude paths from scanning
 - `--no-circular`: skip circular dependency detection in dependency mode
 - `--no-aliases`: skip `tsconfig.json` / `jsconfig.json` path alias resolution in dependency mode
@@ -221,6 +223,8 @@ Examples:
 depxray scan
 depxray scan /path/to/project --mode dependencies
 depxray scan /path/to/project --mode dependencies --json --output dep-graph.json
+depxray scan /path/to/project --mode dependencies --json --format mermaid --output graph.mmd
+depxray scan /path/to/project --mode dependencies --json --format dot --output graph.dot
 depxray scan /path/to/project --mode dependencies --orphans
 depxray scan /path/to/project --mode dependencies --deps --json
 depxray scan /path/to/project --mode dependencies --orphans --entry-points "src/routes/**" "src/bootstrap.ts"
