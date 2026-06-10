@@ -1,5 +1,25 @@
 # Changelog
 
+## 1.3.0 - 2026-06-10
+
+### Added
+
+- Added the new `@depxray/mcp` package for MCP-compatible AI coding agents.
+- Added MCP stdio server support with tools for project scanning, file inspection, circular dependency detection, orphan detection, file-tree retrieval, and folder summaries.
+- Added `@depxray/core` as a published scoped package for shared runtime analysis.
+- Added MCP setup documentation for Claude Desktop, Cursor, and other MCP clients.
+- Added MCP handler tests and server registration coverage for all public tools.
+
+### Changed
+
+- Updated root build and version sync scripts to include the MCP workspace.
+- Updated README files with MCP usage, AI-agent workflows, and the safer `npx --package @depxray/mcp depxray-mcp` launch command.
+- Normalized npm package metadata for publish compatibility.
+
+### Fixed
+
+- Fixed MCP runtime package metadata loading so the built server starts correctly on modern Node.js versions.
+
 ## 1.2.0 - 2026-06-09
 
 ### Added
