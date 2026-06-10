@@ -166,7 +166,7 @@ npx depxray inspect src/App.tsx --dir /path/to/project --format json
 For MCP-compatible clients, use the dedicated server package:
 
 ```bash
-npx @depxray/mcp
+npx --package @depxray/mcp depxray-mcp
 ```
 
 Claude Desktop configuration example:
@@ -176,7 +176,7 @@ Claude Desktop configuration example:
   "mcpServers": {
     "depxray": {
       "command": "npx",
-      "args": ["@depxray/mcp"]
+      "args": ["--package", "@depxray/mcp", "depxray-mcp"]
     }
   }
 }

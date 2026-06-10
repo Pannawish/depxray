@@ -92,7 +92,7 @@ For clients that support MCP, configure the dedicated server package instead:
   "mcpServers": {
     "depxray": {
       "command": "npx",
-      "args": ["@depxray/mcp"]
+      "args": ["--package", "@depxray/mcp", "depxray-mcp"]
     }
   }
 }

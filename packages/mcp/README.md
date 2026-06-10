@@ -18,7 +18,7 @@ The server runs locally over stdio and uses `@depxray/core`, the same scanner th
 ## Quick Start
 
 ```bash
-npx @depxray/mcp
+npx --package @depxray/mcp depxray-mcp
 ```
 
 Most users do not run this command directly. Add it to your MCP client configuration so the client can start the server when needed.
@@ -43,7 +43,7 @@ Add this to your Claude Desktop MCP configuration:
   "mcpServers": {
     "depxray": {
       "command": "npx",
-      "args": ["@depxray/mcp"]
+      "args": ["--package", "@depxray/mcp", "depxray-mcp"]
     }
   }
 }
@@ -56,7 +56,7 @@ Add a new MCP server with:
 ```json
 {
   "command": "npx",
-  "args": ["@depxray/mcp"]
+  "args": ["--package", "@depxray/mcp", "depxray-mcp"]
 }
 ```
 
@@ -108,4 +108,4 @@ Your MCP client may still send tool results to its own model provider. Review yo
 This package is the MCP interface for depxray.
 
 - Use `npx depxray scan` for the browser UI, CLI JSON output, and static HTML reports.
-- Use `npx @depxray/mcp` when an MCP-compatible AI coding agent needs depxray tools.
+- Use `npx --package @depxray/mcp depxray-mcp` when an MCP-compatible AI coding agent needs depxray tools.
