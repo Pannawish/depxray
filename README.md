@@ -46,6 +46,12 @@ Inspect one file:
 npx depxray inspect src/components/Button.tsx --dir /path/to/project
 ```
 
+Create a reusable project config:
+
+```bash
+npx depxray init
+```
+
 Install globally if you prefer:
 
 ```bash
@@ -145,6 +151,62 @@ npx depxray inspect src/App.tsx --dir /path/to/project
 npx depxray inspect src/App.tsx --dir /path/to/project --format json
 ```
 
+### `init`
+
+Create a `depxray.config.js` file with sensible defaults.
+
+```bash
+depxray init [dir] [options]
+```
+
+Options:
+
+- `--defaults`: create the default config without prompts
+- `--force`: overwrite an existing `depxray.config.js`
+
+Example:
+
+```bash
+npx depxray init /path/to/project --defaults
+```
+
+## Configuration
+
+`depxray scan` reads persistent project settings from the project root. CLI flags always override config values.
+
+Supported config locations, in order:
+
+1. `depxray.config.js`
+2. `depxray.config.mjs`
+3. `.depxrayrc.json`
+4. `depxray` key in `package.json`
+
+Example `depxray.config.js`:
+
+```js
+module.exports = {
+  mode: 'dependencies',
+  ignore: ['dist', 'coverage'],
+  extensions: ['.js', '.jsx', '.ts', '.tsx'],
+  entryPoints: ['**/index.*', '**/main.*', '**/App.*'],
+  circular: true,
+  aliases: true,
+  port: 5178,
+  depth: 2,
+};
+```
+
+Supported fields:
+
+- `ignore`: additional file or directory patterns to ignore
+- `extensions`: file extensions included in dependency scans
+- `entryPoints`: patterns excluded from orphan-file detection
+- `mode`: `structure` or `dependencies`
+- `circular`: enable circular dependency detection
+- `aliases`: resolve `tsconfig.json` / `jsconfig.json` path aliases
+- `port`: preferred browser UI port
+- `depth`: initial visible depth, using an integer `>= 1` or `all`
+
 ## For AI Agents
 
 `depxray` is useful for coding agents that need repository structure and dependency context before making edits.
@@ -199,6 +261,7 @@ It supports:
 - CommonJS `require`
 - re-exports and barrel files
 - `tsconfig.json` and `jsconfig.json` path alias resolution
+- `depxray.config.js`, `depxray.config.mjs`, `.depxrayrc.json`, and `package.json` configuration
 - circular dependency detection
 - orphan file detection with configurable entry point exclusions
 - interactive force-directed dependency and structure graph visualization

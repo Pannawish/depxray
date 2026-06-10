@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- Added configuration file support for `depxray scan`.
+- Added `depxray init` to scaffold `depxray.config.js` with sensible defaults.
+- Added support for `depxray.config.js`, `depxray.config.mjs`, `.depxrayrc.json`, and the `depxray` key in `package.json`.
+
+### Changed
+
+- `depxray scan` now merges persistent config with CLI flags, with CLI flags taking precedence.
+
 ## 1.3.0 - 2026-06-10
 
 ### Added

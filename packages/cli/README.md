@@ -66,6 +66,12 @@ Generate a standalone HTML report:
 npx depxray scan /path/to/project --html
 ```
 
+Create a reusable project config:
+
+```bash
+npx depxray init /path/to/project --defaults
+```
+
 ## For AI Agents
 
 Use `depxray` before making edits when an agent needs project structure or file-level dependency context.
@@ -214,6 +220,47 @@ depxray inspect src/App.tsx --dir /path/to/project
 depxray inspect src/App.tsx --dir /path/to/project --format json
 ```
 
+### `init`
+
+Create a `depxray.config.js` file with commented defaults.
+
+```bash
+depxray init [dir] [options]
+```
+
+Options:
+
+- `--defaults`: create the default config without prompts
+- `--force`: overwrite an existing `depxray.config.js`
+
+## Configuration
+
+`depxray scan` reads config from the project root. CLI flags override config values.
+
+Supported locations, in order:
+
+1. `depxray.config.js`
+2. `depxray.config.mjs`
+3. `.depxrayrc.json`
+4. `depxray` key in `package.json`
+
+Example:
+
+```js
+module.exports = {
+  mode: 'dependencies',
+  ignore: ['dist', 'coverage'],
+  extensions: ['.js', '.jsx', '.ts', '.tsx'],
+  entryPoints: ['**/index.*', '**/main.*', '**/App.*'],
+  circular: true,
+  aliases: true,
+  port: 5178,
+  depth: 2,
+};
+```
+
+Supported fields: `ignore`, `extensions`, `entryPoints`, `mode`, `circular`, `aliases`, `port`, and `depth`.
+
 ## Supported Analysis
 
 `depxray` performs static analysis for JavaScript and TypeScript projects.
@@ -229,6 +276,7 @@ It supports:
 - CommonJS `require`
 - re-exports and barrel files
 - `tsconfig.json` and `jsconfig.json` path alias resolution
+- project config via `depxray.config.js`, `depxray.config.mjs`, `.depxrayrc.json`, or `package.json`
 - circular dependency detection
 - orphan file detection with configurable entry point exclusions
 - interactive force-directed dependency and structure graph visualization

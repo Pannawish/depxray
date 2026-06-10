@@ -7,8 +7,10 @@ import { Command } from 'commander';
 import cliPackageJson from '../../package.json';
 import {
   buildStructureGraph,
+  loadConfig,
   scanFileTree,
   scanProject,
+  type DepxrayConfig,
   type FileTreeNode,
   type ScanError,
   type ScanResult,
@@ -77,6 +79,8 @@ interface ScanCommandOptions {
   open?: boolean;
 }
 
+type OptionSourceReader = (name: string) => string | undefined;
+
 const EXPORT_SCHEMA_VERSION = '1.0.0';
 const MAX_PORT_SEARCH_ATTEMPTS = 10;
 
@@ -108,6 +112,48 @@ export function parsePort(value: string | undefined): number {
   }
 
   return parsed;
+}
+
+function cliOptionWasProvided(getOptionSource: OptionSourceReader, name: string): boolean {
+  return getOptionSource(name) === 'cli';
+}
+
+export function mergeScanOptionsWithConfig(
+  rawOptions: ScanCommandOptions,
+  config: DepxrayConfig,
+  getOptionSource: OptionSourceReader = () => undefined,
+): ScanCommandOptions {
+  return {
+    ...rawOptions,
+    ignore: cliOptionWasProvided(getOptionSource, 'ignore')
+      ? rawOptions.ignore
+      : config.ignore ?? rawOptions.ignore,
+    mode: cliOptionWasProvided(getOptionSource, 'mode')
+      ? rawOptions.mode
+      : config.mode ?? rawOptions.mode,
+    circular: cliOptionWasProvided(getOptionSource, 'circular')
+      ? rawOptions.circular
+      : config.circular ?? rawOptions.circular,
+    aliases: cliOptionWasProvided(getOptionSource, 'aliases')
+      ? rawOptions.aliases
+      : config.aliases ?? rawOptions.aliases,
+    extensions: cliOptionWasProvided(getOptionSource, 'extensions')
+      ? rawOptions.extensions
+      : config.extensions ?? rawOptions.extensions,
+    entryPoints: cliOptionWasProvided(getOptionSource, 'entryPoints')
+      ? rawOptions.entryPoints
+      : config.entryPoints ?? rawOptions.entryPoints,
+    depth: cliOptionWasProvided(getOptionSource, 'depth')
+      ? rawOptions.depth
+      : config.depth === undefined
+        ? rawOptions.depth
+        : String(config.depth),
+    port: cliOptionWasProvided(getOptionSource, 'port')
+      ? rawOptions.port
+      : config.port === undefined
+        ? rawOptions.port
+        : String(config.port),
+  };
 }
 
 function isAddressInUseError(error: unknown): error is NodeJS.ErrnoException {
@@ -632,28 +678,34 @@ export function createScanCommand(): Command {
     .action(async (dir: string, rawOptions: ScanCommandOptions) => {
       try {
         const rootDir = path.resolve(dir);
-        const initialDepth = parseDepth(rawOptions.depth);
-        const port = parsePort(rawOptions.port);
+        const config = await loadConfig(rootDir);
+        const options = mergeScanOptionsWithConfig(
+          rawOptions,
+          config,
+          (name) => cmd.getOptionValueSource(name),
+        );
+        const initialDepth = parseDepth(options.depth);
+        const port = parsePort(options.port);
 
-        if (rawOptions.json && rawOptions.html) {
+        if (options.json && options.html) {
           throw new Error('Choose only one output mode: --json or --html.');
         }
 
-        if (rawOptions.output && !rawOptions.json) {
+        if (options.output && !options.json) {
           throw new Error('--output is only supported together with --json.');
         }
 
         await verifyDirectory(rootDir);
         process.stderr.write(`Scanning ${rootDir}...\n`);
 
-        if (rawOptions.json) {
-          const graphData = await buildSelectedGraphData(rootDir, rawOptions);
-          if (rawOptions.orphans && graphData.mode === 'dependencies') {
+        if (options.json) {
+          const graphData = await buildSelectedGraphData(rootDir, options);
+          if (options.orphans && graphData.mode === 'dependencies') {
             printOrphanFiles(graphData.orphanFiles);
           }
           const output = serializeGraphData(graphData);
-          if (rawOptions.output) {
-            const outputPath = path.resolve(rawOptions.output);
+          if (options.output) {
+            const outputPath = path.resolve(options.output);
             await ensureDirectory(path.dirname(outputPath));
             await fs.writeFile(outputPath, output, 'utf-8');
             process.stderr.write(`Output written to ${outputPath}\n`);
@@ -663,20 +715,20 @@ export function createScanCommand(): Command {
           return;
         }
 
-        if (rawOptions.html) {
-          const { graphSet } = await buildGraphSet(rootDir, rawOptions);
+        if (options.html) {
+          const { graphSet } = await buildGraphSet(rootDir, options);
           const outputDir = path.join(rootDir, '.depxray');
           const indexPath = await createStaticExport(outputDir, graphSet, initialDepth);
           process.stderr.write(`Static export written to ${indexPath}\n`);
           return;
         }
 
-        const { tree, graphSet } = await buildGraphSet(rootDir, rawOptions);
-        if (rawOptions.orphans) {
+        const { tree, graphSet } = await buildGraphSet(rootDir, options);
+        if (options.orphans) {
           printOrphanFiles(graphSet.graphs.dependencies?.orphanFiles ?? []);
         }
         const resolvedPort = await startGraphServer(rootDir, tree, graphSet, port, initialDepth);
-        if (rawOptions.open !== false) {
+        if (options.open !== false) {
           const url = `http://127.0.0.1:${resolvedPort}?depth=${encodeURIComponent(normalizeInitialDepth(initialDepth))}&mode=${encodeURIComponent(graphSet.defaultMode)}`;
           await openBrowser(url);
         }

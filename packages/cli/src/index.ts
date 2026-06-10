@@ -26,6 +26,7 @@ import { Command } from 'commander';
 import packageJson from '../package.json';
 import { createScanCommand } from './commands/scan.js';
 import { createInspectCommand } from './commands/inspect.js';
+import { createInitCommand } from './commands/init.js';
 
 const program = new Command();
 
@@ -41,6 +42,7 @@ program
 // Register commands
 program.addCommand(createScanCommand());
 program.addCommand(createInspectCommand());
+program.addCommand(createInitCommand());
 
 // Parse and execute
 program.parse();

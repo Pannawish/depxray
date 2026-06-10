@@ -7,6 +7,7 @@ const CLI_PATH = path.resolve(__dirname, '../dist/index.js');
 const FIXTURES_DIR = path.resolve(__dirname, '../../core/__tests__/fixtures');
 const SIMPLE_PROJECT = path.join(FIXTURES_DIR, 'simple-project');
 const CIRCULAR_PROJECT = path.join(FIXTURES_DIR, 'circular-project');
+const TEMP_DIR = path.join(__dirname, 'tmp-cli-tests');
 
 describe('CLI Integration Tests', () => {
   beforeEach(async () => {
@@ -20,6 +21,9 @@ describe('CLI Integration Tests', () => {
         force: true,
       });
     } catch {}
+    try {
+      await fs.rm(TEMP_DIR, { recursive: true, force: true });
+    } catch {}
   });
 
   afterEach(async () => {
@@ -31,6 +35,9 @@ describe('CLI Integration Tests', () => {
         recursive: true,
         force: true,
       });
+    } catch {}
+    try {
+      await fs.rm(TEMP_DIR, { recursive: true, force: true });
     } catch {}
   });
 
@@ -177,6 +184,86 @@ describe('CLI Integration Tests', () => {
       expect(graphData.graphs.structure.totalFiles).toBe(8);
     });
 
+    it('should read depxray config when scan flags are not passed', async () => {
+      await fs.mkdir(TEMP_DIR, { recursive: true });
+      await fs.cp(SIMPLE_PROJECT, path.join(TEMP_DIR, 'project'), { recursive: true });
+      const projectDir = path.join(TEMP_DIR, 'project');
+      await fs.writeFile(
+        path.join(projectDir, 'depxray.config.js'),
+        'module.exports = { mode: "dependencies", extensions: [".ts"], entryPoints: [] };\n',
+        'utf-8',
+      );
+
+      const { stdout, exitCode } = await execa('node', [
+        CLI_PATH,
+        'scan',
+        projectDir,
+        '--json',
+      ]);
+
+      expect(exitCode).toBe(0);
+      const parsed = JSON.parse(stdout);
+      expect(parsed.mode).toBe('dependencies');
+      expect(parsed.totalFiles).toBe(3);
+    });
+
+    it('should let CLI flags override depxray config', async () => {
+      await fs.mkdir(TEMP_DIR, { recursive: true });
+      await fs.cp(SIMPLE_PROJECT, path.join(TEMP_DIR, 'project'), { recursive: true });
+      const projectDir = path.join(TEMP_DIR, 'project');
+      await fs.writeFile(
+        path.join(projectDir, 'depxray.config.js'),
+        'module.exports = { mode: "dependencies" };\n',
+        'utf-8',
+      );
+
+      const { stdout, exitCode } = await execa('node', [
+        CLI_PATH,
+        'scan',
+        projectDir,
+        '--mode',
+        'structure',
+        '--json',
+      ]);
+
+      expect(exitCode).toBe(0);
+      expect(JSON.parse(stdout).mode).toBe('structure');
+    });
+
+  });
+
+  describe('init command', () => {
+    it('should create a default depxray.config.js', async () => {
+      await fs.mkdir(TEMP_DIR, { recursive: true });
+
+      const { stderr, exitCode } = await execa('node', [
+        CLI_PATH,
+        'init',
+        TEMP_DIR,
+        '--defaults',
+      ]);
+
+      expect(exitCode).toBe(0);
+      const configPath = path.join(TEMP_DIR, 'depxray.config.js');
+      const config = await fs.readFile(configPath, 'utf-8');
+      expect(stderr).toContain(`Created ${configPath}`);
+      expect(config).toContain('mode:');
+      expect(config).toContain('extensions:');
+      expect(config).toContain('entryPoints:');
+    });
+
+    it('should not overwrite an existing config without --force', async () => {
+      await fs.mkdir(TEMP_DIR, { recursive: true });
+      await fs.writeFile(path.join(TEMP_DIR, 'depxray.config.js'), 'module.exports = {};\n', 'utf-8');
+
+      try {
+        await execa('node', [CLI_PATH, 'init', TEMP_DIR, '--defaults']);
+        expect.fail('Should have thrown an error');
+      } catch (err: any) {
+        expect(err.exitCode).toBe(1);
+        expect(err.stderr).toContain('Config already exists');
+      }
+    });
   });
 
   describe('inspect command', () => {

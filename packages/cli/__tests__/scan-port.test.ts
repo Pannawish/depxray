@@ -1,7 +1,7 @@
 import { EventEmitter } from 'node:events';
 import * as http from 'node:http';
 import { describe, expect, it } from 'vitest';
-import { listenOnAvailablePort, parsePort } from '../src/commands/scan';
+import { listenOnAvailablePort, mergeScanOptionsWithConfig, parsePort } from '../src/commands/scan';
 
 class FakeServer extends EventEmitter {
   private readonly occupiedPorts: Set<number>;
@@ -46,5 +46,66 @@ describe('scan port handling', () => {
     await expect(
       listenOnAvailablePort(server as unknown as http.Server, 5178, '127.0.0.1', 3),
     ).rejects.toThrow(new Error('No available port found between 5178 and 5180.'));
+  });
+});
+
+describe('scan config merging', () => {
+  it('uses config values when CLI options were not provided', () => {
+    const merged = mergeScanOptionsWithConfig(
+      {
+        mode: 'structure',
+        depth: '2',
+        port: '5178',
+        circular: true,
+        aliases: true,
+      },
+      {
+        mode: 'dependencies',
+        depth: 'all',
+        port: 6000,
+        circular: false,
+        aliases: false,
+        ignore: ['dist'],
+        extensions: ['.ts'],
+        entryPoints: ['src/main.ts'],
+      },
+      () => 'default',
+    );
+
+    expect(merged).toMatchObject({
+      mode: 'dependencies',
+      depth: 'all',
+      port: '6000',
+      circular: false,
+      aliases: false,
+      ignore: ['dist'],
+      extensions: ['.ts'],
+      entryPoints: ['src/main.ts'],
+    });
+  });
+
+  it('keeps CLI values when provided', () => {
+    const merged = mergeScanOptionsWithConfig(
+      {
+        mode: 'structure',
+        depth: '4',
+        port: '7000',
+        circular: false,
+      },
+      {
+        mode: 'dependencies',
+        depth: 'all',
+        port: 6000,
+        circular: true,
+      },
+      (name) => (['mode', 'depth', 'port', 'circular'].includes(name) ? 'cli' : 'default'),
+    );
+
+    expect(merged).toMatchObject({
+      mode: 'structure',
+      depth: '4',
+      port: '7000',
+      circular: false,
+    });
   });
 });

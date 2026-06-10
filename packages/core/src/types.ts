@@ -283,6 +283,36 @@ export interface ScanFileTreeOptions {
   maxDepth?: number;
 }
 
+/**
+ * Persistent project configuration loaded from depxray.config.js,
+ * depxray.config.mjs, .depxrayrc.json, or package.json's depxray key.
+ */
+export interface DepxrayConfig {
+  /** Additional directory/file patterns to ignore */
+  ignore?: string[];
+
+  /** File extensions to include in dependency scans */
+  extensions?: string[];
+
+  /** Entry point glob patterns to exclude from orphan detection */
+  entryPoints?: string[];
+
+  /** Default graph mode for scan output and the browser UI */
+  mode?: 'structure' | 'dependencies';
+
+  /** Whether circular dependency detection is enabled */
+  circular?: boolean;
+
+  /** Whether tsconfig/jsconfig path alias resolution is enabled */
+  aliases?: boolean;
+
+  /** Preferred local browser server port */
+  port?: number;
+
+  /** Initial visible tree depth in the browser UI */
+  depth?: number | 'all';
+}
+
 // ─── Scan Result ───────────────────────────────────────────────────────────
 
 /**

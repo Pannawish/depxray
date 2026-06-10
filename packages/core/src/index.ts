@@ -20,6 +20,7 @@ export { detectCircularDeps } from './detectCircularDeps.js';
 export { detectOrphanFiles, matchesAnyPattern } from './detectOrphanFiles.js';
 export { discoverFiles } from './fileDiscovery.js';
 export { loadAliases } from './configLoader.js';
+export { loadConfig } from './loadConfig.js';
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 export type {
@@ -32,6 +33,7 @@ export type {
   CircularChain,
   DependencyGraph,
   ScanOptions,
+  DepxrayConfig,
   OrphanDetectionOptions,
   ScanFileTreeOptions,
   ScanResult,
