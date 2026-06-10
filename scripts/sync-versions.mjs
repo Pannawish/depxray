@@ -11,6 +11,11 @@ const corePackagePath = path.join(repoRoot, 'packages/core/package.json');
 const mcpPackagePath = path.join(repoRoot, 'packages/mcp/package.json');
 const webUiPackagePath = path.join(repoRoot, 'packages/web-ui/package.json');
 const lockfilePath = path.join(repoRoot, 'package-lock.json');
+const nestedCorePackagePaths = [
+  'packages/cli/node_modules/@depxray/core',
+  'packages/mcp/node_modules/@depxray/core',
+  'packages/web-ui/node_modules/@depxray/core',
+];
 
 async function readJson(filePath) {
   return JSON.parse(await fs.readFile(filePath, 'utf8'));
@@ -81,12 +86,19 @@ if (lockfile.packages?.['node_modules/@depxray/web-ui']) {
   lockfile.packages['node_modules/@depxray/web-ui'].version = version;
 }
 
+for (const nestedPackagePath of nestedCorePackagePaths) {
+  delete lockfile.packages?.[nestedPackagePath];
+}
+
 await Promise.all([
   writeJson(cliPackagePath, cliPackage),
   writeJson(corePackagePath, corePackage),
   writeJson(mcpPackagePath, mcpPackage),
   writeJson(webUiPackagePath, webUiPackage),
   writeJson(lockfilePath, lockfile),
+  ...nestedCorePackagePaths.map((nestedPackagePath) => (
+    fs.rm(path.join(repoRoot, nestedPackagePath), { recursive: true, force: true })
+  )),
 ]);
 
 process.stdout.write(`Synced workspace package versions to ${version}\n`);
