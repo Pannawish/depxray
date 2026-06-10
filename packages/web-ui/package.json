@@ -1,6 +1,6 @@
 {
   "name": "@depxray/web-ui",
-  "version": "1.5.0",
+  "version": "2.0.0",
   "private": true,
   "type": "module",
   "description": "Interactive browser UI for depxray dependency graphs, codebase structure, architecture violations, metrics, monorepo edges, and live scans.",
@@ -11,7 +11,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@depxray/core": "1.5.0",
+    "@depxray/core": "2.0.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-force-graph-2d": "^1.29.1"
