@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.4.0 - 10/06/2026
 
 ### Added
 
@@ -11,7 +11,7 @@
 - Added `depxray report` to generate Markdown project health reports with summary counts, hub files, heavy importers, orphans, circular chains, and complexity hotspots.
 - Added `depxray scan --deps --json` to report unused and unlisted npm dependencies.
 
-## 1.3.1 - 2026-06-10
+## 1.3.1 - 10/06/2026
 
 ### Added
 
@@ -23,7 +23,7 @@
 
 - `depxray scan` now merges persistent config with CLI flags, with CLI flags taking precedence.
 
-## 1.3.0 - 2026-06-10
+## 1.3.0 - 10/06/2026
 
 ### Added
 
@@ -43,7 +43,7 @@
 
 - Fixed MCP runtime package metadata loading so the built server starts correctly on modern Node.js versions.
 
-## 1.2.0 - 2026-06-09
+## 1.2.0 - 09/06/2026
 
 ### Added
 
@@ -60,7 +60,7 @@
 - The browser UI now opens with the Graph view as the default center panel.
 - Updated package versions to `1.2.0`.
 
-## 1.1.0 - 2026-06-09
+## 1.1.0 - 09/06/2026
 
 ### Added
 
