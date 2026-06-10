@@ -3,6 +3,8 @@ import { statSync } from 'node:fs';
 import * as fs from 'node:fs/promises';
 import * as http from 'node:http';
 import * as path from 'node:path';
+import { createInterface } from 'node:readline/promises';
+import { stdin as input, stdout as output } from 'node:process';
 import { Command } from 'commander';
 import { WebSocketServer, type WebSocket } from 'ws';
 import cliPackageJson from '../../package.json';
@@ -28,7 +30,7 @@ import {
 } from '@depxray/core';
 
 type GraphMode = 'structure' | 'dependencies';
-type ScanOutputFormat = 'json' | 'mermaid' | 'dot';
+type ScanOutputFormat = 'json' | 'mermaid' | 'dot' | 'sarif';
 
 interface ExplorerGraphNode extends StructureGraphNode {
   inDegree?: number;
@@ -68,6 +70,8 @@ interface ExplorerGraphData {
   unresolvedImports: ScanResult['unresolvedImports'];
   dependencyIssues?: ScanResult['dependencyIssues'];
   ruleValidation?: ScanResult['ruleValidation'];
+  devDepsInProd?: ScanResult['devDepsInProd'];
+  importConventionViolations?: ScanResult['importConventionViolations'];
   pluginData?: Record<string, unknown>;
   generatedBy: string;
   errors: ScanError[];
@@ -102,7 +106,14 @@ interface ScanCommandOptions {
   unresolved?: boolean;
   deps?: boolean;
   validate?: boolean;
+  fix?: boolean;
+  dryRun?: boolean;
+  yes?: boolean;
+  ignoreTypeImports?: boolean;
   rules?: DepxrayConfig['rules'];
+  prodEntryPoints?: string[];
+  devEntryPoints?: string[];
+  importConventions?: DepxrayConfig['importConventions'];
   plugins?: DepxrayPlugin[];
   entryPoints?: string[];
   open?: boolean;
@@ -201,6 +212,16 @@ export function mergeScanOptionsWithConfig(
         ? rawOptions.port
         : String(config.port),
     rules: config.rules ?? rawOptions.rules,
+    prodEntryPoints: cliOptionWasProvided(getOptionSource, 'prodEntryPoints')
+      ? rawOptions.prodEntryPoints
+      : config.prodEntryPoints ?? rawOptions.prodEntryPoints,
+    devEntryPoints: cliOptionWasProvided(getOptionSource, 'devEntryPoints')
+      ? rawOptions.devEntryPoints
+      : config.devEntryPoints ?? rawOptions.devEntryPoints,
+    ignoreTypeImports: cliOptionWasProvided(getOptionSource, 'ignoreTypeImports')
+      ? rawOptions.ignoreTypeImports
+      : config.ignoreTypeImports ?? rawOptions.ignoreTypeImports,
+    importConventions: config.importConventions ?? rawOptions.importConventions,
     plugins: rawOptions.plugins,
   };
 }
@@ -267,11 +288,11 @@ function parseOutputFormat(value: string | undefined): ScanOutputFormat {
     return 'json';
   }
 
-  if (value === 'mermaid' || value === 'dot') {
+  if (value === 'mermaid' || value === 'dot' || value === 'sarif') {
     return value;
   }
 
-  throw new Error(`Invalid format: ${value}. Use "json", "mermaid", or "dot".`);
+  throw new Error(`Invalid format: ${value}. Use "json", "mermaid", "dot", or "sarif".`);
 }
 
 function getGeneratedBy(): string {
@@ -297,6 +318,8 @@ function toStructureGraphData(graph: StructureGraph): ExplorerGraphData {
     unresolvedImports: [],
     dependencyIssues: undefined,
     ruleValidation: undefined,
+    devDepsInProd: undefined,
+    importConventionViolations: undefined,
     generatedBy: getGeneratedBy(),
     errors: [],
     nodes: graph.nodes,
@@ -361,6 +384,8 @@ function toDependencyGraphData(result: ScanResult): ExplorerGraphData {
     unresolvedImports: result.unresolvedImports,
     ...(result.dependencyIssues ? { dependencyIssues: result.dependencyIssues } : {}),
     ...(result.ruleValidation ? { ruleValidation: result.ruleValidation } : {}),
+    ...(result.devDepsInProd ? { devDepsInProd: result.devDepsInProd } : {}),
+    ...(result.importConventionViolations ? { importConventionViolations: result.importConventionViolations } : {}),
     ...(result.pluginData ? { pluginData: result.pluginData } : {}),
     generatedBy: getGeneratedBy(),
     errors: result.errors,
@@ -375,6 +400,115 @@ function serializeGraphData(data: ExplorerGraphData): string {
 
 function serializeGraphSet(data: ExplorerGraphSet): string {
   return JSON.stringify(data, null, 2);
+}
+
+function sarifLocation(file: string, line = 1) {
+  return {
+    physicalLocation: {
+      artifactLocation: { uri: file },
+      region: { startLine: Math.max(1, line || 1) },
+    },
+  };
+}
+
+function formatAsSarif(result: ScanResult): string {
+  const rules = [
+    ['depxray/circular-dependency', 'Circular dependency'],
+    ['depxray/orphan-file', 'Orphan file'],
+    ['depxray/unused-export', 'Unused export'],
+    ['depxray/unresolved-import', 'Unresolved import'],
+    ['depxray/architecture-rule', 'Architecture rule violation'],
+    ['depxray/dev-dependency-in-prod', 'DevDependency used in production'],
+    ['depxray/import-convention', 'Import convention violation'],
+  ].map(([id, name]) => ({
+    id,
+    name,
+    shortDescription: { text: name },
+  }));
+
+  const results: unknown[] = [];
+
+  for (const chain of result.graph.circularDependencies) {
+    results.push({
+      ruleId: 'depxray/circular-dependency',
+      level: 'error',
+      message: { text: chain.description },
+      locations: [sarifLocation(chain.chain[0] ?? result.graph.rootDir)],
+    });
+  }
+
+  for (const orphanFile of result.orphanFiles) {
+    results.push({
+      ruleId: 'depxray/orphan-file',
+      level: 'warning',
+      message: { text: `Orphan file: ${orphanFile}` },
+      locations: [sarifLocation(orphanFile)],
+    });
+  }
+
+  for (const node of result.graph.nodes) {
+    for (const unusedExport of node.unusedExports ?? []) {
+      results.push({
+        ruleId: 'depxray/unused-export',
+        level: 'warning',
+        message: { text: `Unused ${unusedExport.kind} export: ${unusedExport.name}` },
+        locations: [sarifLocation(node.relativePath, unusedExport.line)],
+      });
+    }
+  }
+
+  for (const unresolvedImport of result.unresolvedImports) {
+    results.push({
+      ruleId: 'depxray/unresolved-import',
+      level: 'error',
+      message: { text: `Unresolved import: ${unresolvedImport.importSpecifier}` },
+      locations: [sarifLocation(unresolvedImport.file, unresolvedImport.line)],
+    });
+  }
+
+  for (const violation of result.ruleValidation?.violations ?? []) {
+    results.push({
+      ruleId: 'depxray/architecture-rule',
+      level: violation.severity === 'error' ? 'error' : 'warning',
+      message: { text: violation.message },
+      locations: [sarifLocation(violation.source)],
+    });
+  }
+
+  for (const finding of result.devDepsInProd ?? []) {
+    results.push({
+      ruleId: 'depxray/dev-dependency-in-prod',
+      level: 'error',
+      message: { text: `Production path imports devDependency ${finding.module}` },
+      locations: [sarifLocation(finding.file, finding.line)],
+    });
+  }
+
+  for (const violation of result.importConventionViolations ?? []) {
+    results.push({
+      ruleId: 'depxray/import-convention',
+      level: 'warning',
+      message: { text: `Expected ${violation.expected} import for ${violation.importSpecifier}; use ${violation.suggestedSpecifier}` },
+      locations: [sarifLocation(violation.file, violation.line)],
+    });
+  }
+
+  return JSON.stringify({
+    version: '2.1.0',
+    $schema: 'https://json.schemastore.org/sarif-2.1.0.json',
+    runs: [
+      {
+        tool: {
+          driver: {
+            name: 'depxray',
+            informationUri: 'https://github.com/Pannawish/depxray',
+            rules,
+          },
+        },
+        results,
+      },
+    ],
+  }, null, 2);
 }
 
 function printOrphanFiles(orphanFiles: string[]): void {
@@ -432,6 +566,201 @@ function printUnresolvedImports(unresolvedImports: ScanResult['unresolvedImports
     process.stderr.write(
       `  ${unresolvedImport.file}:${unresolvedImport.line} -> ${unresolvedImport.importSpecifier}\n`,
     );
+  }
+}
+
+interface FixAction {
+  kind: 'remove-unused-export' | 'delete-orphan-file' | 'rewrite-import';
+  filePath: string;
+  relativePath: string;
+  line?: number;
+  exportName?: string;
+  importSpecifier?: string;
+  suggestedSpecifier?: string;
+}
+
+interface FixSummary {
+  planned: FixAction[];
+  applied: FixAction[];
+  skipped: Array<{ action: FixAction; reason: string }>;
+}
+
+function planFixes(result: ScanResult): FixAction[] {
+  const actions: FixAction[] = [];
+
+  for (const node of result.graph.nodes) {
+    for (const unusedExport of node.unusedExports ?? []) {
+      actions.push({
+        kind: 'remove-unused-export',
+        filePath: node.id,
+        relativePath: node.relativePath,
+        line: unusedExport.line,
+        exportName: unusedExport.name,
+      });
+    }
+  }
+
+  for (const orphanFile of result.orphanFiles) {
+    actions.push({
+      kind: 'delete-orphan-file',
+      filePath: path.join(result.graph.rootDir, orphanFile),
+      relativePath: orphanFile,
+    });
+  }
+
+  for (const violation of result.importConventionViolations ?? []) {
+    actions.push({
+      kind: 'rewrite-import',
+      filePath: path.join(result.graph.rootDir, violation.file),
+      relativePath: violation.file,
+      line: violation.line,
+      importSpecifier: violation.importSpecifier,
+      suggestedSpecifier: violation.suggestedSpecifier,
+    });
+  }
+
+  return actions.sort((a, b) => a.relativePath.localeCompare(b.relativePath) || (a.line ?? 0) - (b.line ?? 0));
+}
+
+function printFixPlan(actions: FixAction[], dryRun: boolean): void {
+  if (actions.length === 0) {
+    process.stderr.write('No autofix actions found.\n');
+    return;
+  }
+
+  process.stderr.write(`${dryRun ? 'Planned' : 'Autofix'} actions (${actions.length}):\n`);
+  for (const action of actions) {
+    if (action.kind === 'delete-orphan-file') {
+      process.stderr.write(`  delete orphan file: ${action.relativePath}\n`);
+    } else if (action.kind === 'rewrite-import') {
+      process.stderr.write(`  rewrite import: ${action.relativePath}:${action.line} ${action.importSpecifier} -> ${action.suggestedSpecifier}\n`);
+    } else {
+      process.stderr.write(`  remove unused export: ${action.relativePath}:${action.line} ${action.exportName}\n`);
+    }
+  }
+}
+
+async function confirmFixes(yes: boolean | undefined): Promise<void> {
+  if (yes) {
+    return;
+  }
+
+  if (!process.stdin.isTTY) {
+    throw new Error('--fix requires --yes in non-interactive terminals.');
+  }
+
+  const readline = createInterface({ input, output });
+  try {
+    const answer = await readline.question('Apply these fixes? Type "yes" to continue: ');
+    if (answer.trim().toLowerCase() !== 'yes') {
+      throw new Error('Autofix cancelled.');
+    }
+  } finally {
+    readline.close();
+  }
+}
+
+function canSafelyRemoveExportLine(line: string): boolean {
+  const trimmed = line.trim();
+  if (!trimmed.startsWith('export ')) {
+    return false;
+  }
+
+  if (/^export\s+\{/.test(trimmed) && trimmed.includes(',')) {
+    return false;
+  }
+
+  return true;
+}
+
+async function applyFixes(actions: FixAction[]): Promise<FixSummary> {
+  const applied: FixAction[] = [];
+  const skipped: FixSummary['skipped'] = [];
+  const deleteActions = actions.filter((action) => action.kind === 'delete-orphan-file');
+  const rewriteActionsByFile = new Map<string, FixAction[]>();
+  const exportActionsByFile = new Map<string, FixAction[]>();
+
+  for (const action of actions) {
+    if (action.kind !== 'remove-unused-export') {
+      if (action.kind === 'rewrite-import') {
+        const current = rewriteActionsByFile.get(action.filePath);
+        if (current) {
+          current.push(action);
+        } else {
+          rewriteActionsByFile.set(action.filePath, [action]);
+        }
+      }
+      continue;
+    }
+
+    const current = exportActionsByFile.get(action.filePath);
+    if (current) {
+      current.push(action);
+    } else {
+      exportActionsByFile.set(action.filePath, [action]);
+    }
+  }
+
+  for (const [filePath, fileActions] of exportActionsByFile) {
+    const original = await fs.readFile(filePath, 'utf-8');
+    const lines = original.split('\n');
+    const removeLines = new Set<number>();
+
+    for (const action of fileActions) {
+      const lineIndex = (action.line ?? 0) - 1;
+      const line = lines[lineIndex];
+      if (line === undefined || !canSafelyRemoveExportLine(line)) {
+        skipped.push({ action, reason: 'not a safe single-line export removal' });
+        continue;
+      }
+
+      removeLines.add(lineIndex);
+      applied.push(action);
+    }
+
+    if (removeLines.size > 0) {
+      const next = lines.filter((_, index) => !removeLines.has(index)).join('\n');
+      await fs.writeFile(filePath, next, 'utf-8');
+    }
+  }
+
+  for (const [filePath, fileActions] of rewriteActionsByFile) {
+    let source = await fs.readFile(filePath, 'utf-8');
+    for (const action of fileActions) {
+      if (!action.importSpecifier || !action.suggestedSpecifier) {
+        skipped.push({ action, reason: 'missing import rewrite target' });
+        continue;
+      }
+      const singleQuoted = `'${action.importSpecifier}'`;
+      const doubleQuoted = `"${action.importSpecifier}"`;
+      if (source.includes(singleQuoted)) {
+        source = source.replace(singleQuoted, `'${action.suggestedSpecifier}'`);
+        applied.push(action);
+      } else if (source.includes(doubleQuoted)) {
+        source = source.replace(doubleQuoted, `"${action.suggestedSpecifier}"`);
+        applied.push(action);
+      } else {
+        skipped.push({ action, reason: 'import specifier not found' });
+      }
+    }
+    await fs.writeFile(filePath, source, 'utf-8');
+  }
+
+  for (const action of deleteActions) {
+    await fs.rm(action.filePath, { force: true });
+    applied.push(action);
+  }
+
+  return { planned: actions, applied, skipped };
+}
+
+function printFixSummary(summary: FixSummary): void {
+  process.stderr.write(`Autofix applied ${summary.applied.length}/${summary.planned.length} action(s).\n`);
+  if (summary.skipped.length > 0) {
+    process.stderr.write(`Skipped ${summary.skipped.length} action(s):\n`);
+    for (const item of summary.skipped) {
+      process.stderr.write(`  ${item.action.relativePath}: ${item.reason}\n`);
+    }
   }
 }
 
@@ -893,6 +1222,10 @@ async function buildSelectedGraphData(
     entryPointPatterns: options.entryPoints,
     detectUnusedDeps: options.deps,
     rules: options.rules,
+    prodEntryPoints: options.prodEntryPoints,
+    devEntryPoints: options.devEntryPoints,
+    ignoreTypeImports: options.ignoreTypeImports,
+    importConventions: options.importConventions,
     plugins: options.plugins,
   });
 
@@ -912,6 +1245,10 @@ async function buildDependencyScanResult(
     entryPointPatterns: options.entryPoints,
     detectUnusedDeps: options.deps,
     rules: options.rules,
+    prodEntryPoints: options.prodEntryPoints,
+    devEntryPoints: options.devEntryPoints,
+    ignoreTypeImports: options.ignoreTypeImports,
+    importConventions: options.importConventions,
     plugins: options.plugins,
   });
 }
@@ -933,6 +1270,10 @@ async function buildGraphSet(
     entryPointPatterns: options.entryPoints,
     detectUnusedDeps: options.deps,
     rules: options.rules,
+    prodEntryPoints: options.prodEntryPoints,
+    devEntryPoints: options.devEntryPoints,
+    ignoreTypeImports: options.ignoreTypeImports,
+    importConventions: options.importConventions,
     plugins: options.plugins,
   });
 
@@ -969,7 +1310,7 @@ export function createScanCommand(): Command {
     .option('--html', 'Generate a static HTML export in .depxray/')
     .option('-o, --output <file>', 'Write output to a file instead of stdout')
     .option('--mode <mode>', 'Graph mode: structure | dependencies', 'structure')
-    .option('--format <format>', 'Output format for --json: json | mermaid | dot', 'json')
+    .option('--format <format>', 'Output format for --json: json | mermaid | dot | sarif', 'json')
     .option('--ignore <patterns...>', 'Additional directory/file patterns to ignore')
     .option('--no-circular', 'Skip circular dependency detection in dependency mode')
     .option('--no-aliases', 'Skip tsconfig/jsconfig path alias resolution in dependency mode')
@@ -978,6 +1319,12 @@ export function createScanCommand(): Command {
     .option('--unresolved', 'Print unresolved imports to stderr after dependency scanning')
     .option('--deps', 'Include unused and unlisted npm dependency analysis in dependency JSON')
     .option('--validate', 'Validate dependency edges against architecture rules from depxray config')
+    .option('--fix', 'Apply safe autofixes for unused exports and orphan files')
+    .option('--dry-run', 'Show autofix actions without modifying files')
+    .option('--yes', 'Apply autofixes without prompting for confirmation')
+    .option('--ignore-type-imports', 'Ignore type-only imports for devDependency production checks')
+    .option('--prod-entry-points <patterns...>', 'Production entry point patterns for devDependency checks')
+    .option('--dev-entry-points <patterns...>', 'Development-only entry point patterns for devDependency checks')
     .option(
       '--entry-points <patterns...>',
       'Entry point glob patterns to exclude from orphan detection',
@@ -1016,6 +1363,10 @@ export function createScanCommand(): Command {
           throw new Error('--watch is only supported with the local browser UI.');
         }
 
+        if (options.dryRun && !options.fix) {
+          throw new Error('--dry-run is only supported together with --fix.');
+        }
+
         if (options.deps && options.json && parseMode(options.mode) !== 'dependencies') {
           throw new Error('--deps is only supported with --mode dependencies when using --json.');
         }
@@ -1041,11 +1392,23 @@ export function createScanCommand(): Command {
         }
 
         if (outputFormat !== 'json' && parseMode(options.mode) !== 'dependencies') {
-          throw new Error('--format mermaid|dot is only supported with --mode dependencies.');
+          throw new Error('--format mermaid|dot|sarif is only supported with --mode dependencies.');
         }
 
         await verifyDirectory(rootDir);
         process.stderr.write(`Scanning ${rootDir}...\n`);
+
+        if (options.fix) {
+          const result = await buildDependencyScanResult(rootDir, options);
+          const actions = planFixes(result);
+          printFixPlan(actions, Boolean(options.dryRun));
+          if (!options.dryRun && actions.length > 0) {
+            await confirmFixes(options.yes);
+            const summary = await applyFixes(actions);
+            printFixSummary(summary);
+          }
+          return;
+        }
 
         if (options.json) {
           let output: string;
@@ -1093,7 +1456,9 @@ export function createScanCommand(): Command {
             }
             output = outputFormat === 'mermaid'
               ? formatAsMermaid(result)
-              : formatAsDot(result);
+              : outputFormat === 'dot'
+                ? formatAsDot(result)
+                : formatAsSarif(result);
           }
           if (options.output) {
             const outputPath = path.resolve(options.output);

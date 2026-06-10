@@ -42,7 +42,8 @@ module.exports = {
   depth: 2,
 
   // Optional architecture rules for "depxray scan --validate".
-  // Rules block imports from matching "from" files into matching "to" files.
+  // Global rules block imports from matching "from" files into matching "to" files.
+  // Scoped rules restrict files or modules from a specific entry point tree.
   rules: [
     // {
     //   from: 'src/ui/**',
@@ -50,7 +51,31 @@ module.exports = {
     //   severity: 'error',
     //   message: 'UI cannot import DB modules directly',
     // },
+    // {
+    //   entryPoints: ['src/server.ts'],
+    //   deny: { modules: ['react'], files: ['src/components/**'] },
+    //   message: 'Server entry cannot import React UI code',
+    // },
   ],
+
+  // Production/development entry points used by devDependency production checks.
+  prodEntryPoints: [
+    // 'src/main.ts',
+    // 'src/server.ts',
+  ],
+  devEntryPoints: [
+    '**/*.test.*',
+    '**/*.spec.*',
+    'scripts/**',
+  ],
+  ignoreTypeImports: true,
+
+  // Optional import convention enforcement. Run "depxray scan --fix" to rewrite safe imports.
+  // importConventions: {
+  //   prefer: 'absolute',
+  //   aliasPrefix: '@/',
+  //   root: 'src',
+  // },
 
   // Optional plugins. Use built-in aliases or relative module paths.
   plugins: [

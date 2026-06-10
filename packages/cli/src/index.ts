@@ -33,6 +33,12 @@ import { createInspectCommand } from './commands/inspect.js';
 import { createInitCommand } from './commands/init.js';
 import { createReportCommand } from './commands/report.js';
 import { createDiffCommand } from './commands/diff.js';
+import { createCheckCommand } from './commands/check.js';
+import {
+  createEntryPointsCommand,
+  createTraceCommand,
+  createTreeCommand,
+} from './commands/entryAnalysis.js';
 
 const program = new Command();
 
@@ -51,6 +57,10 @@ program.addCommand(createInspectCommand());
 program.addCommand(createInitCommand());
 program.addCommand(createReportCommand());
 program.addCommand(createDiffCommand());
+program.addCommand(createCheckCommand());
+program.addCommand(createEntryPointsCommand());
+program.addCommand(createTraceCommand());
+program.addCommand(createTreeCommand());
 
 // Parse and execute
 program.parse();

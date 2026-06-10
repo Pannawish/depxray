@@ -30,7 +30,7 @@ function assertPlainObject(value: unknown, source: string): ConfigRecord {
 
 function readStringArray(
   record: ConfigRecord,
-  key: 'ignore' | 'extensions' | 'entryPoints',
+  key: 'ignore' | 'extensions' | 'entryPoints' | 'prodEntryPoints' | 'devEntryPoints',
   source: string,
 ): string[] | undefined {
   const value = record[key];
@@ -47,7 +47,7 @@ function readStringArray(
 
 function readBoolean(
   record: ConfigRecord,
-  key: 'circular' | 'aliases',
+  key: 'circular' | 'aliases' | 'ignoreTypeImports',
   source: string,
 ): boolean | undefined {
   const value = record[key];
@@ -121,12 +121,44 @@ function readRules(record: ConfigRecord, source: string): DepxrayConfig['rules']
     }
 
     const rule = item as ConfigRecord;
-    if (typeof rule.from !== 'string' || rule.from.length === 0) {
-      throw new Error(`Invalid depxray config in ${source}: rules[${index}].from must be a non-empty string.`);
+    const hasGlobalRule = rule.from !== undefined || rule.to !== undefined;
+    const hasScopedRule = rule.entryPoints !== undefined || rule.deny !== undefined;
+
+    if (hasGlobalRule) {
+      if (typeof rule.from !== 'string' || rule.from.length === 0) {
+        throw new Error(`Invalid depxray config in ${source}: rules[${index}].from must be a non-empty string.`);
+      }
+      if (typeof rule.to !== 'string' || rule.to.length === 0) {
+        throw new Error(`Invalid depxray config in ${source}: rules[${index}].to must be a non-empty string.`);
+      }
     }
-    if (typeof rule.to !== 'string' || rule.to.length === 0) {
-      throw new Error(`Invalid depxray config in ${source}: rules[${index}].to must be a non-empty string.`);
+
+    if (hasScopedRule) {
+      if (
+        !Array.isArray(rule.entryPoints) ||
+        rule.entryPoints.some((entryPoint) => typeof entryPoint !== 'string' || entryPoint.length === 0)
+      ) {
+        throw new Error(`Invalid depxray config in ${source}: rules[${index}].entryPoints must be an array of non-empty strings.`);
+      }
+      if (!rule.deny || typeof rule.deny !== 'object' || Array.isArray(rule.deny)) {
+        throw new Error(`Invalid depxray config in ${source}: rules[${index}].deny must be an object.`);
+      }
+      const deny = rule.deny as ConfigRecord;
+      for (const key of ['files', 'modules'] as const) {
+        const value = deny[key];
+        if (
+          value !== undefined &&
+          (!Array.isArray(value) || value.some((item) => typeof item !== 'string' || item.length === 0))
+        ) {
+          throw new Error(`Invalid depxray config in ${source}: rules[${index}].deny.${key} must be an array of non-empty strings.`);
+        }
+      }
     }
+
+    if (!hasGlobalRule && !hasScopedRule) {
+      throw new Error(`Invalid depxray config in ${source}: rules[${index}] must define from/to or entryPoints/deny.`);
+    }
+
     if (
       rule.severity !== undefined &&
       rule.severity !== 'error' &&
@@ -139,12 +171,49 @@ function readRules(record: ConfigRecord, source: string): DepxrayConfig['rules']
     }
 
     return {
-      from: rule.from,
-      to: rule.to,
+      ...(rule.from ? { from: rule.from as string } : {}),
+      ...(rule.to ? { to: rule.to as string } : {}),
+      ...(rule.entryPoints ? { entryPoints: rule.entryPoints as string[] } : {}),
+      ...(rule.deny ? { deny: rule.deny as { files?: string[]; modules?: string[] } } : {}),
       ...(rule.severity ? { severity: rule.severity as 'error' | 'warning' } : {}),
       ...(rule.message ? { message: rule.message as string } : {}),
     };
   });
+}
+
+function readImportConventions(
+  record: ConfigRecord,
+  source: string,
+): DepxrayConfig['importConventions'] {
+  const value = record.importConventions;
+  if (value === undefined) {
+    return undefined;
+  }
+
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new Error(`Invalid depxray config in ${source}: importConventions must be an object.`);
+  }
+
+  const config = value as ConfigRecord;
+  if (
+    config.prefer !== undefined &&
+    config.prefer !== 'relative' &&
+    config.prefer !== 'absolute'
+  ) {
+    throw new Error(`Invalid depxray config in ${source}: importConventions.prefer must be "relative" or "absolute".`);
+  }
+
+  for (const key of ['aliasPrefix', 'root'] as const) {
+    if (config[key] !== undefined && (typeof config[key] !== 'string' || config[key].length === 0)) {
+      throw new Error(`Invalid depxray config in ${source}: importConventions.${key} must be a non-empty string.`);
+    }
+  }
+
+  return {
+    ...(config.prefer ? { prefer: config.prefer as 'relative' | 'absolute' } : {}),
+    ...(config.aliasPrefix ? { aliasPrefix: config.aliasPrefix as string } : {}),
+    ...(config.root ? { root: config.root as string } : {}),
+  };
 }
 
 function readPlugins(record: ConfigRecord, source: string): DepxrayConfig['plugins'] {
@@ -191,12 +260,16 @@ function normalizeConfig(value: unknown, source: string): DepxrayConfig {
     ignore: readStringArray(record, 'ignore', source),
     extensions: readStringArray(record, 'extensions', source),
     entryPoints: readStringArray(record, 'entryPoints', source),
+    prodEntryPoints: readStringArray(record, 'prodEntryPoints', source),
+    devEntryPoints: readStringArray(record, 'devEntryPoints', source),
     mode: readMode(record, source),
     circular: readBoolean(record, 'circular', source),
     aliases: readBoolean(record, 'aliases', source),
+    ignoreTypeImports: readBoolean(record, 'ignoreTypeImports', source),
     port: readPort(record, source),
     depth: readDepth(record, source),
     rules: readRules(record, source),
+    importConventions: readImportConventions(record, source),
     plugins: readPlugins(record, source),
   };
 }

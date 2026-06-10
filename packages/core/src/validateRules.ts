@@ -12,7 +12,11 @@ function normalizeSeverity(severity: ArchitectureRule['severity']): 'error' | 'w
 }
 
 function defaultMessage(rule: ArchitectureRule): string {
-  return `Forbidden import from ${rule.from} to ${rule.to}`;
+  if (rule.from && rule.to) {
+    return `Forbidden import from ${rule.from} to ${rule.to}`;
+  }
+
+  return 'Restricted import';
 }
 
 function edgeMatchesRule(
@@ -26,6 +30,10 @@ function edgeMatchesRule(
   const target = edge.target.startsWith(graph.rootDir)
     ? edge.target.replace(graph.rootDir + '/', '')
     : edge.target;
+
+  if (!rule.from || !rule.to) {
+    return null;
+  }
 
   if (!matchesAnyPattern(source, [rule.from]) || !matchesAnyPattern(target, [rule.to])) {
     return null;
@@ -47,9 +55,10 @@ export function validateRules(
   rules: ArchitectureRule[] = [],
 ): RuleValidationResult {
   const violations: RuleViolation[] = [];
+  const globalRules = rules.filter((rule) => rule.from && rule.to);
 
   for (const edge of graph.edges) {
-    for (const rule of rules) {
+    for (const rule of globalRules) {
       const violation = edgeMatchesRule(edge, graph, rule);
       if (violation) {
         violations.push(violation);

@@ -19,9 +19,17 @@
 - Detect orphan files with no incoming imports in dependency mode
 - Detect unused exports, including re-exports and barrel files
 - Detect unresolved local imports while ignoring external packages and common assets
+- Apply safe autofixes with dry-run and confirmation controls
+- Detect devDependencies used from production entry point trees
 - Detect unused and unlisted npm dependencies
 - Detect workspace ownership and cross-package imports in monorepos
 - Validate dependency edges against lightweight architecture rules
+- Enforce entry-point-scoped restricted imports
+- Enforce and autofix internal import conventions
+- Resolve modern workspace package `exports` and `imports` maps
+- Run CI checks with non-zero exit codes
+- Export SARIF for code scanning integrations
+- Explore entry points and transitive import trees from the CLI
 - Extend scans and reports with config-driven plugins and hooks
 - Diff dependency graph snapshots or compare a git base ref against the working tree
 - Export machine-readable JSON for scripts and AI workflows
@@ -121,6 +129,7 @@ Common options:
 - `--html`: generate a static HTML export in `.depxray/`
 - `--mode <mode>`: `structure` or `dependencies`
 - `--format <format>`: `json`, `mermaid`, or `dot`; Mermaid/DOT require `--mode dependencies --json`
+- `--format sarif`: export dependency findings as SARIF; requires `--mode dependencies --json`
 - `--ignore <patterns...>`: exclude additional paths
 - `--no-circular`: skip circular dependency detection in dependency mode
 - `--no-aliases`: skip `tsconfig.json` / `jsconfig.json` path alias resolution in dependency mode
@@ -129,6 +138,12 @@ Common options:
 - `--unresolved`: print unresolved local imports to `stderr` after dependency scanning
 - `--deps`: include unused and unlisted npm dependency analysis in dependency JSON
 - `--validate`: validate dependency edges against architecture rules from config
+- `--fix`: apply safe autofixes for unused exports, orphan files, and configured import conventions
+- `--dry-run`: show autofix actions without modifying files
+- `--yes`: apply autofixes without prompting
+- `--prod-entry-points <patterns...>`: production entry points for devDependency checks
+- `--dev-entry-points <patterns...>`: development-only entry points for devDependency checks
+- `--ignore-type-imports`: ignore type-only imports for devDependency checks
 - `--entry-points <patterns...>`: glob patterns to exclude from orphan detection
 - `--extensions <exts...>`: choose scanned extensions in dependency mode
 - `--depth <depth>`: initial visible depth: any integer `>= 1` or `all`
@@ -154,6 +169,9 @@ npx depxray scan /path/to/project --mode dependencies --json --format mermaid --
 # Export Graphviz DOT
 npx depxray scan /path/to/project --mode dependencies --json --format dot --output graph.dot
 
+# Export SARIF for code scanning
+npx depxray scan /path/to/project --mode dependencies --json --format sarif --output depxray.sarif
+
 # Print files with no incoming imports
 npx depxray scan /path/to/project --mode dependencies --orphans
 
@@ -163,11 +181,20 @@ npx depxray scan /path/to/project --mode dependencies --unused-exports
 # Print unresolved local imports
 npx depxray scan /path/to/project --mode dependencies --unresolved
 
+# Preview safe autofixes
+npx depxray scan /path/to/project --fix --dry-run
+
+# Apply safe autofixes without a prompt
+npx depxray scan /path/to/project --fix --yes
+
 # Find package.json dependencies that are unused or missing
 npx depxray scan /path/to/project --mode dependencies --deps --json
 
 # Fail with exit code 1 when error-level architecture rules are violated
 npx depxray scan /path/to/project --mode dependencies --validate
+
+# Run all CI checks with exit code 1 on findings
+npx depxray check /path/to/project
 
 # Treat custom files as entry points instead of orphans
 npx depxray scan /path/to/project --mode dependencies --orphans --entry-points "src/routes/**" "src/bootstrap.ts"
@@ -224,6 +251,48 @@ Examples:
 ```bash
 npx depxray report /path/to/project
 npx depxray report /path/to/project --output depxray-report.md
+```
+
+### `check`
+
+Run dependency health checks for CI. `check` exits with code `1` when it finds circular dependencies, orphan files, unused exports, unresolved imports, error-level architecture violations, devDependencies in production paths, or configured import convention violations.
+
+```bash
+depxray check [dir] [options]
+```
+
+Options:
+
+- `--format <format>`: `text` or `json`
+- `--json`: print machine-readable JSON
+- `--entry-points <patterns...>`: entry point patterns to exclude from orphan detection
+- `--prod-entry-points <patterns...>`: production entry points for devDependency checks
+- `--dev-entry-points <patterns...>`: development-only entry points for devDependency checks
+- `--ignore-type-imports`: ignore type-only imports for devDependency checks
+
+Examples:
+
+```bash
+npx depxray check /path/to/project
+npx depxray check /path/to/project --json
+```
+
+### `entry-points`, `trace`, and `tree`
+
+Explore dependency reachability from the terminal.
+
+```bash
+depxray entry-points [dir] [options]
+depxray trace <file> [dir] [options]
+depxray tree <entry-point> [dir] [options]
+```
+
+Examples:
+
+```bash
+npx depxray entry-points /path/to/project
+npx depxray trace src/utils/math.ts /path/to/project
+npx depxray tree src/main.ts /path/to/project --json
 ```
 
 ### `diff`
@@ -304,7 +373,21 @@ module.exports = {
       severity: 'error',
       message: 'UI cannot import DB modules directly',
     },
+    {
+      entryPoints: ['src/server.ts'],
+      deny: { files: ['src/components/**'], modules: ['react'] },
+      severity: 'error',
+      message: 'Server entry cannot import browser UI code',
+    },
   ],
+  prodEntryPoints: ['src/main.tsx', 'src/server.ts'],
+  devEntryPoints: ['**/*.test.*', 'scripts/**'],
+  ignoreTypeImports: true,
+  importConventions: {
+    prefer: 'absolute',
+    aliasPrefix: '@/',
+    root: 'src',
+  },
   plugins: [
     '@depxray/plugin-complexity',
     '@depxray/plugin-mcp',
@@ -324,6 +407,10 @@ Supported fields:
 - `port`: preferred browser UI port
 - `depth`: initial visible depth, using an integer `>= 1` or `all`
 - `rules`: architecture rules for `scan --validate`; matching imports are reported and `error` violations exit with code 1
+- `prodEntryPoints`: production entry point patterns for devDependency checks
+- `devEntryPoints`: development entry point patterns excluded from production checks
+- `ignoreTypeImports`: ignores type-only imports when checking devDependency usage
+- `importConventions`: internal import style enforcement; `scan --fix` can rewrite safe violations
 - `plugins`: plugin module specifiers or inline plugin objects with `afterBuildGraph`, `afterScan`, or `onReport` hooks
 
 Example plugin module:
@@ -356,7 +443,11 @@ Use cases:
 - find dead exports with `scan --mode dependencies --unused-exports --json`
 - find broken local references with `scan --mode dependencies --unresolved --json`
 - check npm dependency drift with `scan --mode dependencies --deps --json`
+- check devDependency runtime risk with `prodEntryPoints` and `scan --mode dependencies --json`
 - validate architecture boundaries with `scan --mode dependencies --validate`
+- run all configured CI gates with `check --json`
+- export SARIF with `scan --mode dependencies --json --format sarif`
+- trace reachability with `entry-points`, `trace`, and `tree`
 - compare graph snapshots or review branch dependency changes with `diff`
 - inspect one file's outgoing imports and incoming dependents with `inspect --format json`
 - create a Markdown health summary with `report --output depxray-report.md`
@@ -370,6 +461,8 @@ npx depxray scan /path/to/project --mode dependencies --unused-exports --json > 
 npx depxray scan /path/to/project --mode dependencies --unresolved --json > .depxray-unresolved-imports.json
 npx depxray scan /path/to/project --mode dependencies --deps --json > .depxray-deps.json
 npx depxray scan /path/to/project --mode dependencies --validate
+npx depxray check /path/to/project --json > .depxray-check.json
+npx depxray scan /path/to/project --mode dependencies --json --format sarif > depxray.sarif
 npx depxray diff --base main --json > .depxray-diff.json
 npx depxray inspect src/App.tsx --dir /path/to/project --format json
 npx depxray report /path/to/project --output depxray-report.md
@@ -416,11 +509,19 @@ It supports:
 - orphan file detection with configurable entry point exclusions
 - unused export detection with barrel and re-export support
 - unresolved local import detection
+- autofix dry-runs and safe source rewrites
 - unused and unlisted npm dependency detection
+- devDependency usage detection from production entry point trees
 - monorepo workspace metadata and cross-package dependency detection
+- package.json `exports` and `imports` map resolution for workspaces
 - architecture rule validation with browser-highlighted violating edges
+- entry-point-scoped restricted import rules
+- import convention detection and autofix suggestions
 - plugin hooks for extending graph metadata, scan metadata, and report data
 - dependency graph diffing for files, edges, and circular dependency changes
+- SARIF export for CI/code scanning
+- CI check command with non-zero exit codes
+- entry-point, trace, and transitive tree analysis commands
 - per-file LOC, cyclomatic complexity, export count, and instability metrics
 - interactive force-directed dependency and structure graph visualization
 - watch mode with live browser UI updates
@@ -450,6 +551,7 @@ Published CLI package"]
 - [`packages/web-ui`](./packages/web-ui): React browser UI
 - [`packages/cli`](./packages/cli): published `depxray` package with the embedded web UI
 - [`packages/mcp`](./packages/mcp): MCP stdio server for agentic AI tools
+- [`packages/vscode-extension`](./packages/vscode-extension): VS Code extension scaffold with CodeLens, diagnostics, and dependency tree integration
 
 ## Local Development
 

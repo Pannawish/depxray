@@ -10,6 +10,10 @@ Use it when an agent needs to answer questions like:
 - What files depend on this file?
 - Are there circular dependencies?
 - Which files appear to be orphaned?
+- Which exports are unused?
+- Which imports are unresolved?
+- Is production code importing devDependencies?
+- Are import conventions or scoped import restrictions being violated?
 - Which files are complex or highly connected?
 - Which workspace owns this file in a monorepo?
 - What is inside this folder?
@@ -31,6 +35,9 @@ Most users do not run this command directly. Add it to your MCP client configura
 - Inspect imports and dependents for a target file
 - Find circular dependencies before refactors
 - Find orphan files that may be safe cleanup candidates
+- Find unused exports and unresolved imports before cleanup work
+- Check production entry point trees for devDependency imports
+- Inspect architecture and import-convention metadata returned by depxray scans
 - Review per-file metrics such as LOC, complexity, exports, and instability
 - Understand monorepo workspace ownership and cross-package imports
 - Summarize folder-level dependency relationships
@@ -72,7 +79,7 @@ A coding agent can use the tools in this order before editing:
 2. Call `inspect_file` for the file it plans to modify.
 3. Call `get_folder_summary` for the surrounding folder.
 4. Call `find_circular` or `find_orphans` when planning a refactor.
-5. Call `scan_project` when it needs full graph context.
+5. Call `scan_project` when it needs full graph context, unused export data, unresolved import data, or production dependency checks.
 
 This gives the agent a clearer view of dependency impact, ownership, and file health before it changes code.
 
@@ -80,14 +87,21 @@ This gives the agent a clearer view of dependency impact, ownership, and file he
 
 | Tool | Use When | Example Input |
 | --- | --- | --- |
-| `scan_project` | The agent needs full structure or dependency graph data. | `{ "rootDir": "/path/to/project", "mode": "dependencies" }` |
+| `scan_project` | The agent needs full structure or dependency graph data, cleanup findings, or production dependency checks. | `{ "rootDir": "/path/to/project", "mode": "dependencies", "prodEntryPoints": ["src/main.ts"] }` |
 | `inspect_file` | The agent needs imports, dependents, and metrics for one file. | `{ "rootDir": "/path/to/project", "filePath": "src/App.tsx" }` |
 | `find_circular` | The agent should detect dependency cycles before a refactor. | `{ "rootDir": "/path/to/project" }` |
 | `find_orphans` | The agent should find files with no incoming references. | `{ "rootDir": "/path/to/project" }` |
 | `get_file_tree` | The agent needs a compact project tree. | `{ "rootDir": "/path/to/project", "maxDepth": 3 }` |
 | `get_folder_summary` | The agent needs folder-level dependency metrics. | `{ "rootDir": "/path/to/project", "folderPath": "src/components" }` |
 
-`scan_project` supports `mode: "dependencies"` and `mode: "structure"`. Dependency mode returns imports, circular counts, orphan files, graph edges, per-file metrics, workspace metadata, and cross-package edge metadata. Structure mode returns directory and file parent-child graph data.
+`scan_project` supports `mode: "dependencies"` and `mode: "structure"`. Dependency mode returns imports, circular counts, orphan files, unused exports, unresolved imports, devDependency production findings, import convention findings, graph edges, per-file metrics, workspace metadata, and cross-package edge metadata. Structure mode returns directory and file parent-child graph data.
+
+Optional dependency-mode inputs:
+
+- `prodEntryPoints`: production entry point patterns for devDependency checks
+- `devEntryPoints`: development-only entry point patterns excluded from production checks
+- `ignoreTypeImports`: ignore type-only imports for devDependency checks
+- `importConventions`: internal import convention settings, such as `{ "prefer": "absolute", "aliasPrefix": "@/", "root": "src" }`
 
 ## Supported Projects
 
@@ -101,8 +115,9 @@ This gives the agent a clearer view of dependency impact, ownership, and file he
 - re-exports and barrel files
 - `tsconfig.json` and `jsconfig.json` path aliases
 - monorepo workspaces
+- package.json `exports` and `imports` maps for workspaces
 - per-file metrics
-- circular and orphan-file analysis
+- circular, orphan-file, unused-export, unresolved-import, devDependency, import-convention, and scoped architecture-rule analysis
 
 ## Privacy
 

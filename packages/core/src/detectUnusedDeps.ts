@@ -23,7 +23,7 @@ function getDeclaredPackages(packageJson: PackageJsonDeps): Set<string> {
   ]);
 }
 
-function normalizePackageName(specifier: string): string | null {
+export function normalizePackageName(specifier: string): string | null {
   if (
     !specifier ||
     specifier.startsWith('.') ||

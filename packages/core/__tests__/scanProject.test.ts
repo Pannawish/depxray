@@ -313,6 +313,151 @@ describe('scanProject — integration', () => {
     }
   });
 
+  it('should detect devDependencies imported from production entry point trees', async () => {
+    const projectDir = path.join(__dirname, 'tmp-devdeps-prod-project');
+    await fs.rm(projectDir, { recursive: true, force: true });
+    await fs.mkdir(path.join(projectDir, 'src'), { recursive: true });
+    await fs.writeFile(
+      path.join(projectDir, 'package.json'),
+      JSON.stringify({ devDependencies: { vitest: '^1.0.0' } }),
+      'utf-8',
+    );
+    await fs.writeFile(
+      path.join(projectDir, 'src/main.ts'),
+      "import { helper } from './helper';\nexport const value = helper;\n",
+      'utf-8',
+    );
+    await fs.writeFile(
+      path.join(projectDir, 'src/helper.ts'),
+      "import { describe } from 'vitest';\nexport const helper = describe;\n",
+      'utf-8',
+    );
+
+    try {
+      const result = await scanProject({
+        rootDir: projectDir,
+        prodEntryPoints: ['src/main.ts'],
+      });
+
+      expect(result.devDepsInProd).toEqual([
+        {
+          file: 'src/helper.ts',
+          module: 'vitest',
+          importSpecifier: 'vitest',
+          line: 1,
+          entryPoint: 'src/main.ts',
+          isTypeOnly: false,
+        },
+      ]);
+    } finally {
+      await fs.rm(projectDir, { recursive: true, force: true });
+    }
+  });
+
+  it('should detect import convention violations and scoped restricted imports', async () => {
+    const projectDir = path.join(__dirname, 'tmp-conventions-project');
+    await fs.rm(projectDir, { recursive: true, force: true });
+    await fs.mkdir(path.join(projectDir, 'src'), { recursive: true });
+    await fs.writeFile(
+      path.join(projectDir, 'src/server.ts'),
+      [
+        "import React from 'react';",
+        "import { helper } from './helper';",
+        'export const server = [React, helper];',
+      ].join('\n'),
+      'utf-8',
+    );
+    await fs.writeFile(
+      path.join(projectDir, 'src/helper.ts'),
+      'export const helper = "ok";\n',
+      'utf-8',
+    );
+
+    try {
+      const result = await scanProject({
+        rootDir: projectDir,
+        prodEntryPoints: ['src/server.ts'],
+        importConventions: { prefer: 'absolute', aliasPrefix: '@/', root: 'src' },
+        rules: [
+          {
+            entryPoints: ['src/server.ts'],
+            deny: { modules: ['react'] },
+            message: 'Server entry cannot import React',
+          },
+        ],
+      });
+
+      expect(result.importConventionViolations).toEqual([
+        {
+          file: 'src/server.ts',
+          target: 'src/helper.ts',
+          importSpecifier: './helper',
+          suggestedSpecifier: '@/helper',
+          expected: 'absolute',
+          line: 2,
+        },
+      ]);
+      expect(result.ruleValidation?.violations).toEqual([
+        expect.objectContaining({
+          source: 'src/server.ts',
+          target: 'react',
+          importSpecifier: 'react',
+          entryPoint: 'src/server.ts',
+          message: 'Server entry cannot import React',
+        }),
+      ]);
+    } finally {
+      await fs.rm(projectDir, { recursive: true, force: true });
+    }
+  });
+
+  it('should resolve workspace package exports maps', async () => {
+    const projectDir = path.join(__dirname, 'tmp-workspace-exports-project');
+    await fs.rm(projectDir, { recursive: true, force: true });
+    await fs.mkdir(path.join(projectDir, 'packages/app/src'), { recursive: true });
+    await fs.mkdir(path.join(projectDir, 'packages/lib/src'), { recursive: true });
+    await fs.writeFile(
+      path.join(projectDir, 'package.json'),
+      JSON.stringify({ private: true, workspaces: ['packages/*'] }),
+      'utf-8',
+    );
+    await fs.writeFile(
+      path.join(projectDir, 'packages/app/package.json'),
+      JSON.stringify({ name: '@repo/app' }),
+      'utf-8',
+    );
+    await fs.writeFile(
+      path.join(projectDir, 'packages/lib/package.json'),
+      JSON.stringify({
+        name: '@repo/lib',
+        exports: {
+          './button': './src/Button.ts',
+        },
+      }),
+      'utf-8',
+    );
+    await fs.writeFile(
+      path.join(projectDir, 'packages/lib/src/Button.ts'),
+      'export const Button = "button";\n',
+      'utf-8',
+    );
+    await fs.writeFile(
+      path.join(projectDir, 'packages/app/src/index.ts'),
+      'import { Button } from "@repo/lib/button";\nexport const value = Button;\n',
+      'utf-8',
+    );
+
+    try {
+      const result = await scanProject({ rootDir: projectDir });
+      expect(result.graph.edges.some((edge) => (
+        edge.importSpecifier === '@repo/lib/button' &&
+        edge.target.endsWith('packages/lib/src/Button.ts')
+      ))).toBe(true);
+    } finally {
+      await fs.rm(projectDir, { recursive: true, force: true });
+    }
+  });
+
   it('should optionally detect unused and unlisted npm dependencies', async () => {
     const projectDir = path.join(__dirname, 'tmp-unused-deps-project');
     await fs.rm(projectDir, { recursive: true, force: true });

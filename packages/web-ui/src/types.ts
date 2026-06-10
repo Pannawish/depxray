@@ -58,6 +58,22 @@ export interface ExplorerGraphData {
     unlisted: string[];
   };
   ruleValidation?: RuleValidationResult;
+  devDepsInProd?: Array<{
+    file: string;
+    module: string;
+    importSpecifier: string;
+    line: number;
+    entryPoint: string;
+    isTypeOnly: boolean;
+  }>;
+  importConventionViolations?: Array<{
+    file: string;
+    target: string;
+    importSpecifier: string;
+    suggestedSpecifier: string;
+    expected: 'relative' | 'absolute';
+    line: number;
+  }>;
   pluginData?: Record<string, unknown>;
   generatedBy: string;
   errors: Array<{ filePath: string; error: string }>;

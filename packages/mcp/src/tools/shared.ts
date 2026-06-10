@@ -51,6 +51,8 @@ export interface ExplorerGraphData {
   orphanFiles: string[];
   unresolvedImports: ScanResult['unresolvedImports'];
   ruleValidation?: ScanResult['ruleValidation'];
+  devDepsInProd?: ScanResult['devDepsInProd'];
+  importConventionViolations?: ScanResult['importConventionViolations'];
   pluginData?: Record<string, unknown>;
   generatedBy: string;
   errors: ScanError[];
@@ -109,6 +111,8 @@ export function toStructureGraphData(graph: StructureGraph): ExplorerGraphData {
     circularDependencies: [],
     orphanFiles: [],
     unresolvedImports: [],
+    devDepsInProd: undefined,
+    importConventionViolations: undefined,
     generatedBy: getGeneratedBy(),
     errors: [],
     nodes: graph.nodes,
@@ -172,6 +176,8 @@ export function toDependencyGraphData(result: ScanResult): ExplorerGraphData {
     orphanFiles: result.orphanFiles,
     unresolvedImports: result.unresolvedImports,
     ...(result.ruleValidation ? { ruleValidation: result.ruleValidation } : {}),
+    ...(result.devDepsInProd ? { devDepsInProd: result.devDepsInProd } : {}),
+    ...(result.importConventionViolations ? { importConventionViolations: result.importConventionViolations } : {}),
     ...(result.pluginData ? { pluginData: result.pluginData } : {}),
     generatedBy: getGeneratedBy(),
     errors: result.errors,

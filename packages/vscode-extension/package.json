@@ -1,0 +1,49 @@
+{
+  "name": "depxray-vscode",
+  "displayName": "depxray",
+  "version": "0.1.0",
+  "private": true,
+  "description": "VS Code integration for depxray dependency intelligence.",
+  "publisher": "pannawish",
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "Linters",
+    "Visualization",
+    "Other"
+  ],
+  "activationEvents": [
+    "onCommand:depxray.openCurrentFile",
+    "onCommand:depxray.refreshDiagnostics",
+    "onStartupFinished"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "depxray.openCurrentFile",
+        "title": "depxray: Open Current File"
+      },
+      {
+        "command": "depxray.refreshDiagnostics",
+        "title": "depxray: Refresh Diagnostics"
+      }
+    ],
+    "views": {
+      "explorer": [
+        {
+          "id": "depxray.dependencyChains",
+          "name": "depxray Dependencies"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "build": "tsc -p ."
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.90.0",
+    "typescript": "^5.4.0"
+  }
+}

@@ -31,6 +31,14 @@ export function createDepxrayMcpServer(): McpServer {
       inputSchema: {
         rootDir: rootDirSchema,
         mode: z.enum(['structure', 'dependencies']).optional().describe('Graph mode to return. Defaults to dependencies.'),
+        prodEntryPoints: z.array(z.string().min(1)).optional().describe('Production entry point patterns for devDependency checks.'),
+        devEntryPoints: z.array(z.string().min(1)).optional().describe('Development entry point patterns excluded from production checks.'),
+        ignoreTypeImports: z.boolean().optional().describe('Ignore type-only imports for devDependency production checks.'),
+        importConventions: z.object({
+          prefer: z.enum(['relative', 'absolute']).optional(),
+          aliasPrefix: z.string().min(1).optional(),
+          root: z.string().min(1).optional(),
+        }).optional().describe('Internal import convention to enforce.'),
       },
     },
     async (input) => jsonContent(await scanProjectTool(input)),

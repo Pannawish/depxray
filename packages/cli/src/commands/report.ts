@@ -23,6 +23,11 @@ interface ReportCommandOptions {
   aliases?: boolean;
   extensions?: string[];
   entryPoints?: string[];
+  prodEntryPoints?: string[];
+  devEntryPoints?: string[];
+  ignoreTypeImports?: boolean;
+  rules?: DepxrayConfig['rules'];
+  importConventions?: DepxrayConfig['importConventions'];
   plugins?: DepxrayPlugin[];
 }
 
@@ -60,6 +65,11 @@ function mergeReportOptionsWithConfig(
     entryPoints: cliOptionWasProvided(getOptionSource, 'entryPoints')
       ? rawOptions.entryPoints
       : config.entryPoints ?? rawOptions.entryPoints,
+    prodEntryPoints: config.prodEntryPoints ?? rawOptions.prodEntryPoints,
+    devEntryPoints: config.devEntryPoints ?? rawOptions.devEntryPoints,
+    ignoreTypeImports: config.ignoreTypeImports ?? rawOptions.ignoreTypeImports,
+    rules: config.rules ?? rawOptions.rules,
+    importConventions: config.importConventions ?? rawOptions.importConventions,
     plugins: rawOptions.plugins,
   };
 }
@@ -245,6 +255,8 @@ export function generateMarkdownReport(
   lines.push(`| Orphan files | ${result.orphanFiles.length} |`);
   lines.push(`| Files with unused exports | ${nodes.filter((node) => (node.unusedExports?.length ?? 0) > 0).length} |`);
   lines.push(`| Unresolved imports | ${result.unresolvedImports.length} |`);
+  lines.push(`| DevDeps in production | ${result.devDepsInProd?.length ?? 0} |`);
+  lines.push(`| Import convention violations | ${result.importConventionViolations?.length ?? 0} |`);
   lines.push(`| Total LOC | ${totalLoc} |`);
   lines.push(`| Scan duration | ${formatNumber(result.durationMs)} ms |`);
   lines.push('');
@@ -269,6 +281,32 @@ export function generateMarkdownReport(
   lines.push('## Unresolved Imports');
   lines.push('');
   addUnresolvedImportsTable(lines, result.unresolvedImports);
+  lines.push('## DevDependencies In Production');
+  lines.push('');
+  if (result.devDepsInProd?.length) {
+    lines.push('| File | Line | Module | Entry Point |');
+    lines.push('| --- | ---: | --- | --- |');
+    for (const finding of result.devDepsInProd) {
+      lines.push(`| \`${escapeMarkdownTableCell(finding.file)}\` | ${finding.line} | \`${escapeMarkdownTableCell(finding.module)}\` | \`${escapeMarkdownTableCell(finding.entryPoint)}\` |`);
+    }
+    lines.push('');
+  } else {
+    lines.push('_None_');
+    lines.push('');
+  }
+  lines.push('## Import Convention Violations');
+  lines.push('');
+  if (result.importConventionViolations?.length) {
+    lines.push('| File | Line | Current | Suggested |');
+    lines.push('| --- | ---: | --- | --- |');
+    for (const violation of result.importConventionViolations) {
+      lines.push(`| \`${escapeMarkdownTableCell(violation.file)}\` | ${violation.line} | \`${escapeMarkdownTableCell(violation.importSpecifier)}\` | \`${escapeMarkdownTableCell(violation.suggestedSpecifier)}\` |`);
+    }
+    lines.push('');
+  } else {
+    lines.push('_None_');
+    lines.push('');
+  }
   if (reportData?.sections.length) {
     for (const section of reportData.sections) {
       lines.push(section.trimEnd());
@@ -310,6 +348,11 @@ export function createReportCommand(): Command {
           resolveAliases: options.aliases,
           extensions: options.extensions,
           entryPointPatterns: options.entryPoints,
+          prodEntryPoints: options.prodEntryPoints,
+          devEntryPoints: options.devEntryPoints,
+          ignoreTypeImports: options.ignoreTypeImports,
+          rules: options.rules,
+          importConventions: options.importConventions,
           plugins: options.plugins,
         });
         const reportData = await runReportHooks(

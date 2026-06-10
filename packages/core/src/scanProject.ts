@@ -29,6 +29,11 @@ import type {
   FileMetrics,
   RawExportInfo,
   UnresolvedImport,
+  DevDependencyInProd,
+  ImportConventionViolation,
+  RuleValidationResult,
+  RuleViolation,
+  ArchitectureRule,
 } from './types.js';
 import {
   DEFAULT_ENTRY_POINT_PATTERNS,
@@ -44,7 +49,7 @@ import { detectCircularDeps } from './detectCircularDeps.js';
 import { detectOrphanFiles, matchesAnyPattern } from './detectOrphanFiles.js';
 import { loadAliases } from './configLoader.js';
 import { computeFileMetrics } from './computeMetrics.js';
-import { detectUnusedDeps } from './detectUnusedDeps.js';
+import { detectUnusedDeps, normalizePackageName } from './detectUnusedDeps.js';
 import { detectUnusedExports } from './detectUnusedExports.js';
 import {
   createWorkspaceAliases,
@@ -80,6 +85,317 @@ const KNOWN_ASSET_EXTENSIONS = new Set([
 function isKnownAssetImport(specifier: string): boolean {
   const cleaned = specifier.split('?')[0]?.split('#')[0] ?? specifier;
   return KNOWN_ASSET_EXTENSIONS.has(path.extname(cleaned).toLowerCase());
+}
+
+function normalizeRelativePath(rootDir: string, filePath: string): string {
+  return path.relative(rootDir, filePath).replaceAll('\\', '/');
+}
+
+function withoutKnownSourceExtension(filePath: string): string {
+  return filePath.replace(/\.(tsx|ts|jsx|js)$/i, '');
+}
+
+function normalizeImportSpecifier(specifier: string): string {
+  return specifier.startsWith('.') ? specifier : specifier.replace(/\/$/, '');
+}
+
+function relativeImportSpecifier(fromFile: string, toFile: string): string {
+  const relative = withoutKnownSourceExtension(
+    path.relative(path.dirname(fromFile), toFile).replaceAll('\\', '/'),
+  );
+  return normalizeImportSpecifier(relative.startsWith('.') ? relative : `./${relative}`);
+}
+
+function absoluteAliasSpecifier(
+  rootDir: string,
+  targetFile: string,
+  aliasPrefix = '@/',
+  sourceRoot = 'src',
+): string | null {
+  const absoluteSourceRoot = path.resolve(rootDir, sourceRoot);
+  const relative = path.relative(absoluteSourceRoot, targetFile).replaceAll('\\', '/');
+  if (relative.startsWith('..') || path.isAbsolute(relative)) {
+    return null;
+  }
+
+  return normalizeImportSpecifier(`${aliasPrefix}${withoutKnownSourceExtension(relative)}`);
+}
+
+function buildForwardAdjacency(graph: { edges: Array<{ source: string; target: string }> }): Map<string, string[]> {
+  const adjacency = new Map<string, string[]>();
+  for (const edge of graph.edges) {
+    const current = adjacency.get(edge.source);
+    if (current) {
+      current.push(edge.target);
+    } else {
+      adjacency.set(edge.source, [edge.target]);
+    }
+  }
+  return adjacency;
+}
+
+function findEntryPointNodes(
+  graph: { nodes: Array<{ id: string; relativePath: string }> },
+  patterns: string[] = [],
+): Array<{ id: string; relativePath: string }> {
+  return graph.nodes.filter((node) => matchesAnyPattern(node.relativePath, patterns));
+}
+
+function buildReachabilityFromEntries(
+  graph: { edges: Array<{ source: string; target: string }> },
+  entryPoints: Array<{ id: string; relativePath: string }>,
+): Map<string, Set<string>> {
+  const adjacency = buildForwardAdjacency(graph);
+  const reachableByFile = new Map<string, Set<string>>();
+
+  for (const entryPoint of entryPoints) {
+    const visited = new Set<string>();
+    const queue = [entryPoint.id];
+
+    while (queue.length > 0) {
+      const current = queue.shift()!;
+      if (visited.has(current)) {
+        continue;
+      }
+      visited.add(current);
+
+      const reachableFrom = reachableByFile.get(current);
+      if (reachableFrom) {
+        reachableFrom.add(entryPoint.relativePath);
+      } else {
+        reachableByFile.set(current, new Set([entryPoint.relativePath]));
+      }
+
+      for (const child of adjacency.get(current) ?? []) {
+        queue.push(child);
+      }
+    }
+  }
+
+  return reachableByFile;
+}
+
+function detectImportConventionViolations(
+  rootDir: string,
+  edges: Array<{ source: string; target: string; importSpecifier: string }>,
+  fileImportsMap: Map<string, ResolvedImport[]>,
+  config: NonNullable<ScanOptions['importConventions']>,
+): ImportConventionViolation[] {
+  const prefer = config.prefer ?? 'absolute';
+  const violations: ImportConventionViolation[] = [];
+
+  for (const edge of edges) {
+    const line = fileImportsMap.get(edge.source)
+      ?.find((resolvedImport) => (
+        resolvedImport.resolvedPath === edge.target &&
+        resolvedImport.raw.source === edge.importSpecifier
+      ))
+      ?.raw.line ?? 0;
+    const isRelative = edge.importSpecifier.startsWith('.');
+    if (prefer === 'absolute' && isRelative) {
+      const suggestedSpecifier = absoluteAliasSpecifier(
+        rootDir,
+        edge.target,
+        config.aliasPrefix ?? '@/',
+        config.root ?? 'src',
+      );
+      if (!suggestedSpecifier || suggestedSpecifier === edge.importSpecifier) {
+        continue;
+      }
+      violations.push({
+        file: normalizeRelativePath(rootDir, edge.source),
+        target: normalizeRelativePath(rootDir, edge.target),
+        importSpecifier: edge.importSpecifier,
+        suggestedSpecifier,
+        expected: 'absolute',
+        line,
+      });
+    } else if (prefer === 'relative' && !isRelative) {
+      const suggestedSpecifier = relativeImportSpecifier(edge.source, edge.target);
+      if (suggestedSpecifier === edge.importSpecifier) {
+        continue;
+      }
+      violations.push({
+        file: normalizeRelativePath(rootDir, edge.source),
+        target: normalizeRelativePath(rootDir, edge.target),
+        importSpecifier: edge.importSpecifier,
+        suggestedSpecifier,
+        expected: 'relative',
+        line,
+      });
+    }
+  }
+
+  return violations.sort((a, b) => a.file.localeCompare(b.file) || a.importSpecifier.localeCompare(b.importSpecifier));
+}
+
+function detectDevDepsInProd(
+  rootDir: string,
+  graph: { nodes: Array<{ id: string; relativePath: string }>; edges: Array<{ source: string; target: string }> },
+  fileImportsMap: Map<string, ResolvedImport[]>,
+  packageJson: { devDependencies?: Record<string, string> },
+  prodEntryPointPatterns: string[],
+  devEntryPointPatterns: string[] = [],
+  ignoreTypeImports = false,
+): DevDependencyInProd[] {
+  const devDependencies = new Set(Object.keys(packageJson.devDependencies ?? {}));
+  if (devDependencies.size === 0 || prodEntryPointPatterns.length === 0) {
+    return [];
+  }
+
+  const prodEntries = findEntryPointNodes(graph, prodEntryPointPatterns);
+  const reachableByFile = buildReachabilityFromEntries(graph, prodEntries);
+  const findings: DevDependencyInProd[] = [];
+  const seen = new Set<string>();
+
+  for (const [filePath, entryPoints] of reachableByFile) {
+    const relativeFile = normalizeRelativePath(rootDir, filePath);
+    if (devEntryPointPatterns.length > 0 && matchesAnyPattern(relativeFile, devEntryPointPatterns)) {
+      continue;
+    }
+
+    for (const resolvedImport of fileImportsMap.get(filePath) ?? []) {
+      if (resolvedImport.error !== 'external_package') {
+        continue;
+      }
+      if (ignoreTypeImports && resolvedImport.raw.isTypeOnly) {
+        continue;
+      }
+
+      const module = normalizePackageName(resolvedImport.raw.source);
+      if (!module || !devDependencies.has(module)) {
+        continue;
+      }
+
+      for (const entryPoint of entryPoints) {
+        const key = `${relativeFile}:${resolvedImport.raw.line}:${module}:${entryPoint}`;
+        if (seen.has(key)) {
+          continue;
+        }
+        seen.add(key);
+        findings.push({
+          file: relativeFile,
+          module,
+          importSpecifier: resolvedImport.raw.source,
+          line: resolvedImport.raw.line,
+          entryPoint,
+          isTypeOnly: resolvedImport.raw.isTypeOnly,
+        });
+      }
+    }
+  }
+
+  return findings.sort((a, b) => a.file.localeCompare(b.file) || a.module.localeCompare(b.module));
+}
+
+function scopedRuleMessage(rule: ArchitectureRule): string {
+  return rule.message ?? 'Restricted import for entry point';
+}
+
+function detectScopedRestrictedImports(
+  rootDir: string,
+  graph: { nodes: Array<{ id: string; relativePath: string }>; edges: Array<{ source: string; target: string; importSpecifier: string }> },
+  fileImportsMap: Map<string, ResolvedImport[]>,
+  rules: ArchitectureRule[] = [],
+): RuleViolation[] {
+  const scopedRules = rules.filter((rule) => rule.entryPoints?.length && rule.deny);
+  if (scopedRules.length === 0) {
+    return [];
+  }
+
+  const violations: RuleViolation[] = [];
+  const seen = new Set<string>();
+
+  for (const rule of scopedRules) {
+    const entryPoints = findEntryPointNodes(graph, rule.entryPoints ?? []);
+    const reachableByFile = buildReachabilityFromEntries(graph, entryPoints);
+
+    for (const edge of graph.edges) {
+      const sourceEntryPoints = reachableByFile.get(edge.source);
+      if (!sourceEntryPoints) {
+        continue;
+      }
+
+      const source = normalizeRelativePath(rootDir, edge.source);
+      const target = normalizeRelativePath(rootDir, edge.target);
+      if (!matchesAnyPattern(target, rule.deny?.files ?? [])) {
+        continue;
+      }
+
+      for (const entryPoint of sourceEntryPoints) {
+        const key = `${entryPoint}:${source}:${target}:${edge.importSpecifier}`;
+        if (seen.has(key)) {
+          continue;
+        }
+        seen.add(key);
+        violations.push({
+          source,
+          target,
+          importSpecifier: edge.importSpecifier,
+          from: rule.entryPoints?.join(', ') ?? '',
+          to: (rule.deny?.files ?? []).join(', '),
+          entryPoint,
+          severity: rule.severity === 'warning' ? 'warning' : 'error',
+          message: scopedRuleMessage(rule),
+        });
+      }
+    }
+
+    for (const [filePath, resolvedImports] of fileImportsMap.entries()) {
+      const sourceEntryPoints = reachableByFile.get(filePath);
+      if (!sourceEntryPoints) {
+        continue;
+      }
+
+      const source = normalizeRelativePath(rootDir, filePath);
+      for (const resolvedImport of resolvedImports) {
+        if (resolvedImport.error !== 'external_package') {
+          continue;
+        }
+        const module = normalizePackageName(resolvedImport.raw.source) ?? resolvedImport.raw.source;
+        const deniedModules = rule.deny?.modules ?? [];
+        if (!deniedModules.some((pattern) => pattern === module || pattern === resolvedImport.raw.source || matchesAnyPattern(module, [pattern]))) {
+          continue;
+        }
+
+        for (const entryPoint of sourceEntryPoints) {
+          const key = `${entryPoint}:${source}:${module}:${resolvedImport.raw.line}`;
+          if (seen.has(key)) {
+            continue;
+          }
+          seen.add(key);
+          violations.push({
+            source,
+            target: module,
+            importSpecifier: resolvedImport.raw.source,
+            from: rule.entryPoints?.join(', ') ?? '',
+            to: deniedModules.join(', '),
+            entryPoint,
+            severity: rule.severity === 'warning' ? 'warning' : 'error',
+            message: scopedRuleMessage(rule),
+          });
+        }
+      }
+    }
+  }
+
+  return violations;
+}
+
+function mergeRuleValidation(
+  validation: RuleValidationResult | undefined,
+  extraViolations: RuleViolation[],
+): RuleValidationResult | undefined {
+  if (!validation && extraViolations.length === 0) {
+    return undefined;
+  }
+
+  const violations = [...(validation?.violations ?? []), ...extraViolations];
+  return {
+    violations,
+    errorCount: violations.filter((violation) => violation.severity === 'error').length,
+    warningCount: violations.filter((violation) => violation.severity === 'warning').length,
+  };
 }
 
 /**
@@ -135,6 +451,10 @@ export async function scanProject(options: ScanOptions): Promise<ScanResult> {
     entryPointPatterns,
     detectUnusedDeps: shouldDetectUnusedDeps = false,
     rules = [],
+    prodEntryPoints = [],
+    devEntryPoints = [],
+    ignoreTypeImports = false,
+    importConventions,
     plugins = [],
   } = options;
 
@@ -378,30 +698,49 @@ export async function scanProject(options: ScanOptions): Promise<ScanResult> {
     })),
   };
 
-  const ruleValidation = rules.length > 0
+  const baseRuleValidation = rules.length > 0
     ? validateRules(graph, rules)
     : undefined;
+
+  const scopedRuleViolations = detectScopedRestrictedImports(
+    resolvedRoot,
+    graph,
+    fileImportsMap,
+    rules,
+  );
+  const ruleValidation = mergeRuleValidation(baseRuleValidation, scopedRuleViolations);
   if (ruleValidation) {
     graph = attachRuleViolations(graph, ruleValidation);
   }
 
-  let dependencyIssues: ScanResult['dependencyIssues'];
-  if (shouldDetectUnusedDeps) {
+  let projectPackageJson: {
+    name?: string;
+    dependencies?: Record<string, string>;
+    devDependencies?: Record<string, string>;
+    peerDependencies?: Record<string, string>;
+    optionalDependencies?: Record<string, string>;
+  } | undefined;
+  if (shouldDetectUnusedDeps || prodEntryPoints.length > 0) {
     try {
       const packageJsonPath = path.join(resolvedRoot, 'package.json');
-      const packageJson = JSON.parse(await fs.readFile(packageJsonPath, 'utf-8')) as {
-        name?: string;
-        dependencies?: Record<string, string>;
-        devDependencies?: Record<string, string>;
-        peerDependencies?: Record<string, string>;
-        optionalDependencies?: Record<string, string>;
-      };
+      projectPackageJson = JSON.parse(await fs.readFile(packageJsonPath, 'utf-8')) as typeof projectPackageJson;
+    } catch (err) {
+      errors.push({
+        filePath: path.join(resolvedRoot, 'package.json'),
+        error: `Failed to read package dependencies: ${(err as Error).message}`,
+      });
+    }
+  }
+
+  let dependencyIssues: ScanResult['dependencyIssues'];
+  if (shouldDetectUnusedDeps && projectPackageJson) {
+    try {
       const importReferences = [...fileImportsMap.values()]
         .flat()
         .map((resolved) => ({
           importSpecifier: resolved.raw.source,
         }));
-      dependencyIssues = detectUnusedDeps(resolvedRoot, importReferences, packageJson);
+      dependencyIssues = detectUnusedDeps(resolvedRoot, importReferences, projectPackageJson);
     } catch (err) {
       dependencyIssues = { unused: [], unlisted: [] };
       errors.push({
@@ -410,6 +749,27 @@ export async function scanProject(options: ScanOptions): Promise<ScanResult> {
       });
     }
   }
+
+  const devDepsInProd = projectPackageJson && prodEntryPoints.length > 0
+    ? detectDevDepsInProd(
+      resolvedRoot,
+      graph,
+      fileImportsMap,
+      projectPackageJson,
+      prodEntryPoints,
+      devEntryPoints,
+      ignoreTypeImports,
+    )
+    : undefined;
+
+  const importConventionViolations = importConventions
+    ? detectImportConventionViolations(
+      resolvedRoot,
+      graph.edges,
+      fileImportsMap,
+      importConventions,
+    )
+    : undefined;
 
   // ── Return the complete result ───────────────────────────────────────
   const finalDurationMs = performance.now() - startTime;
@@ -424,6 +784,8 @@ export async function scanProject(options: ScanOptions): Promise<ScanResult> {
     unresolvedImports,
     ...(dependencyIssues ? { dependencyIssues } : {}),
     ...(ruleValidation ? { ruleValidation } : {}),
+    ...(devDepsInProd ? { devDepsInProd } : {}),
+    ...(importConventionViolations ? { importConventionViolations } : {}),
     errors,
     durationMs: finalDurationMs,
   };

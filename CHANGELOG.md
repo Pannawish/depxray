@@ -1,5 +1,27 @@
 # Changelog
 
+## 3.0.0 - 11/06/2026
+
+### Added
+
+- Added `depxray scan --fix`, `--dry-run`, and `--yes` for safe autofixes.
+- Added autofix planning and application for unused export line removal, orphan file deletion, and configured import convention rewrites.
+- Added devDependencies-in-production detection with `prodEntryPoints`, `devEntryPoints`, and `ignoreTypeImports` config support.
+- Added `depxray entry-points`, `depxray trace`, and `depxray tree` for entry-point discovery, reverse reachability, and transitive import tree analysis.
+- Added import convention detection through `importConventions` config.
+- Added package.json `exports` and `imports` map resolution for workspace package imports.
+- Added `depxray check` for CI/CD health checks with exit code 1 on circular dependencies, orphan files, unused exports, unresolved imports, architecture errors, devDependency production usage, or import convention violations.
+- Added SARIF output through `depxray scan --mode dependencies --json --format sarif`.
+- Added entry-point-scoped restricted import rules using `rules[].entryPoints` with `deny.files` and `deny.modules`.
+- Added a VS Code extension scaffold with CodeLens, diagnostics, an "Open Current File" command, and a dependency tree view.
+- Added MCP `scan_project` inputs for production entry points, development entry points, type-only import handling, and import convention checks.
+
+### Changed
+
+- Extended scan, report, browser, CLI JSON, and MCP outputs with devDependency production findings and import convention findings.
+- Updated `depxray init` defaults with v3 configuration examples.
+- Updated README files for v3.0.0 workflows, CI checks, SARIF, autofix, entry-point analysis, modern package resolution, and AI-agent usage.
+
 ## 2.1.0 - 11/06/2026
 
 ### Added

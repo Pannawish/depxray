@@ -13,6 +13,14 @@ import {
 export interface ScanProjectInput {
   rootDir: string;
   mode?: GraphMode;
+  prodEntryPoints?: string[];
+  devEntryPoints?: string[];
+  ignoreTypeImports?: boolean;
+  importConventions?: {
+    prefer?: 'relative' | 'absolute';
+    aliasPrefix?: string;
+    root?: string;
+  };
 }
 
 export async function scanProjectTool(input: ScanProjectInput) {
@@ -24,6 +32,13 @@ export async function scanProjectTool(input: ScanProjectInput) {
     return toStructureGraphData(buildStructureGraph(tree));
   }
 
-  const result = await scanProject({ rootDir, detectCircular: true });
+  const result = await scanProject({
+    rootDir,
+    detectCircular: true,
+    prodEntryPoints: input.prodEntryPoints,
+    devEntryPoints: input.devEntryPoints,
+    ignoreTypeImports: input.ignoreTypeImports,
+    importConventions: input.importConventions,
+  });
   return toDependencyGraphData(result);
 }

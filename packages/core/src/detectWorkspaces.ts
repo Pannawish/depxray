@@ -9,6 +9,8 @@ type PackageJsonWithWorkspaces = {
   workspaces?: string[] | {
     packages?: string[];
   };
+  exports?: unknown;
+  imports?: unknown;
 };
 
 function readWorkspacePatterns(packageJson: PackageJsonWithWorkspaces): string[] {
@@ -104,6 +106,8 @@ export async function detectWorkspaces(rootDir: string): Promise<WorkspaceInfo[]
       name: packageJson?.name || relativePath,
       relativePath,
       absolutePath: workspaceDir,
+      ...(packageJson?.exports ? { exports: packageJson.exports } : {}),
+      ...(packageJson?.imports ? { imports: packageJson.imports } : {}),
     });
   }
 
@@ -127,7 +131,8 @@ export function getWorkspaceForPath(
 export function createWorkspaceAliases(workspaces: WorkspaceInfo[]): AliasMapping[] {
   return workspaces.flatMap((workspace) => {
     const sourceDir = path.join(workspace.absolutePath, 'src');
-    return [
+    const aliases: AliasMapping[] = [
+      ...createPackageMapAliases(workspace),
       {
         prefix: workspace.name,
         paths: [workspace.absolutePath, sourceDir],
@@ -137,5 +142,88 @@ export function createWorkspaceAliases(workspaces: WorkspaceInfo[]): AliasMappin
         paths: [workspace.absolutePath, sourceDir],
       },
     ];
+
+    return aliases;
   });
+}
+
+function selectExportTarget(value: unknown): string | null {
+  if (typeof value === 'string') {
+    return value;
+  }
+
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return null;
+  }
+
+  const record = value as Record<string, unknown>;
+  for (const key of ['import', 'default', 'require', 'node']) {
+    const selected = selectExportTarget(record[key]);
+    if (selected) {
+      return selected;
+    }
+  }
+
+  return null;
+}
+
+function targetPathWithoutWildcard(workspace: WorkspaceInfo, target: string): string {
+  return path.resolve(workspace.absolutePath, target.replace(/\/?\*.*$/, ''));
+}
+
+function createPackageMapAliases(workspace: WorkspaceInfo): AliasMapping[] {
+  const aliases: AliasMapping[] = [];
+
+  if (workspace.exports && typeof workspace.exports === 'object' && !Array.isArray(workspace.exports)) {
+    for (const [subpath, value] of Object.entries(workspace.exports as Record<string, unknown>)) {
+      const target = selectExportTarget(value);
+      if (!target) {
+        continue;
+      }
+
+      if (subpath === '.') {
+        aliases.push({
+          prefix: workspace.name,
+          paths: [path.resolve(workspace.absolutePath, target)],
+        });
+        continue;
+      }
+
+      const publicSubpath = subpath.replace(/^\.\//, '');
+      if (publicSubpath.includes('*')) {
+        aliases.push({
+          prefix: `${workspace.name}/${publicSubpath.replace(/\*.*$/, '')}`,
+          paths: [targetPathWithoutWildcard(workspace, target)],
+        });
+      } else {
+        aliases.push({
+          prefix: `${workspace.name}/${publicSubpath}`,
+          paths: [path.resolve(workspace.absolutePath, target)],
+        });
+      }
+    }
+  }
+
+  if (workspace.imports && typeof workspace.imports === 'object' && !Array.isArray(workspace.imports)) {
+    for (const [specifier, value] of Object.entries(workspace.imports as Record<string, unknown>)) {
+      const target = selectExportTarget(value);
+      if (!target) {
+        continue;
+      }
+
+      if (specifier.includes('*')) {
+        aliases.push({
+          prefix: specifier.replace(/\*.*$/, ''),
+          paths: [targetPathWithoutWildcard(workspace, target)],
+        });
+      } else {
+        aliases.push({
+          prefix: specifier,
+          paths: [path.resolve(workspace.absolutePath, target)],
+        });
+      }
+    }
+  }
+
+  return aliases;
 }

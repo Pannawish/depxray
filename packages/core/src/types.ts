@@ -257,6 +257,12 @@ export interface WorkspaceInfo {
 
   /** Absolute workspace directory path */
   absolutePath: string;
+
+  /** package.json exports map for modern Node package resolution */
+  exports?: unknown;
+
+  /** package.json imports map for package-local # aliases */
+  imports?: unknown;
 }
 
 /**
@@ -267,10 +273,19 @@ export interface WorkspaceInfo {
  */
 export interface ArchitectureRule {
   /** Glob-like source path pattern */
-  from: string;
+  from?: string;
 
   /** Glob-like target path pattern */
-  to: string;
+  to?: string;
+
+  /** Entry point patterns whose transitive dependency tree scopes this rule */
+  entryPoints?: string[];
+
+  /** Restricted files or modules for entry-point scoped rules */
+  deny?: {
+    files?: string[];
+    modules?: string[];
+  };
 
   /** Severity used by CLI validation and UI highlighting */
   severity?: 'error' | 'warning';
@@ -298,6 +313,9 @@ export interface RuleViolation {
   /** Rule target pattern */
   to: string;
 
+  /** Entry point that scoped this rule, when applicable */
+  entryPoint?: string;
+
   /** Violation severity */
   severity: 'error' | 'warning';
 
@@ -309,6 +327,57 @@ export interface RuleValidationResult {
   violations: RuleViolation[];
   errorCount: number;
   warningCount: number;
+}
+
+export interface DevDependencyInProd {
+  /** Production source file importing the devDependency */
+  file: string;
+
+  /** Imported devDependency package name */
+  module: string;
+
+  /** Original import specifier */
+  importSpecifier: string;
+
+  /** 1-based line number */
+  line: number;
+
+  /** Production entry point that reaches this file */
+  entryPoint: string;
+
+  /** Whether the import is type-only */
+  isTypeOnly: boolean;
+}
+
+export interface ImportConventionConfig {
+  /** Preferred style for internal source imports */
+  prefer?: 'relative' | 'absolute';
+
+  /** Alias prefix used when prefer is absolute */
+  aliasPrefix?: string;
+
+  /** Source-root path relative to project root for alias suggestions */
+  root?: string;
+}
+
+export interface ImportConventionViolation {
+  /** Source file containing the import */
+  file: string;
+
+  /** Target file if the import resolves internally */
+  target: string;
+
+  /** Original import specifier */
+  importSpecifier: string;
+
+  /** Suggested replacement import specifier */
+  suggestedSpecifier: string;
+
+  /** Expected convention */
+  expected: 'relative' | 'absolute';
+
+  /** 1-based line number */
+  line: number;
 }
 
 export interface UnusedExport {
@@ -416,6 +485,18 @@ export interface ScanOptions {
   /** Architecture rules to validate against dependency edges */
   rules?: ArchitectureRule[];
 
+  /** Production entry points used to detect devDependencies in production paths */
+  prodEntryPoints?: string[];
+
+  /** Development-only entry points excluded from production dependency checks */
+  devEntryPoints?: string[];
+
+  /** Whether type-only imports are ignored for devDependencies-in-production checks */
+  ignoreTypeImports?: boolean;
+
+  /** Optional internal import convention enforcement */
+  importConventions?: ImportConventionConfig;
+
   /** Resolved plugins that can extend graph and scan results */
   plugins?: DepxrayPlugin[];
 }
@@ -485,6 +566,18 @@ export interface DepxrayConfig {
   /** Architecture rules for dependency validation */
   rules?: ArchitectureRule[];
 
+  /** Production entry point patterns used by devDependency checks */
+  prodEntryPoints?: string[];
+
+  /** Development entry point patterns excluded from production checks */
+  devEntryPoints?: string[];
+
+  /** Ignore type-only imports when checking devDependencies in production */
+  ignoreTypeImports?: boolean;
+
+  /** Internal import convention enforcement */
+  importConventions?: ImportConventionConfig;
+
   /** Plugin modules or inline plugin objects */
   plugins?: DepxrayPluginReference[];
 }
@@ -553,6 +646,12 @@ export interface ScanResult {
 
   /** Optional architecture rule validation result */
   ruleValidation?: RuleValidationResult;
+
+  /** Optional devDependencies imported from production dependency trees */
+  devDepsInProd?: DevDependencyInProd[];
+
+  /** Optional import convention violations */
+  importConventionViolations?: ImportConventionViolation[];
 
   /** Namespaced scan-level metadata added by plugins */
   pluginData?: Record<string, unknown>;

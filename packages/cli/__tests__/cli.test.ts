@@ -163,6 +163,33 @@ describe('CLI Integration Tests', () => {
       expect(stdout).toContain('->');
     });
 
+    it('should output SARIF dependency findings', async () => {
+      await fs.mkdir(path.join(TEMP_DIR, 'src'), { recursive: true });
+      await fs.writeFile(
+        path.join(TEMP_DIR, 'src/index.ts'),
+        "import './missing';\nexport const value = 1;\n",
+        'utf-8',
+      );
+
+      const { stdout, exitCode } = await execa('node', [
+        CLI_PATH,
+        'scan',
+        TEMP_DIR,
+        '--mode',
+        'dependencies',
+        '--json',
+        '--format',
+        'sarif',
+      ]);
+
+      expect(exitCode).toBe(0);
+      const parsed = JSON.parse(stdout);
+      expect(parsed.version).toBe('2.1.0');
+      expect(parsed.runs[0].results.some((result: any) => (
+        result.ruleId === 'depxray/unresolved-import'
+      ))).toBe(true);
+    });
+
     it('should write Mermaid output to file', async () => {
       await fs.mkdir(TEMP_DIR, { recursive: true });
       const outputPath = path.join(TEMP_DIR, 'graph.mmd');
@@ -267,6 +294,34 @@ describe('CLI Integration Tests', () => {
       expect(stderr).toContain('unusedValue');
       expect(stderr).toContain('Unresolved imports');
       expect(stderr).toContain('./missing-module');
+    });
+
+    it('should show autofix dry-run actions without modifying files', async () => {
+      await fs.mkdir(path.join(TEMP_DIR, 'src'), { recursive: true });
+      const featurePath = path.join(TEMP_DIR, 'src/feature.ts');
+      await fs.writeFile(
+        path.join(TEMP_DIR, 'src/index.ts'),
+        "import { usedValue } from './feature';\nexport const value = usedValue;\n",
+        'utf-8',
+      );
+      await fs.writeFile(
+        featurePath,
+        'export const usedValue = "used";\nexport const unusedValue = "unused";\n',
+        'utf-8',
+      );
+
+      const { stderr, exitCode } = await execa('node', [
+        CLI_PATH,
+        'scan',
+        TEMP_DIR,
+        '--fix',
+        '--dry-run',
+      ]);
+
+      expect(exitCode).toBe(0);
+      expect(stderr).toContain('Planned actions');
+      expect(stderr).toContain('unusedValue');
+      expect(await fs.readFile(featurePath, 'utf-8')).toContain('unusedValue');
     });
 
     it('should include unused and unlisted npm dependencies with --deps', async () => {
@@ -391,7 +446,7 @@ describe('CLI Integration Tests', () => {
         expect.fail('Should have thrown an error');
       } catch (err: any) {
         expect(err.exitCode).toBe(1);
-        expect(err.stderr).toContain('--format mermaid|dot is only supported with --mode dependencies');
+        expect(err.stderr).toContain('--format mermaid|dot|sarif is only supported with --mode dependencies');
       }
     });
 
@@ -811,6 +866,61 @@ describe('CLI Integration Tests', () => {
 
       expect(exitCode).toBe(0);
       expect(JSON.parse(stdout).addedFiles).toContain('src/new.ts');
+    });
+  });
+
+  describe('entry analysis and check commands', () => {
+    it('should list entry points, print trees, trace dependents, and fail check on findings', async () => {
+      await fs.mkdir(path.join(TEMP_DIR, 'src'), { recursive: true });
+      await fs.writeFile(
+        path.join(TEMP_DIR, 'src/index.ts'),
+        "import { helper } from './helper';\nexport const value = helper;\n",
+        'utf-8',
+      );
+      await fs.writeFile(
+        path.join(TEMP_DIR, 'src/helper.ts'),
+        "import './missing';\nexport const helper = 'ok';\n",
+        'utf-8',
+      );
+
+      const entryPoints = await execa('node', [
+        CLI_PATH,
+        'entry-points',
+        TEMP_DIR,
+        '--json',
+      ]);
+      expect(JSON.parse(entryPoints.stdout).entryPoints.map((item: any) => item.file)).toContain('src/index.ts');
+
+      const tree = await execa('node', [
+        CLI_PATH,
+        'tree',
+        'src/index.ts',
+        TEMP_DIR,
+        '--json',
+      ]);
+      expect(JSON.parse(tree.stdout).imports[0].file).toBe('src/helper.ts');
+
+      const trace = await execa('node', [
+        CLI_PATH,
+        'trace',
+        'src/helper.ts',
+        TEMP_DIR,
+        '--json',
+      ]);
+      expect(JSON.parse(trace.stdout).entryPoints).toEqual(['src/index.ts']);
+
+      try {
+        await execa('node', [
+          CLI_PATH,
+          'check',
+          TEMP_DIR,
+          '--json',
+        ]);
+        expect.fail('Should have thrown an error');
+      } catch (err: any) {
+        expect(err.exitCode).toBe(1);
+        expect(JSON.parse(err.stdout).summary.unresolvedImports).toBe(1);
+      }
     });
   });
 
