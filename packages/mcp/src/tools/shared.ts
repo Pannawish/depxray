@@ -20,6 +20,7 @@ export interface ExplorerGraphNode extends StructureGraphNode {
   isCircular?: boolean;
   isOrphan?: boolean;
   componentName?: string;
+  metrics?: ScanResult['graph']['nodes'][number]['metrics'];
 }
 
 export interface ExplorerGraphEdge extends StructureGraphEdge {
@@ -123,6 +124,7 @@ export function toDependencyGraphData(result: ScanResult): ExplorerGraphData {
     outDegree: node.outDegree,
     isCircular: node.isCircular,
     isOrphan: orphanFileSet.has(node.relativePath),
+    ...(node.metrics ? { metrics: node.metrics } : {}),
     ...(node.componentName ? { componentName: node.componentName } : {}),
   }));
 

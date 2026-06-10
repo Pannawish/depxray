@@ -38,6 +38,10 @@ function DetailRow({ label, value }: { label: string; value: string | number }) 
   );
 }
 
+function formatInstability(value: number): string {
+  return `${Math.round(value * 100)}%`;
+}
+
 export function SelectionPanel({
   node,
   index,
@@ -212,6 +216,14 @@ export function SelectionPanel({
             <DetailRow label="Incoming imports" value={importedBy.length} />
             <DetailRow label="Circular" value={node.isCircular ? 'yes' : 'no'} />
             <DetailRow label="Orphan" value={node.isOrphan ? 'yes' : 'no'} />
+            {node.metrics ? (
+              <>
+                <DetailRow label="Lines of code" value={node.metrics.loc} />
+                <DetailRow label="Complexity" value={node.metrics.cyclomaticComplexity} />
+                <DetailRow label="Exports" value={node.metrics.exportCount} />
+                <DetailRow label="Instability" value={formatInstability(node.metrics.instability)} />
+              </>
+            ) : null}
             {node.componentName ? <DetailRow label="Component" value={node.componentName} /> : null}
           </>
         )}

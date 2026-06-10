@@ -26,6 +26,7 @@ import type {
   ScanError,
   ScanMetadata,
   ResolvedImport,
+  FileMetrics,
 } from './types.js';
 import { DEFAULT_EXTENSIONS, DEFAULT_IGNORE_PATTERNS } from './types.js';
 import { discoverFiles } from './fileDiscovery.js';
@@ -35,6 +36,7 @@ import { buildGraph } from './buildGraph.js';
 import { detectCircularDeps } from './detectCircularDeps.js';
 import { detectOrphanFiles } from './detectOrphanFiles.js';
 import { loadAliases } from './configLoader.js';
+import { computeFileMetrics } from './computeMetrics.js';
 
 /**
  * Scan a React project and build its dependency graph.
@@ -150,6 +152,7 @@ export async function scanProject(options: ScanOptions): Promise<ScanResult> {
 
   // ── Step 3 & 4: Parse imports and resolve paths for each file ────────
   const fileImportsMap = new Map<string, ResolvedImport[]>();
+  const fileMetricsMap = new Map<string, Omit<FileMetrics, 'instability'>>();
 
   // Process files concurrently for performance, but limit concurrency
   // to avoid opening too many file handles at once
@@ -162,6 +165,8 @@ export async function scanProject(options: ScanOptions): Promise<ScanResult> {
         try {
           // Read the file content
           const sourceCode = await fs.readFile(filePath, 'utf-8');
+
+          fileMetricsMap.set(filePath, computeFileMetrics(sourceCode, filePath));
 
           // Parse imports from the AST
           let rawImports = parseImports(sourceCode, filePath);
@@ -209,6 +214,25 @@ export async function scanProject(options: ScanOptions): Promise<ScanResult> {
   };
 
   let graph = buildGraph(fileImportsMap, resolvedRoot, metadata);
+
+  graph = {
+    ...graph,
+    nodes: graph.nodes.map((node) => {
+      const baseMetrics = fileMetricsMap.get(node.id);
+      if (!baseMetrics) {
+        return node;
+      }
+
+      const totalDegree = node.inDegree + node.outDegree;
+      return {
+        ...node,
+        metrics: {
+          ...baseMetrics,
+          instability: totalDegree === 0 ? 0 : node.outDegree / totalDegree,
+        },
+      };
+    }),
+  };
 
   // Update metadata with actual edge count
   graph.metadata.totalEdges = graph.edges.length;

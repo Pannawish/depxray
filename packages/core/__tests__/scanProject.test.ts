@@ -191,6 +191,19 @@ describe('scanProject — integration', () => {
     expect(scannedCount).toBe(6); // 7 total minus Dashboard
   });
 
+  it('should attach metrics to scanned file nodes', async () => {
+    const result = await scanProject({ rootDir: SIMPLE_PROJECT });
+    const appNode = result.graph.nodes.find((node) => node.relativePath === 'src/App.tsx');
+
+    expect(appNode?.metrics).toBeDefined();
+    expect(appNode!.metrics!.loc).toBeGreaterThan(0);
+    expect(appNode!.metrics!.cyclomaticComplexity).toBeGreaterThanOrEqual(1);
+    expect(appNode!.metrics!.exportCount).toBeGreaterThanOrEqual(1);
+    expect(appNode!.metrics!.instability).toBe(
+      appNode!.outDegree / (appNode!.inDegree + appNode!.outDegree),
+    );
+  });
+
   // ─── Export ──────────────────────────────────────────────────────────
 
   it('should produce valid exportable JSON', async () => {
@@ -202,6 +215,7 @@ describe('scanProject — integration', () => {
     expect(parsed.nodes.length).toBe(result.totalFiles);
     expect(parsed.edges.length).toBe(result.totalImports);
     expect(parsed.metadata.depxrayVersion).toBe(packageJson.version);
+    expect(parsed.nodes.some((node: any) => node.metrics?.loc > 0)).toBe(true);
   });
 
   // ─── Error handling ──────────────────────────────────────────────────

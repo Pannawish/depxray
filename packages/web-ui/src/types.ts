@@ -21,6 +21,7 @@ export interface ExplorerGraphNode extends StructureGraphNode {
   isCircular?: boolean;
   isOrphan?: boolean;
   componentName?: string;
+  metrics?: DependencyGraphNode['metrics'];
 }
 
 export interface ExplorerGraphEdge extends StructureGraphEdge {

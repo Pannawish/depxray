@@ -11,6 +11,7 @@ For MCP-compatible AI clients, use the companion package `@depxray/mcp`.
 - Explore a repo as a compact file tree instead of a noisy full-project graph
 - Navigate an interactive force-directed graph for dependency and structure data
 - See what a file imports and what depends on it
+- Review file health metrics such as LOC, complexity, exports, and instability
 - Detect circular dependencies quickly
 - Detect orphan files with no incoming imports
 - Export JSON for scripts, automation, and AI coding agents
@@ -287,6 +288,7 @@ It supports:
 - project config via `depxray.config.js`, `depxray.config.mjs`, `.depxrayrc.json`, or `package.json`
 - circular dependency detection
 - orphan file detection with configurable entry point exclusions
+- per-file LOC, cyclomatic complexity, export count, and instability metrics
 - interactive force-directed dependency and structure graph visualization
 - watch mode with live browser UI updates
 

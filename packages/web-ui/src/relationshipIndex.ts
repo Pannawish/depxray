@@ -69,6 +69,7 @@ function mergeNode(
     isCircular: dependencyNode.isCircular,
     isOrphan: dependencyNode.isOrphan,
     componentName: dependencyNode.componentName,
+    metrics: dependencyNode.metrics,
   };
 }
 

@@ -21,12 +21,14 @@ export { detectOrphanFiles, matchesAnyPattern } from './detectOrphanFiles.js';
 export { discoverFiles } from './fileDiscovery.js';
 export { loadAliases } from './configLoader.js';
 export { loadConfig } from './loadConfig.js';
+export { computeFileMetrics } from './computeMetrics.js';
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 export type {
   FileTreeNode,
   GraphNode,
   GraphEdge,
+  FileMetrics,
   StructureGraphNode,
   StructureGraphEdge,
   StructureGraph,

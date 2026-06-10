@@ -40,6 +40,7 @@ export async function inspectFileTool(input: InspectFileInput) {
     outDegree: node.outDegree,
     isCircular: node.isCircular,
     isOrphan: result.orphanFiles.includes(node.relativePath),
+    metrics: node.metrics,
     imports: imports.map((edge) => ({
       file: path.relative(rootDir, edge.target),
       absolutePath: edge.target,

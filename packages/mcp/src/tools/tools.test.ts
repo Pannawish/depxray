@@ -22,6 +22,7 @@ describe('MCP tool handlers', () => {
     expect(result.totalFiles).toBe(7);
     expect(result.nodes.length).toBeGreaterThan(0);
     expect(result.edges.length).toBeGreaterThan(0);
+    expect(result.nodes.some((node) => node.metrics?.loc && node.metrics.loc > 0)).toBe(true);
     expect(result.orphanFiles).toEqual([]);
   });
 
@@ -47,6 +48,7 @@ describe('MCP tool handlers', () => {
     expect(result.imports.map((item) => item.file)).toContain('src/components/Header.tsx');
     expect(result.imports.map((item) => item.file)).toContain('src/components/Footer.tsx');
     expect(result.isOrphan).toBe(false);
+    expect(result.metrics?.loc).toBeGreaterThan(0);
   });
 
   it('finds circular dependency chains', async () => {

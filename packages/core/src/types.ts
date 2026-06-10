@@ -137,8 +137,28 @@ export interface GraphNode {
   /** Whether this file participates in a circular dependency */
   isCircular: boolean;
 
+  /** Complexity and health metrics for this file */
+  metrics?: FileMetrics;
+
   /** Detected component or export name (from default export, if any) */
   componentName?: string;
+}
+
+/**
+ * Per-file complexity and health metrics.
+ */
+export interface FileMetrics {
+  /** Non-empty physical lines of code */
+  loc: number;
+
+  /** Cyclomatic complexity: decision points + 1 */
+  cyclomaticComplexity: number;
+
+  /** Number of export declarations/specifiers */
+  exportCount: number;
+
+  /** outDegree / (outDegree + inDegree), from 0 to 1 */
+  instability: number;
 }
 
 /**

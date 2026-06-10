@@ -6,6 +6,8 @@
 
 - Added `depxray scan --watch` to update the browser UI when project files change.
 - Added a live WebSocket update channel for browser graph refreshes.
+- Added per-file metrics for lines of code, cyclomatic complexity, export count, and instability.
+- Added file metrics to dependency JSON, MCP scan/inspect output, and browser file details.
 
 ## 1.3.1 - 2026-06-10
 

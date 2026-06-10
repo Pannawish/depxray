@@ -124,6 +124,7 @@ describe('CLI Integration Tests', () => {
       expect(parsed.totalDirs).toBe(0);
       expect(parsed.orphanFiles).toEqual([]);
       expect(parsed.nodes.some((node: any) => node.outDegree >= 1)).toBe(true);
+      expect(parsed.nodes.some((node: any) => node.metrics?.loc > 0)).toBe(true);
     });
 
     it('should include and print orphan files in dependency mode', async () => {

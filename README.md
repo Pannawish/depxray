@@ -14,6 +14,7 @@
 - Explore dependencies in an interactive force-directed graph
 - Inspect outgoing imports and incoming dependents for a file
 - View file details, folder summaries, and inline source code
+- See file health metrics such as LOC, complexity, exports, and instability
 - Detect circular dependencies
 - Detect orphan files with no incoming imports in dependency mode
 - Export machine-readable JSON for scripts and AI workflows
@@ -77,6 +78,7 @@ Current UI and graph-data capabilities include:
 - graph node coloring by file extension, circular status, and orphan status
 - directional dependency arrows with circular relationships highlighted
 - file details such as relative path, absolute path, extension, depth, size, incoming count, outgoing count, circular status, and orphan status
+- file metrics such as lines of code, cyclomatic complexity, export count, and instability
 - folder summaries such as total files, direct children, descendants, internal imports, incoming external references, outgoing external references, circular files, and orphan files inside the folder
 - dependency metadata for type-only and dynamic imports in exported graph data
 - layout swapping and resizable panels
@@ -268,6 +270,7 @@ It supports:
 - `depxray.config.js`, `depxray.config.mjs`, `.depxrayrc.json`, and `package.json` configuration
 - circular dependency detection
 - orphan file detection with configurable entry point exclusions
+- per-file LOC, cyclomatic complexity, export count, and instability metrics
 - interactive force-directed dependency and structure graph visualization
 - watch mode with live browser UI updates
 

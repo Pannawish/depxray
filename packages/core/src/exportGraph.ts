@@ -32,6 +32,7 @@ export function exportGraphJSON(
       inDegree: node.inDegree,
       outDegree: node.outDegree,
       isCircular: node.isCircular,
+      ...(node.metrics ? { metrics: node.metrics } : {}),
       ...(node.componentName ? { componentName: node.componentName } : {}),
     })),
     edges: graph.edges.map((edge) => ({
