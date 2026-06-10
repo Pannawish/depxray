@@ -14,6 +14,8 @@ For MCP-compatible AI clients, use the companion package `@depxray/mcp`.
 - Review file health metrics such as LOC, complexity, exports, and instability
 - Detect circular dependencies quickly
 - Detect orphan files with no incoming imports
+- Detect unused exports, including barrel and re-export chains
+- Detect unresolved local imports while ignoring external packages and common assets
 - Detect unused and unlisted npm dependencies
 - Detect workspace ownership and cross-package imports in monorepos
 - Validate dependency edges against lightweight architecture rules
@@ -34,7 +36,7 @@ npx depxray scan
 
 The default `scan` command starts a local browser UI. If port `5178` is busy, `depxray` automatically tries the next free port.
 
-The browser UI opens with the graph view in the center panel. Use the toolbar to switch between **Graph** and **Miller** views. In graph view, you can zoom, pan, drag nodes, click nodes to select files, and switch label visibility between **Smart**, **All**, and **None**.
+The browser UI opens with the graph view in the center panel. Use the toolbar to switch between **Graph** and **Miller** views. In graph view, you can zoom, pan, drag nodes, click nodes to select files, switch label visibility between **Smart**, **All**, and **None**, filter files with unused exports, and inspect unresolved import warnings directly in file details.
 
 ## Quick Examples
 
@@ -60,6 +62,18 @@ Print orphan files:
 
 ```bash
 npx depxray scan /path/to/project --mode dependencies --orphans
+```
+
+Print unused exports:
+
+```bash
+npx depxray scan /path/to/project --mode dependencies --unused-exports
+```
+
+Print unresolved local imports:
+
+```bash
+npx depxray scan /path/to/project --mode dependencies --unresolved
 ```
 
 Find unused and unlisted npm dependencies:
@@ -111,13 +125,17 @@ Use `depxray` before making edits when an agent needs project structure or file-
 Typical workflow:
 
 1. Run `scan --json` to get project structure or dependency graph data.
-2. Run `inspect --format json` on the file the agent plans to edit.
-3. Use incoming dependents and outgoing imports to avoid breaking connected files.
+2. Run `scan --mode dependencies --unused-exports --json` to find removable exports.
+3. Run `scan --mode dependencies --unresolved --json` to find broken local references.
+4. Run `inspect --format json` on the file the agent plans to edit.
+5. Use incoming dependents and outgoing imports to avoid breaking connected files.
 
 Agent-oriented commands:
 
 ```bash
 npx depxray scan /path/to/project --mode dependencies --json --output dep-graph.json
+npx depxray scan /path/to/project --mode dependencies --unused-exports --json --output dep-unused-exports.json
+npx depxray scan /path/to/project --mode dependencies --unresolved --json --output dep-unresolved.json
 npx depxray scan /path/to/project --mode dependencies --deps --json --output dep-graph.json
 npx depxray scan /path/to/project --mode dependencies --validate
 npx depxray diff --base main --json --dir /path/to/project
@@ -125,7 +143,7 @@ npx depxray inspect src/components/Button.tsx --dir /path/to/project --format js
 npx depxray report /path/to/project --output depxray-report.md
 ```
 
-Use `scan --json` when an agent needs project-wide context. Use `scan --deps --json` when an agent should check package.json drift before installing or removing dependencies. Use `scan --validate` when an agent should respect architecture boundaries before editing. Use `diff --base main --json` when an agent should summarize dependency changes in a branch. Use `inspect --format json` when an agent needs focused context for one file. Use `report` when an agent or reviewer needs a compact Markdown health summary.
+Use `scan --json` when an agent needs project-wide context. Use `scan --unused-exports --json` when an agent should identify dead exports before refactoring. Use `scan --unresolved --json` when an agent should repair broken local imports. Use `scan --deps --json` when an agent should check package.json drift before installing or removing dependencies. Use `scan --validate` when an agent should respect architecture boundaries before editing. Use `diff --base main --json` when an agent should summarize dependency changes in a branch. Use `inspect --format json` when an agent needs focused context for one file. Use `report` when an agent or reviewer needs a compact Markdown health summary.
 
 For clients that support MCP, configure the dedicated server package instead:
 
@@ -140,7 +158,7 @@ For clients that support MCP, configure the dedicated server package instead:
 }
 ```
 
-The MCP server exposes project scanning, file inspection, circular dependency detection, orphan detection, file-tree retrieval, and folder summaries as callable tools.
+The MCP server exposes project scanning, file inspection, circular dependency detection, orphan detection, file-tree retrieval, and folder summaries as callable tools, with scan and inspect results including unused export and unresolved import metadata.
 
 ## JSON Output Examples
 
@@ -220,6 +238,8 @@ Common options:
 - `--no-circular`: skip circular dependency detection in dependency mode
 - `--no-aliases`: skip `tsconfig.json` / `jsconfig.json` path alias resolution in dependency mode
 - `--orphans`: print orphan files to `stderr` after dependency scanning
+- `--unused-exports`: print unused export findings to `stderr` after dependency scanning
+- `--unresolved`: print unresolved local imports to `stderr` after dependency scanning
 - `--deps`: include unused and unlisted npm dependency analysis in dependency JSON
 - `--validate`: validate dependency edges against architecture rules from config
 - `--entry-points <patterns...>`: glob patterns to exclude from orphan detection
@@ -238,6 +258,8 @@ depxray scan /path/to/project --mode dependencies --json --output dep-graph.json
 depxray scan /path/to/project --mode dependencies --json --format mermaid --output graph.mmd
 depxray scan /path/to/project --mode dependencies --json --format dot --output graph.dot
 depxray scan /path/to/project --mode dependencies --orphans
+depxray scan /path/to/project --mode dependencies --unused-exports
+depxray scan /path/to/project --mode dependencies --unresolved
 depxray scan /path/to/project --mode dependencies --deps --json
 depxray scan /path/to/project --mode dependencies --validate
 depxray scan /path/to/project --mode dependencies --orphans --entry-points "src/routes/**" "src/bootstrap.ts"
@@ -404,6 +426,8 @@ It supports:
 - project config via `depxray.config.js`, `depxray.config.mjs`, `.depxrayrc.json`, or `package.json`
 - circular dependency detection
 - orphan file detection with configurable entry point exclusions
+- unused export detection with barrel and re-export support
+- unresolved local import detection
 - unused and unlisted npm dependency detection
 - monorepo workspace metadata and cross-package dependency detection
 - architecture rule validation with browser-highlighted violating edges

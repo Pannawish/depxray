@@ -17,6 +17,8 @@
 - See file health metrics such as LOC, complexity, exports, and instability
 - Detect circular dependencies
 - Detect orphan files with no incoming imports in dependency mode
+- Detect unused exports, including re-exports and barrel files
+- Detect unresolved local imports while ignoring external packages and common assets
 - Detect unused and unlisted npm dependencies
 - Detect workspace ownership and cross-package imports in monorepos
 - Validate dependency edges against lightweight architecture rules
@@ -77,7 +79,7 @@ depxray scan
 
 The default `scan` command starts a local server and opens a browser UI with three working areas:
 
-- Left: file tree with expand/collapse, search, circular-only filtering, and orphan-only filtering
+- Left: file tree with expand/collapse, search, circular-only filtering, orphan-only filtering, and unused-export filtering
 - Center: interactive graph view by default, with a Miller-column dependency tracing view available from the toolbar
 - Right: code viewer and file or folder details
 
@@ -88,12 +90,14 @@ Current UI and graph-data capabilities include:
 - force-directed graph view for dependency and structure data
 - graph zoom, pan, node dragging, click-to-select, and selected-node centering
 - graph node labels with Smart, All, and None label visibility modes
-- graph node coloring by file extension, circular status, and orphan status
+- graph node coloring by file extension, circular status, orphan status, unused exports, and unresolved imports
 - graph node coloring by workspace in monorepos, with dashed cross-package dependency edges
 - directional dependency arrows with circular relationships highlighted
 - architecture rule violations highlighted on dependency edges
 - file details such as relative path, absolute path, extension, depth, size, incoming count, outgoing count, circular status, and orphan status
 - file metrics such as lines of code, cyclomatic complexity, export count, and instability
+- unused export lists with line numbers and type-only markers
+- unresolved import warnings with import specifiers and line numbers
 - folder summaries such as total files, direct children, descendants, internal imports, incoming external references, outgoing external references, circular files, and orphan files inside the folder
 - dependency metadata for type-only and dynamic imports in exported graph data
 - layout swapping and resizable panels
@@ -121,6 +125,8 @@ Common options:
 - `--no-circular`: skip circular dependency detection in dependency mode
 - `--no-aliases`: skip `tsconfig.json` / `jsconfig.json` path alias resolution in dependency mode
 - `--orphans`: print orphan files to `stderr` after dependency scanning
+- `--unused-exports`: print unused export findings to `stderr` after dependency scanning
+- `--unresolved`: print unresolved local imports to `stderr` after dependency scanning
 - `--deps`: include unused and unlisted npm dependency analysis in dependency JSON
 - `--validate`: validate dependency edges against architecture rules from config
 - `--entry-points <patterns...>`: glob patterns to exclude from orphan detection
@@ -151,6 +157,12 @@ npx depxray scan /path/to/project --mode dependencies --json --format dot --outp
 # Print files with no incoming imports
 npx depxray scan /path/to/project --mode dependencies --orphans
 
+# Print unused exports
+npx depxray scan /path/to/project --mode dependencies --unused-exports
+
+# Print unresolved local imports
+npx depxray scan /path/to/project --mode dependencies --unresolved
+
 # Find package.json dependencies that are unused or missing
 npx depxray scan /path/to/project --mode dependencies --deps --json
 
@@ -172,7 +184,7 @@ npx depxray scan /path/to/project --watch
 
 ### `inspect`
 
-Inspect what a file imports and what imports it.
+Inspect what a file imports, what imports it, and any file-level issues such as unused exports or unresolved imports.
 
 ```bash
 depxray inspect <file> [options]
@@ -192,7 +204,7 @@ npx depxray inspect src/App.tsx --dir /path/to/project --format json
 
 ### `report`
 
-Generate a Markdown project health report with summary counts, hub files, heavy importers, orphan files, circular chains, and complexity hotspots.
+Generate a Markdown project health report with summary counts, hub files, heavy importers, orphan files, unused exports, unresolved imports, circular chains, and complexity hotspots.
 
 ```bash
 depxray report [dir] [options]
@@ -341,6 +353,8 @@ Use cases:
 
 - generate project-wide structure data with `scan --json`
 - generate project-wide dependency data with `scan --mode dependencies --json`
+- find dead exports with `scan --mode dependencies --unused-exports --json`
+- find broken local references with `scan --mode dependencies --unresolved --json`
 - check npm dependency drift with `scan --mode dependencies --deps --json`
 - validate architecture boundaries with `scan --mode dependencies --validate`
 - compare graph snapshots or review branch dependency changes with `diff`
@@ -352,6 +366,8 @@ Examples:
 
 ```bash
 npx depxray scan /path/to/project --json > .depxray-context.json
+npx depxray scan /path/to/project --mode dependencies --unused-exports --json > .depxray-unused-exports.json
+npx depxray scan /path/to/project --mode dependencies --unresolved --json > .depxray-unresolved-imports.json
 npx depxray scan /path/to/project --mode dependencies --deps --json > .depxray-deps.json
 npx depxray scan /path/to/project --mode dependencies --validate
 npx depxray diff --base main --json > .depxray-diff.json
@@ -378,7 +394,7 @@ Claude Desktop configuration example:
 }
 ```
 
-The MCP server exposes `scan_project`, `inspect_file`, `find_circular`, `find_orphans`, `get_file_tree`, and `get_folder_summary`.
+The MCP server exposes `scan_project`, `inspect_file`, `find_circular`, `find_orphans`, `get_file_tree`, and `get_folder_summary`, with scan and inspect results including unused export and unresolved import metadata.
 
 ## How It Works
 
@@ -398,6 +414,8 @@ It supports:
 - `depxray.config.js`, `depxray.config.mjs`, `.depxrayrc.json`, and `package.json` configuration
 - circular dependency detection
 - orphan file detection with configurable entry point exclusions
+- unused export detection with barrel and re-export support
+- unresolved local import detection
 - unused and unlisted npm dependency detection
 - monorepo workspace metadata and cross-package dependency detection
 - architecture rule validation with browser-highlighted violating edges

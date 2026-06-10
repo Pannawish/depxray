@@ -1,5 +1,22 @@
 # Changelog
 
+## 2.1.0 - 11/06/2026
+
+### Added
+
+- Added unused export detection for dependency scans, including named exports, default exports, re-exports, barrel files, and type-only exports.
+- Added unresolved local import detection for dependency scans, while ignoring external packages and common asset imports.
+- Added `depxray scan --unused-exports` to print unused export findings to `stderr`.
+- Added `depxray scan --unresolved` to print unresolved local imports to `stderr`.
+- Added `unusedExports` per file in dependency JSON, inspect output, MCP scan output, and MCP inspect output.
+- Added top-level `unresolvedImports` to dependency JSON, report output, and MCP scan output.
+- Added browser UI unused-export badges, an unused-export toolbar filter, file detail sections for unused exports and unresolved imports, and graph coloring for both issue types.
+- Added project health report sections for unused exports and unresolved imports.
+
+### Changed
+
+- Updated the GitHub and npm README files to document unused export detection, unresolved import detection, and the new CLI workflows for developers and AI agents.
+
 ## 2.0.0 - 11/06/2026
 
 ### Added
