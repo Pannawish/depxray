@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 
+import { createRequire } from 'node:module';
 import { pathToFileURL } from 'node:url';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
-import packageJson from '../package.json';
 import { findCircularTool } from './tools/findCircular.js';
 import { findOrphansTool } from './tools/findOrphans.js';
 import { getFileTreeTool } from './tools/getFileTree.js';
@@ -13,6 +13,8 @@ import { inspectFileTool } from './tools/inspectFile.js';
 import { scanProjectTool } from './tools/scanProject.js';
 import { jsonContent } from './tools/shared.js';
 
+const require = createRequire(import.meta.url);
+const packageJson = require('../package.json') as { version: string };
 const rootDirSchema = z.string().min(1).describe('Absolute or relative project root directory.');
 
 export function createDepxrayMcpServer(): McpServer {

@@ -5,7 +5,7 @@
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "bin": {
-    "depxray": "./dist/index.js"
+    "depxray": "dist/index.js"
   },
   "files": [
     "dist"
@@ -55,7 +55,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/Pannawish/depxray"
+    "url": "git+https://github.com/Pannawish/depxray.git"
   },
   "homepage": "https://github.com/Pannawish/depxray#readme",
   "bugs": {

@@ -1,4 +1,5 @@
 import * as path from 'node:path';
+import { createRequire } from 'node:module';
 import type {
   FileTreeNode,
   ScanError,
@@ -7,7 +8,9 @@ import type {
   StructureGraphEdge,
   StructureGraphNode,
 } from '@depxray/core';
-import packageJson from '../../package.json';
+
+const require = createRequire(import.meta.url);
+const packageJson = require('../../package.json') as { version: string };
 
 export type GraphMode = 'structure' | 'dependencies';
 
