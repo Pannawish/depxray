@@ -191,6 +191,9 @@ export interface GraphEdge {
 
   /** Whether this import crosses workspace/package boundaries */
   isCrossPackage?: boolean;
+
+  /** Architecture rule violations attached to this import edge */
+  ruleViolations?: RuleViolation[];
 }
 
 /**
@@ -239,6 +242,58 @@ export interface WorkspaceInfo {
 
   /** Absolute workspace directory path */
   absolutePath: string;
+}
+
+/**
+ * Lightweight architecture import rule.
+ *
+ * A rule is treated as a forbidden import when a source path matching `from`
+ * imports a target path matching `to`.
+ */
+export interface ArchitectureRule {
+  /** Glob-like source path pattern */
+  from: string;
+
+  /** Glob-like target path pattern */
+  to: string;
+
+  /** Severity used by CLI validation and UI highlighting */
+  severity?: 'error' | 'warning';
+
+  /** Optional message shown when the rule is violated */
+  message?: string;
+}
+
+/**
+ * A dependency edge that violates an architecture rule.
+ */
+export interface RuleViolation {
+  /** Source relative file path */
+  source: string;
+
+  /** Target relative file path */
+  target: string;
+
+  /** Original import specifier */
+  importSpecifier: string;
+
+  /** Rule source pattern */
+  from: string;
+
+  /** Rule target pattern */
+  to: string;
+
+  /** Violation severity */
+  severity: 'error' | 'warning';
+
+  /** Human-readable violation message */
+  message: string;
+}
+
+export interface RuleValidationResult {
+  violations: RuleViolation[];
+  errorCount: number;
+  warningCount: number;
 }
 
 // ─── Scan Configuration ────────────────────────────────────────────────────
@@ -305,6 +360,9 @@ export interface ScanOptions {
    * @default false
    */
   detectUnusedDeps?: boolean;
+
+  /** Architecture rules to validate against dependency edges */
+  rules?: ArchitectureRule[];
 }
 
 /**
@@ -368,6 +426,9 @@ export interface DepxrayConfig {
 
   /** Initial visible tree depth in the browser UI */
   depth?: number | 'all';
+
+  /** Architecture rules for dependency validation */
+  rules?: ArchitectureRule[];
 }
 
 // ─── Scan Result ───────────────────────────────────────────────────────────
@@ -396,6 +457,9 @@ export interface ScanResult {
 
   /** Optional npm dependency usage analysis */
   dependencyIssues?: UnusedDepsResult;
+
+  /** Optional architecture rule validation result */
+  ruleValidation?: RuleValidationResult;
 
   /** Files that could not be parsed, with error details */
   errors: ScanError[];

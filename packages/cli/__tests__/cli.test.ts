@@ -350,6 +350,46 @@ describe('CLI Integration Tests', () => {
       }
     });
 
+    it('should validate architecture rules and exit non-zero for errors', async () => {
+      await fs.mkdir(path.join(TEMP_DIR, 'src/ui'), { recursive: true });
+      await fs.mkdir(path.join(TEMP_DIR, 'src/db'), { recursive: true });
+      await fs.writeFile(
+        path.join(TEMP_DIR, 'depxray.config.js'),
+        'module.exports = { rules: [{ from: "src/ui/**", to: "src/db/**", severity: "error", message: "UI cannot import DB" }] };\n',
+        'utf-8',
+      );
+      await fs.writeFile(
+        path.join(TEMP_DIR, 'src/db/client.ts'),
+        'export const client = {};\n',
+        'utf-8',
+      );
+      await fs.writeFile(
+        path.join(TEMP_DIR, 'src/ui/Button.ts'),
+        'import { client } from "../db/client";\nexport const button = client;\n',
+        'utf-8',
+      );
+
+      try {
+        await execa('node', [
+          CLI_PATH,
+          'scan',
+          TEMP_DIR,
+          '--mode',
+          'dependencies',
+          '--json',
+          '--validate',
+        ]);
+        expect.fail('Should have thrown an error');
+      } catch (err: any) {
+        expect(err.exitCode).toBe(1);
+        expect(err.stderr).toContain('Architecture rule violations: 1 error(s), 0 warning(s)');
+        expect(err.stderr).toContain('UI cannot import DB');
+        const parsed = JSON.parse(err.stdout);
+        expect(parsed.ruleValidation.errorCount).toBe(1);
+        expect(parsed.edges.some((edge: any) => edge.ruleViolations?.length === 1)).toBe(true);
+      }
+    });
+
     it('should generate dependency-mode static HTML export', async () => {
       const { exitCode } = await execa('node', [
         CLI_PATH,
@@ -532,6 +572,102 @@ describe('CLI Integration Tests', () => {
 
       expect(exitCode).toBe(0);
       expect(stdout).toContain('report [options]');
+    });
+  });
+
+  describe('diff command', () => {
+    it('should output JSON diff for two graph snapshots', async () => {
+      await fs.mkdir(TEMP_DIR, { recursive: true });
+      const beforePath = path.join(TEMP_DIR, 'before.json');
+      const afterPath = path.join(TEMP_DIR, 'after.json');
+      await fs.writeFile(
+        beforePath,
+        JSON.stringify({
+          projectRoot: '/project',
+          nodes: [{ relativePath: 'src/App.ts' }],
+          edges: [],
+          circularDependencies: [],
+        }),
+        'utf-8',
+      );
+      await fs.writeFile(
+        afterPath,
+        JSON.stringify({
+          projectRoot: '/project',
+          nodes: [
+            { relativePath: 'src/App.ts' },
+            { relativePath: 'src/New.ts' },
+          ],
+          edges: [
+            {
+              source: '/project/src/App.ts',
+              target: '/project/src/New.ts',
+              importSpecifier: './New',
+            },
+          ],
+          circularDependencies: [],
+        }),
+        'utf-8',
+      );
+
+      const { stdout, exitCode } = await execa('node', [
+        CLI_PATH,
+        'diff',
+        beforePath,
+        afterPath,
+        '--json',
+      ]);
+
+      expect(exitCode).toBe(0);
+      const parsed = JSON.parse(stdout);
+      expect(parsed.addedFiles).toEqual(['src/New.ts']);
+      expect(parsed.addedEdges).toEqual([
+        {
+          source: 'src/App.ts',
+          target: 'src/New.ts',
+          importSpecifier: './New',
+        },
+      ]);
+    });
+
+    it('should compare the working tree against a git base ref', async () => {
+      const repoDir = path.join(TEMP_DIR, 'repo');
+      await fs.mkdir(path.join(repoDir, 'src'), { recursive: true });
+      await fs.writeFile(path.join(repoDir, 'package.json'), '{}\n', 'utf-8');
+      await fs.writeFile(
+        path.join(repoDir, 'src/index.ts'),
+        'export const value = 1;\n',
+        'utf-8',
+      );
+      await execa('git', ['init'], { cwd: repoDir });
+      await execa('git', ['add', '.'], { cwd: repoDir });
+      await execa('git', [
+        '-c',
+        'user.name=depxray',
+        '-c',
+        'user.email=depxray@example.com',
+        'commit',
+        '-m',
+        'initial',
+      ], { cwd: repoDir });
+      await fs.writeFile(
+        path.join(repoDir, 'src/new.ts'),
+        'export const next = 2;\n',
+        'utf-8',
+      );
+
+      const { stdout, exitCode } = await execa('node', [
+        CLI_PATH,
+        'diff',
+        '--base',
+        'HEAD',
+        '--dir',
+        repoDir,
+        '--json',
+      ]);
+
+      expect(exitCode).toBe(0);
+      expect(JSON.parse(stdout).addedFiles).toContain('src/new.ts');
     });
   });
 

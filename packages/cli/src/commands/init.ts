@@ -40,6 +40,17 @@ module.exports = {
 
   // Initial visible tree depth in the browser UI. Use "all" to expand everything.
   depth: 2,
+
+  // Optional architecture rules for "depxray scan --validate".
+  // Rules block imports from matching "from" files into matching "to" files.
+  rules: [
+    // {
+    //   from: 'src/ui/**',
+    //   to: 'src/db/**',
+    //   severity: 'error',
+    //   message: 'UI cannot import DB modules directly',
+    // },
+  ],
 };
 `;
 

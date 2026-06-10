@@ -17,6 +17,7 @@ import {
   scanProject,
   type DepxrayConfig,
   type FileTreeNode,
+  type RuleValidationResult,
   type ScanError,
   type ScanResult,
   type StructureGraph,
@@ -44,6 +45,7 @@ interface ExplorerGraphEdge extends StructureGraphEdge {
   isTypeOnly?: boolean;
   isDynamic?: boolean;
   isCrossPackage?: boolean;
+  ruleViolations?: ScanResult['graph']['edges'][number]['ruleViolations'];
 }
 
 interface ExplorerGraphData {
@@ -55,8 +57,10 @@ interface ExplorerGraphData {
   totalDirs: number;
   totalImports: number;
   circularCount: number;
+  circularDependencies: ScanResult['graph']['circularDependencies'];
   orphanFiles: string[];
   dependencyIssues?: ScanResult['dependencyIssues'];
+  ruleValidation?: ScanResult['ruleValidation'];
   generatedBy: string;
   errors: ScanError[];
   nodes: ExplorerGraphNode[];
@@ -87,6 +91,8 @@ interface ScanCommandOptions {
   extensions?: string[];
   orphans?: boolean;
   deps?: boolean;
+  validate?: boolean;
+  rules?: DepxrayConfig['rules'];
   entryPoints?: string[];
   open?: boolean;
   watch?: boolean;
@@ -183,6 +189,7 @@ export function mergeScanOptionsWithConfig(
       : config.port === undefined
         ? rawOptions.port
         : String(config.port),
+    rules: config.rules ?? rawOptions.rules,
   };
 }
 
@@ -273,8 +280,10 @@ function toStructureGraphData(graph: StructureGraph): ExplorerGraphData {
     totalDirs,
     totalImports: 0,
     circularCount: 0,
+    circularDependencies: [],
     orphanFiles: [],
     dependencyIssues: undefined,
+    ruleValidation: undefined,
     generatedBy: getGeneratedBy(),
     errors: [],
     nodes: graph.nodes,
@@ -318,6 +327,7 @@ function toDependencyGraphData(result: ScanResult): ExplorerGraphData {
     isTypeOnly: edge.isTypeOnly,
     isDynamic: edge.isDynamic,
     ...(edge.isCrossPackage ? { isCrossPackage: edge.isCrossPackage } : {}),
+    ...(edge.ruleViolations ? { ruleViolations: edge.ruleViolations } : {}),
   }));
 
   return {
@@ -329,8 +339,10 @@ function toDependencyGraphData(result: ScanResult): ExplorerGraphData {
     totalDirs: 0,
     totalImports: result.totalImports,
     circularCount: result.circularCount,
+    circularDependencies: result.graph.circularDependencies,
     orphanFiles: result.orphanFiles,
     ...(result.dependencyIssues ? { dependencyIssues: result.dependencyIssues } : {}),
+    ...(result.ruleValidation ? { ruleValidation: result.ruleValidation } : {}),
     generatedBy: getGeneratedBy(),
     errors: result.errors,
     nodes,
@@ -355,6 +367,22 @@ function printOrphanFiles(orphanFiles: string[]): void {
   process.stderr.write(`Orphan files (${orphanFiles.length}):\n`);
   for (const orphanFile of orphanFiles) {
     process.stderr.write(`  ${orphanFile}\n`);
+  }
+}
+
+function printRuleViolations(validation: RuleValidationResult | undefined): void {
+  if (!validation || validation.violations.length === 0) {
+    process.stderr.write('No architecture rule violations found.\n');
+    return;
+  }
+
+  process.stderr.write(
+    `Architecture rule violations: ${validation.errorCount} error(s), ${validation.warningCount} warning(s)\n`,
+  );
+  for (const violation of validation.violations) {
+    process.stderr.write(
+      `  [${violation.severity}] ${violation.source} -> ${violation.target}: ${violation.message}\n`,
+    );
   }
 }
 
@@ -799,6 +827,7 @@ async function buildSelectedGraphData(
     extensions: options.extensions,
     entryPointPatterns: options.entryPoints,
     detectUnusedDeps: options.deps,
+    rules: options.rules,
   });
 
   return toDependencyGraphData(result);
@@ -816,6 +845,7 @@ async function buildDependencyScanResult(
     extensions: options.extensions,
     entryPointPatterns: options.entryPoints,
     detectUnusedDeps: options.deps,
+    rules: options.rules,
   });
 }
 
@@ -835,6 +865,7 @@ async function buildGraphSet(
     extensions: options.extensions,
     entryPointPatterns: options.entryPoints,
     detectUnusedDeps: options.deps,
+    rules: options.rules,
   });
 
   const structureData = toStructureGraphData(structureGraph);
@@ -876,6 +907,7 @@ export function createScanCommand(): Command {
     .option('--no-aliases', 'Skip tsconfig/jsconfig path alias resolution in dependency mode')
     .option('--orphans', 'Print orphan files to stderr after dependency scanning')
     .option('--deps', 'Include unused and unlisted npm dependency analysis in dependency JSON')
+    .option('--validate', 'Validate dependency edges against architecture rules from depxray config')
     .option(
       '--entry-points <patterns...>',
       'Entry point glob patterns to exclude from orphan detection',
@@ -917,6 +949,14 @@ export function createScanCommand(): Command {
           throw new Error('--deps is only supported with --mode dependencies when using --json.');
         }
 
+        if (options.validate && (!options.rules || options.rules.length === 0)) {
+          throw new Error('--validate requires rules in depxray config.');
+        }
+
+        if (options.validate && options.json && parseMode(options.mode) !== 'dependencies') {
+          throw new Error('--validate is only supported with --mode dependencies when using --json.');
+        }
+
         if (outputFormat !== 'json' && !options.json) {
           throw new Error('--format is only supported together with --json.');
         }
@@ -930,16 +970,25 @@ export function createScanCommand(): Command {
 
         if (options.json) {
           let output: string;
+          let validation: RuleValidationResult | undefined;
           if (outputFormat === 'json') {
             const graphData = await buildSelectedGraphData(rootDir, options);
             if (options.orphans && graphData.mode === 'dependencies') {
               printOrphanFiles(graphData.orphanFiles);
+            }
+            validation = graphData.ruleValidation;
+            if (options.validate) {
+              printRuleViolations(validation);
             }
             output = serializeGraphData(graphData);
           } else {
             const result = await buildDependencyScanResult(rootDir, options);
             if (options.orphans) {
               printOrphanFiles(result.orphanFiles);
+            }
+            validation = result.ruleValidation;
+            if (options.validate) {
+              printRuleViolations(validation);
             }
             output = outputFormat === 'mermaid'
               ? formatAsMermaid(result)
@@ -953,11 +1002,21 @@ export function createScanCommand(): Command {
           } else {
             process.stdout.write(output + '\n');
           }
+          if (options.validate && validation?.errorCount) {
+            process.exit(1);
+          }
           return;
         }
 
         if (options.html) {
           const { graphSet } = await buildGraphSet(rootDir, options);
+          if (options.validate) {
+            const validation = graphSet.graphs.dependencies?.ruleValidation;
+            printRuleViolations(validation);
+            if (validation?.errorCount) {
+              process.exit(1);
+            }
+          }
           const outputDir = path.join(rootDir, '.depxray');
           const indexPath = await createStaticExport(outputDir, graphSet, initialDepth);
           process.stderr.write(`Static export written to ${indexPath}\n`);
@@ -967,6 +1026,13 @@ export function createScanCommand(): Command {
         const { tree, graphSet } = await buildGraphSet(rootDir, options);
         if (options.orphans) {
           printOrphanFiles(graphSet.graphs.dependencies?.orphanFiles ?? []);
+        }
+        if (options.validate) {
+          const validation = graphSet.graphs.dependencies?.ruleValidation;
+          printRuleViolations(validation);
+          if (validation?.errorCount) {
+            process.exit(1);
+          }
         }
         const serverHandle = await startGraphServer(rootDir, tree, graphSet, port, initialDepth);
         const watcher = options.watch

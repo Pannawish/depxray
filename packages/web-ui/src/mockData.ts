@@ -10,6 +10,7 @@ export const sampleGraphData: ExplorerGraphData = {
   totalDirs: 5,
   totalImports: 0,
   circularCount: 0,
+  circularDependencies: [],
   orphanFiles: [],
   generatedBy: `depxray@${packageJson.version}`,
   errors: [],

@@ -24,6 +24,9 @@ export {
   detectWorkspaces,
   getWorkspaceForPath,
 } from './detectWorkspaces.js';
+export { attachRuleViolations, validateRules } from './validateRules.js';
+export { diffGraphs } from './diffGraphs.js';
+export type { GraphDiffEdge, GraphDiffResult } from './diffGraphs.js';
 export { discoverFiles } from './fileDiscovery.js';
 export { loadAliases } from './configLoader.js';
 export { loadConfig } from './loadConfig.js';
@@ -37,6 +40,9 @@ export type {
   FileMetrics,
   UnusedDepsResult,
   WorkspaceInfo,
+  ArchitectureRule,
+  RuleValidationResult,
+  RuleViolation,
   StructureGraphNode,
   StructureGraphEdge,
   StructureGraph,

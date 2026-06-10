@@ -31,6 +31,7 @@ export interface ExplorerGraphEdge extends StructureGraphEdge {
   isTypeOnly?: boolean;
   isDynamic?: boolean;
   isCrossPackage?: boolean;
+  ruleViolations?: ScanResult['graph']['edges'][number]['ruleViolations'];
 }
 
 export interface ExplorerGraphData {
@@ -42,7 +43,9 @@ export interface ExplorerGraphData {
   totalDirs: number;
   totalImports: number;
   circularCount: number;
+  circularDependencies: ScanResult['graph']['circularDependencies'];
   orphanFiles: string[];
+  ruleValidation?: ScanResult['ruleValidation'];
   generatedBy: string;
   errors: ScanError[];
   nodes: ExplorerGraphNode[];
@@ -97,6 +100,7 @@ export function toStructureGraphData(graph: StructureGraph): ExplorerGraphData {
     totalDirs,
     totalImports: 0,
     circularCount: 0,
+    circularDependencies: [],
     orphanFiles: [],
     generatedBy: getGeneratedBy(),
     errors: [],
@@ -141,6 +145,7 @@ export function toDependencyGraphData(result: ScanResult): ExplorerGraphData {
     isTypeOnly: edge.isTypeOnly,
     isDynamic: edge.isDynamic,
     ...(edge.isCrossPackage ? { isCrossPackage: edge.isCrossPackage } : {}),
+    ...(edge.ruleViolations ? { ruleViolations: edge.ruleViolations } : {}),
   }));
 
   return {
@@ -152,7 +157,9 @@ export function toDependencyGraphData(result: ScanResult): ExplorerGraphData {
     totalDirs: 0,
     totalImports: result.totalImports,
     circularCount: result.circularCount,
+    circularDependencies: result.graph.circularDependencies,
     orphanFiles: result.orphanFiles,
+    ...(result.ruleValidation ? { ruleValidation: result.ruleValidation } : {}),
     generatedBy: getGeneratedBy(),
     errors: result.errors,
     nodes,

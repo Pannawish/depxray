@@ -105,6 +105,48 @@ function readDepth(record: ConfigRecord, source: string): DepxrayConfig['depth']
   return value as number;
 }
 
+function readRules(record: ConfigRecord, source: string): DepxrayConfig['rules'] {
+  const value = record.rules;
+  if (value === undefined) {
+    return undefined;
+  }
+
+  if (!Array.isArray(value)) {
+    throw new Error(`Invalid depxray config in ${source}: rules must be an array.`);
+  }
+
+  return value.map((item, index) => {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) {
+      throw new Error(`Invalid depxray config in ${source}: rules[${index}] must be an object.`);
+    }
+
+    const rule = item as ConfigRecord;
+    if (typeof rule.from !== 'string' || rule.from.length === 0) {
+      throw new Error(`Invalid depxray config in ${source}: rules[${index}].from must be a non-empty string.`);
+    }
+    if (typeof rule.to !== 'string' || rule.to.length === 0) {
+      throw new Error(`Invalid depxray config in ${source}: rules[${index}].to must be a non-empty string.`);
+    }
+    if (
+      rule.severity !== undefined &&
+      rule.severity !== 'error' &&
+      rule.severity !== 'warning'
+    ) {
+      throw new Error(`Invalid depxray config in ${source}: rules[${index}].severity must be "error" or "warning".`);
+    }
+    if (rule.message !== undefined && typeof rule.message !== 'string') {
+      throw new Error(`Invalid depxray config in ${source}: rules[${index}].message must be a string.`);
+    }
+
+    return {
+      from: rule.from,
+      to: rule.to,
+      ...(rule.severity ? { severity: rule.severity as 'error' | 'warning' } : {}),
+      ...(rule.message ? { message: rule.message as string } : {}),
+    };
+  });
+}
+
 function normalizeConfig(value: unknown, source: string): DepxrayConfig {
   const record = assertPlainObject(value, source);
 
@@ -117,6 +159,7 @@ function normalizeConfig(value: unknown, source: string): DepxrayConfig {
     aliases: readBoolean(record, 'aliases', source),
     port: readPort(record, source),
     depth: readDepth(record, source),
+    rules: readRules(record, source),
   };
 }
 

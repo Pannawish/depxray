@@ -45,6 +45,7 @@ interface ForceGraphLink {
   typeOnly?: boolean;
   dynamic?: boolean;
   crossPackage?: boolean;
+  ruleSeverity?: 'error' | 'warning';
 }
 
 interface LabelBounds {
@@ -249,6 +250,11 @@ export function ForceGraphView({
         typeOnly: edge.isTypeOnly,
         dynamic: edge.isDynamic,
         crossPackage: edge.isCrossPackage,
+        ruleSeverity: edge.ruleViolations?.some((violation) => violation.severity === 'error')
+          ? 'error'
+          : edge.ruleViolations?.length
+            ? 'warning'
+            : undefined,
       }));
 
     return {
@@ -338,14 +344,24 @@ export function ForceGraphView({
           enablePointerInteraction
           enableZoomInteraction
           linkColor={(link: LinkObject<ForceGraphNode, ForceGraphLink>) => (
-            (link as ForceGraphLink).circular
+            (link as ForceGraphLink).ruleSeverity === 'error'
+              ? '#dc2626'
+              : (link as ForceGraphLink).ruleSeverity === 'warning'
+                ? '#d97706'
+                : (link as ForceGraphLink).circular
               ? '#b33a32'
               : (link as ForceGraphLink).crossPackage
                 ? '#475569'
                 : '#b7c1cd'
           )}
           linkDirectionalArrowColor={(link: LinkObject<ForceGraphNode, ForceGraphLink>) => (
-            (link as ForceGraphLink).circular ? '#b33a32' : '#94a3b8'
+            (link as ForceGraphLink).ruleSeverity === 'error'
+              ? '#dc2626'
+              : (link as ForceGraphLink).ruleSeverity === 'warning'
+                ? '#d97706'
+                : (link as ForceGraphLink).circular
+                  ? '#b33a32'
+                  : '#94a3b8'
           )}
           linkDirectionalArrowLength={graphMode === 'dependencies' ? 5 : 3}
           linkDirectionalArrowRelPos={1}
@@ -357,7 +373,11 @@ export function ForceGraphView({
                 : null
           )}
           linkWidth={(link: LinkObject<ForceGraphNode, ForceGraphLink>) => (
-            (link as ForceGraphLink).circular || (link as ForceGraphLink).crossPackage ? 2 : 1
+            (link as ForceGraphLink).ruleSeverity ||
+            (link as ForceGraphLink).circular ||
+            (link as ForceGraphLink).crossPackage
+              ? 2
+              : 1
           )}
           nodeCanvasObject={(node, context, globalScale) => {
             drawNode(node, context, globalScale, selectedNodeId, occupiedLabelBoundsRef.current, labelMode);

@@ -43,6 +43,7 @@ import {
   detectWorkspaces,
   getWorkspaceForPath,
 } from './detectWorkspaces.js';
+import { attachRuleViolations, validateRules } from './validateRules.js';
 
 /**
  * Scan a React project and build its dependency graph.
@@ -96,6 +97,7 @@ export async function scanProject(options: ScanOptions): Promise<ScanResult> {
     includeDynamicImports = true,
     entryPointPatterns,
     detectUnusedDeps: shouldDetectUnusedDeps = false,
+    rules = [],
   } = options;
 
   // Validate rootDir
@@ -156,6 +158,7 @@ export async function scanProject(options: ScanOptions): Promise<ScanResult> {
       circularCount: 0,
       orphanFiles: [],
       ...(shouldDetectUnusedDeps ? { dependencyIssues: { unused: [], unlisted: [] } } : {}),
+      ...(rules.length > 0 ? { ruleValidation: { violations: [], errorCount: 0, warningCount: 0 } } : {}),
       errors: [],
       durationMs: emptyMetadata.scanDurationMs,
     };
@@ -282,6 +285,13 @@ export async function scanProject(options: ScanOptions): Promise<ScanResult> {
   // ── Step 7: Detect orphan files ─────────────────────────────────────
   const orphanFiles = detectOrphanFiles(graph, { entryPointPatterns });
 
+  const ruleValidation = rules.length > 0
+    ? validateRules(graph, rules)
+    : undefined;
+  if (ruleValidation) {
+    graph = attachRuleViolations(graph, ruleValidation);
+  }
+
   let dependencyIssues: ScanResult['dependencyIssues'];
   if (shouldDetectUnusedDeps) {
     try {
@@ -319,6 +329,7 @@ export async function scanProject(options: ScanOptions): Promise<ScanResult> {
     circularCount: graph.circularDependencies.length,
     orphanFiles,
     ...(dependencyIssues ? { dependencyIssues } : {}),
+    ...(ruleValidation ? { ruleValidation } : {}),
     errors,
     durationMs: finalDurationMs,
   };

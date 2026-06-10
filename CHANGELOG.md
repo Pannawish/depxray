@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- Added lightweight architecture rule validation with `depxray scan --validate`, config-driven `rules`, stderr violation reporting, and exit code 1 for error-level violations.
+- Added browser graph highlighting for dependency edges that violate architecture rules.
+- Added graph diffing with `depxray diff <before.json> <after.json>` and `depxray diff --base <ref>`.
+- Added machine-readable `depxray diff --json` output for added and removed files, edges, and circular dependencies.
+
 ## 1.5.0 - 10/06/2026
 
 ### Added

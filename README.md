@@ -19,6 +19,8 @@
 - Detect orphan files with no incoming imports in dependency mode
 - Detect unused and unlisted npm dependencies
 - Detect workspace ownership and cross-package imports in monorepos
+- Validate dependency edges against lightweight architecture rules
+- Diff dependency graph snapshots or compare a git base ref against the working tree
 - Export machine-readable JSON for scripts and AI workflows
 - Export Mermaid and DOT dependency graphs for docs and PRs
 - Expose dependency-analysis tools to AI clients through `@depxray/mcp`
@@ -88,6 +90,7 @@ Current UI and graph-data capabilities include:
 - graph node coloring by file extension, circular status, and orphan status
 - graph node coloring by workspace in monorepos, with dashed cross-package dependency edges
 - directional dependency arrows with circular relationships highlighted
+- architecture rule violations highlighted on dependency edges
 - file details such as relative path, absolute path, extension, depth, size, incoming count, outgoing count, circular status, and orphan status
 - file metrics such as lines of code, cyclomatic complexity, export count, and instability
 - folder summaries such as total files, direct children, descendants, internal imports, incoming external references, outgoing external references, circular files, and orphan files inside the folder
@@ -118,6 +121,7 @@ Common options:
 - `--no-aliases`: skip `tsconfig.json` / `jsconfig.json` path alias resolution in dependency mode
 - `--orphans`: print orphan files to `stderr` after dependency scanning
 - `--deps`: include unused and unlisted npm dependency analysis in dependency JSON
+- `--validate`: validate dependency edges against architecture rules from config
 - `--entry-points <patterns...>`: glob patterns to exclude from orphan detection
 - `--extensions <exts...>`: choose scanned extensions in dependency mode
 - `--depth <depth>`: initial visible depth: any integer `>= 1` or `all`
@@ -148,6 +152,9 @@ npx depxray scan /path/to/project --mode dependencies --orphans
 
 # Find package.json dependencies that are unused or missing
 npx depxray scan /path/to/project --mode dependencies --deps --json
+
+# Fail with exit code 1 when error-level architecture rules are violated
+npx depxray scan /path/to/project --mode dependencies --validate
 
 # Treat custom files as entry points instead of orphans
 npx depxray scan /path/to/project --mode dependencies --orphans --entry-points "src/routes/**" "src/bootstrap.ts"
@@ -206,6 +213,35 @@ npx depxray report /path/to/project
 npx depxray report /path/to/project --output depxray-report.md
 ```
 
+### `diff`
+
+Compare two dependency graph JSON snapshots, or compare a git base ref against the current working tree.
+
+```bash
+depxray diff [before.json] [after.json] [options]
+```
+
+Options:
+
+- `--json`: print machine-readable diff JSON
+- `--base <ref>`: scan the project at a git ref and compare it with the working tree
+- `-d, --dir <dir>`: project directory for `--base`, default `.`
+
+Examples:
+
+```bash
+# Create snapshots, then compare them
+npx depxray scan /path/to/project --mode dependencies --json --output before.json
+npx depxray scan /path/to/project --mode dependencies --json --output after.json
+npx depxray diff before.json after.json
+
+# Compare the current working tree against main
+npx depxray diff --base main --dir /path/to/project
+
+# Use JSON output in automation
+npx depxray diff --base main --json
+```
+
 ### `init`
 
 Create a `depxray.config.js` file with sensible defaults.
@@ -248,6 +284,14 @@ module.exports = {
   aliases: true,
   port: 5178,
   depth: 2,
+  rules: [
+    {
+      from: 'src/ui/**',
+      to: 'src/db/**',
+      severity: 'error',
+      message: 'UI cannot import DB modules directly',
+    },
+  ],
 };
 ```
 
@@ -261,6 +305,7 @@ Supported fields:
 - `aliases`: resolve `tsconfig.json` / `jsconfig.json` path aliases
 - `port`: preferred browser UI port
 - `depth`: initial visible depth, using an integer `>= 1` or `all`
+- `rules`: architecture rules for `scan --validate`; matching imports are reported and `error` violations exit with code 1
 
 ## For AI Agents
 
@@ -271,6 +316,8 @@ Use cases:
 - generate project-wide structure data with `scan --json`
 - generate project-wide dependency data with `scan --mode dependencies --json`
 - check npm dependency drift with `scan --mode dependencies --deps --json`
+- validate architecture boundaries with `scan --mode dependencies --validate`
+- compare graph snapshots or review branch dependency changes with `diff`
 - inspect one file's outgoing imports and incoming dependents with `inspect --format json`
 - create a Markdown health summary with `report --output depxray-report.md`
 - save JSON into agent context files or use it in automated review pipelines
@@ -280,6 +327,8 @@ Examples:
 ```bash
 npx depxray scan /path/to/project --json > .depxray-context.json
 npx depxray scan /path/to/project --mode dependencies --deps --json > .depxray-deps.json
+npx depxray scan /path/to/project --mode dependencies --validate
+npx depxray diff --base main --json > .depxray-diff.json
 npx depxray inspect src/App.tsx --dir /path/to/project --format json
 npx depxray report /path/to/project --output depxray-report.md
 ```
@@ -325,6 +374,8 @@ It supports:
 - orphan file detection with configurable entry point exclusions
 - unused and unlisted npm dependency detection
 - monorepo workspace metadata and cross-package dependency detection
+- architecture rule validation with browser-highlighted violating edges
+- dependency graph diffing for files, edges, and circular dependency changes
 - per-file LOC, cyclomatic complexity, export count, and instability metrics
 - interactive force-directed dependency and structure graph visualization
 - watch mode with live browser UI updates

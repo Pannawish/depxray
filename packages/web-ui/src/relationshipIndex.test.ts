@@ -32,6 +32,7 @@ function makeDataSet(): ExplorerGraphSet {
         totalDirs: 2,
         totalImports: 0,
         circularCount: 0,
+        circularDependencies: [],
         orphanFiles: [],
         generatedBy: 'test',
         errors: [],
@@ -146,6 +147,12 @@ function makeDataSet(): ExplorerGraphSet {
         totalDirs: 0,
         totalImports: 5,
         circularCount: 2,
+        circularDependencies: [
+          {
+            chain: ['src/App.tsx', 'src/Header.tsx', 'src/App.tsx'],
+            description: 'src/App.tsx -> src/Header.tsx -> src/App.tsx',
+          },
+        ],
         orphanFiles: ['external.ts'],
         generatedBy: 'test',
         errors: [],

@@ -32,6 +32,7 @@ export interface ExplorerGraphEdge extends StructureGraphEdge {
   isTypeOnly?: boolean;
   isDynamic?: boolean;
   isCrossPackage?: DependencyGraphEdge['isCrossPackage'];
+  ruleViolations?: DependencyGraphEdge['ruleViolations'];
 }
 
 export interface ExplorerGraphData {
@@ -43,6 +44,7 @@ export interface ExplorerGraphData {
   totalDirs: number;
   totalImports: number;
   circularCount: number;
+  circularDependencies: Array<{ chain: string[]; description: string }>;
   orphanFiles: string[];
   generatedBy: string;
   errors: Array<{ filePath: string; error: string }>;

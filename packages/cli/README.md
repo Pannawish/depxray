@@ -16,6 +16,8 @@ For MCP-compatible AI clients, use the companion package `@depxray/mcp`.
 - Detect orphan files with no incoming imports
 - Detect unused and unlisted npm dependencies
 - Detect workspace ownership and cross-package imports in monorepos
+- Validate dependency edges against lightweight architecture rules
+- Diff dependency graph snapshots or compare a git base ref against the working tree
 - Export JSON for scripts, automation, and AI coding agents
 - Export Mermaid and DOT dependency graphs for docs and PRs
 - Generate Markdown project health reports
@@ -65,6 +67,12 @@ Find unused and unlisted npm dependencies:
 npx depxray scan /path/to/project --mode dependencies --deps --json
 ```
 
+Validate imports against architecture rules:
+
+```bash
+npx depxray scan /path/to/project --mode dependencies --validate
+```
+
 Inspect one file and show its imports and dependents:
 
 ```bash
@@ -110,11 +118,13 @@ Agent-oriented commands:
 ```bash
 npx depxray scan /path/to/project --mode dependencies --json --output dep-graph.json
 npx depxray scan /path/to/project --mode dependencies --deps --json --output dep-graph.json
+npx depxray scan /path/to/project --mode dependencies --validate
+npx depxray diff --base main --json --dir /path/to/project
 npx depxray inspect src/components/Button.tsx --dir /path/to/project --format json
 npx depxray report /path/to/project --output depxray-report.md
 ```
 
-Use `scan --json` when an agent needs project-wide context. Use `scan --deps --json` when an agent should check package.json drift before installing or removing dependencies. Use `inspect --format json` when an agent needs focused context for one file. Use `report` when an agent or reviewer needs a compact Markdown health summary.
+Use `scan --json` when an agent needs project-wide context. Use `scan --deps --json` when an agent should check package.json drift before installing or removing dependencies. Use `scan --validate` when an agent should respect architecture boundaries before editing. Use `diff --base main --json` when an agent should summarize dependency changes in a branch. Use `inspect --format json` when an agent needs focused context for one file. Use `report` when an agent or reviewer needs a compact Markdown health summary.
 
 For clients that support MCP, configure the dedicated server package instead:
 
@@ -210,6 +220,7 @@ Common options:
 - `--no-aliases`: skip `tsconfig.json` / `jsconfig.json` path alias resolution in dependency mode
 - `--orphans`: print orphan files to `stderr` after dependency scanning
 - `--deps`: include unused and unlisted npm dependency analysis in dependency JSON
+- `--validate`: validate dependency edges against architecture rules from config
 - `--entry-points <patterns...>`: glob patterns to exclude from orphan detection
 - `--extensions <exts...>`: choose scanned extensions in dependency mode
 - `--depth <depth>`: initial directory expansion depth; accepts any integer `>= 1` or `all`
@@ -227,6 +238,7 @@ depxray scan /path/to/project --mode dependencies --json --format mermaid --outp
 depxray scan /path/to/project --mode dependencies --json --format dot --output graph.dot
 depxray scan /path/to/project --mode dependencies --orphans
 depxray scan /path/to/project --mode dependencies --deps --json
+depxray scan /path/to/project --mode dependencies --validate
 depxray scan /path/to/project --mode dependencies --orphans --entry-points "src/routes/**" "src/bootstrap.ts"
 depxray scan /path/to/project --html
 depxray scan /path/to/project --watch
@@ -276,6 +288,30 @@ depxray report /path/to/project
 depxray report /path/to/project --output depxray-report.md
 ```
 
+### `diff`
+
+Compare two dependency graph JSON snapshots, or compare a git base ref against the current working tree.
+
+```bash
+depxray diff [before.json] [after.json] [options]
+```
+
+Options:
+
+- `--json`: print machine-readable diff JSON
+- `--base <ref>`: scan the project at a git ref and compare it with the working tree
+- `-d, --dir <dir>`: project directory for `--base`, default `.`
+
+Examples:
+
+```bash
+depxray scan /path/to/project --mode dependencies --json --output before.json
+depxray scan /path/to/project --mode dependencies --json --output after.json
+depxray diff before.json after.json
+depxray diff --base main --dir /path/to/project
+depxray diff --base main --json
+```
+
 ### `init`
 
 Create a `depxray.config.js` file with commented defaults.
@@ -312,10 +348,18 @@ module.exports = {
   aliases: true,
   port: 5178,
   depth: 2,
+  rules: [
+    {
+      from: 'src/ui/**',
+      to: 'src/db/**',
+      severity: 'error',
+      message: 'UI cannot import DB modules directly',
+    },
+  ],
 };
 ```
 
-Supported fields: `ignore`, `extensions`, `entryPoints`, `mode`, `circular`, `aliases`, `port`, and `depth`.
+Supported fields: `ignore`, `extensions`, `entryPoints`, `mode`, `circular`, `aliases`, `port`, `depth`, and `rules`.
 
 ## Supported Analysis
 
@@ -337,6 +381,8 @@ It supports:
 - orphan file detection with configurable entry point exclusions
 - unused and unlisted npm dependency detection
 - monorepo workspace metadata and cross-package dependency detection
+- architecture rule validation with browser-highlighted violating edges
+- dependency graph diffing for files, edges, and circular dependency changes
 - per-file LOC, cyclomatic complexity, export count, and instability metrics
 - Markdown health reports with hub files, heavy importers, orphans, circular chains, and complexity hotspots
 - interactive force-directed dependency and structure graph visualization

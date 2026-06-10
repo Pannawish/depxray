@@ -50,6 +50,7 @@ export async function inspectFileTool(input: InspectFileInput) {
       isTypeOnly: edge.isTypeOnly,
       isDynamic: edge.isDynamic,
       isCrossPackage: edge.isCrossPackage,
+      ruleViolations: edge.ruleViolations,
     })),
     dependents: dependents.map((edge) => ({
       file: path.relative(rootDir, edge.source),
@@ -59,6 +60,7 @@ export async function inspectFileTool(input: InspectFileInput) {
       isTypeOnly: edge.isTypeOnly,
       isDynamic: edge.isDynamic,
       isCrossPackage: edge.isCrossPackage,
+      ruleViolations: edge.ruleViolations,
     })),
   };
 }

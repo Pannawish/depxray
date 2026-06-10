@@ -48,6 +48,7 @@ export function exportGraphJSON(
       isTypeOnly: edge.isTypeOnly,
       isDynamic: edge.isDynamic,
       ...(edge.isCrossPackage ? { isCrossPackage: edge.isCrossPackage } : {}),
+      ...(edge.ruleViolations ? { ruleViolations: edge.ruleViolations } : {}),
     })),
     circularDependencies: graph.circularDependencies,
   };

@@ -6,6 +6,7 @@
 //   scan [dir]           Scan a project and open its structure graph
 //   inspect <file>       Inspect a single file's dependencies
 //   report [dir]         Generate a Markdown project health report
+//   diff <before> <after> Compare graph JSON snapshots
 //
 // Usage:
 //   npx depxray scan                         # Open local browser UI
@@ -17,6 +18,7 @@
 //   npx depxray scan --port 5180             # Custom server port
 //   npx depxray inspect src/App.tsx          # Inspect one file
 //   npx depxray report --output report.md    # Write Markdown report
+//   npx depxray diff before.json after.json  # Compare snapshots
 //
 // For AI agents:
 //   npx depxray scan --json > structure.json
@@ -30,6 +32,7 @@ import { createScanCommand } from './commands/scan.js';
 import { createInspectCommand } from './commands/inspect.js';
 import { createInitCommand } from './commands/init.js';
 import { createReportCommand } from './commands/report.js';
+import { createDiffCommand } from './commands/diff.js';
 
 const program = new Command();
 
@@ -47,6 +50,7 @@ program.addCommand(createScanCommand());
 program.addCommand(createInspectCommand());
 program.addCommand(createInitCommand());
 program.addCommand(createReportCommand());
+program.addCommand(createDiffCommand());
 
 // Parse and execute
 program.parse();

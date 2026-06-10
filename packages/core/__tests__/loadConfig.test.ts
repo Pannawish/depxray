@@ -67,6 +67,32 @@ describe('loadConfig', () => {
     expect(config.ignore).toEqual(['dist']);
   });
 
+  it('loads architecture rules', async () => {
+    await writeFile(
+      '.depxrayrc.json',
+      JSON.stringify({
+        rules: [
+          {
+            from: 'src/ui/**',
+            to: 'src/db/**',
+            severity: 'warning',
+            message: 'UI should not import DB',
+          },
+        ],
+      }),
+    );
+
+    const config = await loadConfig(tempDir);
+    expect(config.rules).toEqual([
+      {
+        from: 'src/ui/**',
+        to: 'src/db/**',
+        severity: 'warning',
+        message: 'UI should not import DB',
+      },
+    ]);
+  });
+
   it('loads the depxray key from package.json', async () => {
     await writeFile(
       'package.json',
