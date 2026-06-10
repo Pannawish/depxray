@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 1.3.1 - 2026-06-10
+
 ### Added
 
 - Added configuration file support for `depxray scan`.

@@ -1,6 +1,6 @@
 {
   "name": "@depxray/mcp",
-  "version": "1.3.0",
+  "version": "1.3.1",
   "description": "Dependency-aware MCP server that gives AI coding agents codebase context, import graphs, circular checks, and orphan-file insights.",
   "type": "module",
   "main": "./dist/index.js",
@@ -20,7 +20,7 @@
     "prepublishOnly": "node ../../scripts/sync-versions.mjs && npm run build"
   },
   "dependencies": {
-    "@depxray/core": "1.3.0",
+    "@depxray/core": "1.3.1",
     "@modelcontextprotocol/sdk": "^1.29.0",
     "zod": "^4.4.3"
   },
