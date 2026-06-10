@@ -279,6 +279,23 @@ export interface ScanOptions {
    * Uses lightweight glob matching against relative paths.
    */
   entryPointPatterns?: string[];
+
+  /**
+   * Whether to compare package.json dependencies against imported packages.
+   * @default false
+   */
+  detectUnusedDeps?: boolean;
+}
+
+/**
+ * Result of cross-referencing package.json dependencies with import specifiers.
+ */
+export interface UnusedDepsResult {
+  /** Packages listed in package.json but not imported by scanned files */
+  unused: string[];
+
+  /** External packages imported by scanned files but not listed in package.json */
+  unlisted: string[];
 }
 
 /**
@@ -356,6 +373,9 @@ export interface ScanResult {
 
   /** Relative paths of files with no incoming imports, excluding entry points */
   orphanFiles: string[];
+
+  /** Optional npm dependency usage analysis */
+  dependencyIssues?: UnusedDepsResult;
 
   /** Files that could not be parsed, with error details */
   errors: ScanError[];

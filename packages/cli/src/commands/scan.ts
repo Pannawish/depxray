@@ -51,6 +51,7 @@ interface ExplorerGraphData {
   totalImports: number;
   circularCount: number;
   orphanFiles: string[];
+  dependencyIssues?: ScanResult['dependencyIssues'];
   generatedBy: string;
   errors: ScanError[];
   nodes: ExplorerGraphNode[];
@@ -79,6 +80,7 @@ interface ScanCommandOptions {
   aliases?: boolean;
   extensions?: string[];
   orphans?: boolean;
+  deps?: boolean;
   entryPoints?: string[];
   open?: boolean;
   watch?: boolean;
@@ -254,6 +256,7 @@ function toStructureGraphData(graph: StructureGraph): ExplorerGraphData {
     totalImports: 0,
     circularCount: 0,
     orphanFiles: [],
+    dependencyIssues: undefined,
     generatedBy: getGeneratedBy(),
     errors: [],
     nodes: graph.nodes,
@@ -307,6 +310,7 @@ function toDependencyGraphData(result: ScanResult): ExplorerGraphData {
     totalImports: result.totalImports,
     circularCount: result.circularCount,
     orphanFiles: result.orphanFiles,
+    ...(result.dependencyIssues ? { dependencyIssues: result.dependencyIssues } : {}),
     generatedBy: getGeneratedBy(),
     errors: result.errors,
     nodes,
@@ -774,6 +778,7 @@ async function buildSelectedGraphData(
     resolveAliases: options.aliases !== false,
     extensions: options.extensions,
     entryPointPatterns: options.entryPoints,
+    detectUnusedDeps: options.deps,
   });
 
   return toDependencyGraphData(result);
@@ -794,6 +799,7 @@ async function buildGraphSet(
     resolveAliases: options.aliases !== false,
     extensions: options.extensions,
     entryPointPatterns: options.entryPoints,
+    detectUnusedDeps: options.deps,
   });
 
   const structureData = toStructureGraphData(structureGraph);
@@ -833,6 +839,7 @@ export function createScanCommand(): Command {
     .option('--no-circular', 'Skip circular dependency detection in dependency mode')
     .option('--no-aliases', 'Skip tsconfig/jsconfig path alias resolution in dependency mode')
     .option('--orphans', 'Print orphan files to stderr after dependency scanning')
+    .option('--deps', 'Include unused and unlisted npm dependency analysis in dependency JSON')
     .option(
       '--entry-points <patterns...>',
       'Entry point glob patterns to exclude from orphan detection',
@@ -867,6 +874,10 @@ export function createScanCommand(): Command {
 
         if (options.watch && (options.json || options.html)) {
           throw new Error('--watch is only supported with the local browser UI.');
+        }
+
+        if (options.deps && options.json && parseMode(options.mode) !== 'dependencies') {
+          throw new Error('--deps is only supported with --mode dependencies when using --json.');
         }
 
         await verifyDirectory(rootDir);

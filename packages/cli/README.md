@@ -14,6 +14,7 @@ For MCP-compatible AI clients, use the companion package `@depxray/mcp`.
 - Review file health metrics such as LOC, complexity, exports, and instability
 - Detect circular dependencies quickly
 - Detect orphan files with no incoming imports
+- Detect unused and unlisted npm dependencies
 - Export JSON for scripts, automation, and AI coding agents
 - Generate Markdown project health reports
 - Generate a standalone HTML report for local review or sharing
@@ -54,6 +55,12 @@ Print orphan files:
 
 ```bash
 npx depxray scan /path/to/project --mode dependencies --orphans
+```
+
+Find unused and unlisted npm dependencies:
+
+```bash
+npx depxray scan /path/to/project --mode dependencies --deps --json
 ```
 
 Inspect one file and show its imports and dependents:
@@ -100,11 +107,12 @@ Agent-oriented commands:
 
 ```bash
 npx depxray scan /path/to/project --mode dependencies --json --output dep-graph.json
+npx depxray scan /path/to/project --mode dependencies --deps --json --output dep-graph.json
 npx depxray inspect src/components/Button.tsx --dir /path/to/project --format json
 npx depxray report /path/to/project --output depxray-report.md
 ```
 
-Use `scan --json` when an agent needs project-wide context. Use `inspect --format json` when an agent needs focused context for one file. Use `report` when an agent or reviewer needs a compact Markdown health summary.
+Use `scan --json` when an agent needs project-wide context. Use `scan --deps --json` when an agent should check package.json drift before installing or removing dependencies. Use `inspect --format json` when an agent needs focused context for one file. Use `report` when an agent or reviewer needs a compact Markdown health summary.
 
 For clients that support MCP, configure the dedicated server package instead:
 
@@ -198,6 +206,7 @@ Common options:
 - `--no-circular`: skip circular dependency detection in dependency mode
 - `--no-aliases`: skip `tsconfig.json` / `jsconfig.json` path alias resolution in dependency mode
 - `--orphans`: print orphan files to `stderr` after dependency scanning
+- `--deps`: include unused and unlisted npm dependency analysis in dependency JSON
 - `--entry-points <patterns...>`: glob patterns to exclude from orphan detection
 - `--extensions <exts...>`: choose scanned extensions in dependency mode
 - `--depth <depth>`: initial directory expansion depth; accepts any integer `>= 1` or `all`
@@ -212,6 +221,7 @@ depxray scan
 depxray scan /path/to/project --mode dependencies
 depxray scan /path/to/project --mode dependencies --json --output dep-graph.json
 depxray scan /path/to/project --mode dependencies --orphans
+depxray scan /path/to/project --mode dependencies --deps --json
 depxray scan /path/to/project --mode dependencies --orphans --entry-points "src/routes/**" "src/bootstrap.ts"
 depxray scan /path/to/project --html
 depxray scan /path/to/project --watch
@@ -320,6 +330,7 @@ It supports:
 - project config via `depxray.config.js`, `depxray.config.mjs`, `.depxrayrc.json`, or `package.json`
 - circular dependency detection
 - orphan file detection with configurable entry point exclusions
+- unused and unlisted npm dependency detection
 - per-file LOC, cyclomatic complexity, export count, and instability metrics
 - Markdown health reports with hub files, heavy importers, orphans, circular chains, and complexity hotspots
 - interactive force-directed dependency and structure graph visualization

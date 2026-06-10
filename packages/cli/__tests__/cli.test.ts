@@ -165,6 +165,66 @@ describe('CLI Integration Tests', () => {
       expect(parsed.nodes.some((node: any) => node.isCircular)).toBe(true);
     });
 
+    it('should include unused and unlisted npm dependencies with --deps', async () => {
+      await fs.mkdir(path.join(TEMP_DIR, 'src'), { recursive: true });
+      await fs.writeFile(
+        path.join(TEMP_DIR, 'package.json'),
+        JSON.stringify({
+          dependencies: {
+            react: '^18.0.0',
+            lodash: '^4.17.21',
+          },
+          devDependencies: {
+            vitest: '^1.0.0',
+          },
+        }),
+        'utf-8',
+      );
+      await fs.writeFile(
+        path.join(TEMP_DIR, 'src/index.ts'),
+        [
+          "import React from 'react';",
+          "import '@scope/unlisted/subpath';",
+          "import path from 'node:path';",
+          'export const value = React.createElement("div", { id: path.sep });',
+        ].join('\n'),
+        'utf-8',
+      );
+
+      const { stdout, exitCode } = await execa('node', [
+        CLI_PATH,
+        'scan',
+        TEMP_DIR,
+        '--mode',
+        'dependencies',
+        '--deps',
+        '--json',
+      ]);
+
+      expect(exitCode).toBe(0);
+      const parsed = JSON.parse(stdout);
+      expect(parsed.dependencyIssues).toEqual({
+        unused: ['lodash', 'vitest'],
+        unlisted: ['@scope/unlisted'],
+      });
+    });
+
+    it('should reject --deps with structure JSON output', async () => {
+      try {
+        await execa('node', [
+          CLI_PATH,
+          'scan',
+          SIMPLE_PROJECT,
+          '--deps',
+          '--json',
+        ]);
+        expect.fail('Should have thrown an error');
+      } catch (err: any) {
+        expect(err.exitCode).toBe(1);
+        expect(err.stderr).toContain('--deps is only supported with --mode dependencies');
+      }
+    });
+
     it('should generate dependency-mode static HTML export', async () => {
       const { exitCode } = await execa('node', [
         CLI_PATH,

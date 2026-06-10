@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import packageJson from '../package.json';
 import * as path from 'path';
+import * as fs from 'fs/promises';
 import { scanProject } from '../src/scanProject.js';
 import { exportGraphJSON } from '../src/exportGraph.js';
 
@@ -202,6 +203,49 @@ describe('scanProject — integration', () => {
     expect(appNode!.metrics!.instability).toBe(
       appNode!.outDegree / (appNode!.inDegree + appNode!.outDegree),
     );
+  });
+
+  it('should optionally detect unused and unlisted npm dependencies', async () => {
+    const projectDir = path.join(__dirname, 'tmp-unused-deps-project');
+    await fs.rm(projectDir, { recursive: true, force: true });
+    await fs.mkdir(path.join(projectDir, 'src'), { recursive: true });
+    await fs.writeFile(
+      path.join(projectDir, 'package.json'),
+      JSON.stringify({
+        dependencies: {
+          react: '^18.0.0',
+          lodash: '^4.17.21',
+        },
+        devDependencies: {
+          vitest: '^1.0.0',
+        },
+      }),
+      'utf-8',
+    );
+    await fs.writeFile(
+      path.join(projectDir, 'src/index.ts'),
+      [
+        "import React from 'react';",
+        "import '@scope/unlisted/subpath';",
+        "import path from 'node:path';",
+        'export const value = React.createElement("div", { id: path.sep });',
+      ].join('\n'),
+      'utf-8',
+    );
+
+    try {
+      const result = await scanProject({
+        rootDir: projectDir,
+        detectUnusedDeps: true,
+      });
+
+      expect(result.dependencyIssues).toEqual({
+        unused: ['lodash', 'vitest'],
+        unlisted: ['@scope/unlisted'],
+      });
+    } finally {
+      await fs.rm(projectDir, { recursive: true, force: true });
+    }
   });
 
   // ─── Export ──────────────────────────────────────────────────────────

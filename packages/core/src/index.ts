@@ -18,6 +18,7 @@ export { resolveImport, resolveImports } from './resolveImports.js';
 export { buildGraph } from './buildGraph.js';
 export { detectCircularDeps } from './detectCircularDeps.js';
 export { detectOrphanFiles, matchesAnyPattern } from './detectOrphanFiles.js';
+export { detectUnusedDeps } from './detectUnusedDeps.js';
 export { discoverFiles } from './fileDiscovery.js';
 export { loadAliases } from './configLoader.js';
 export { loadConfig } from './loadConfig.js';
@@ -29,6 +30,7 @@ export type {
   GraphNode,
   GraphEdge,
   FileMetrics,
+  UnusedDepsResult,
   StructureGraphNode,
   StructureGraphEdge,
   StructureGraph,

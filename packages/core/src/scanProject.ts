@@ -37,6 +37,7 @@ import { detectCircularDeps } from './detectCircularDeps.js';
 import { detectOrphanFiles } from './detectOrphanFiles.js';
 import { loadAliases } from './configLoader.js';
 import { computeFileMetrics } from './computeMetrics.js';
+import { detectUnusedDeps } from './detectUnusedDeps.js';
 
 /**
  * Scan a React project and build its dependency graph.
@@ -89,6 +90,7 @@ export async function scanProject(options: ScanOptions): Promise<ScanResult> {
     includeTypeImports = true,
     includeDynamicImports = true,
     entryPointPatterns,
+    detectUnusedDeps: shouldDetectUnusedDeps = false,
   } = options;
 
   // Validate rootDir
@@ -145,6 +147,7 @@ export async function scanProject(options: ScanOptions): Promise<ScanResult> {
       totalImports: 0,
       circularCount: 0,
       orphanFiles: [],
+      ...(shouldDetectUnusedDeps ? { dependencyIssues: { unused: [], unlisted: [] } } : {}),
       errors: [],
       durationMs: emptyMetadata.scanDurationMs,
     };
@@ -245,6 +248,32 @@ export async function scanProject(options: ScanOptions): Promise<ScanResult> {
   // ── Step 7: Detect orphan files ─────────────────────────────────────
   const orphanFiles = detectOrphanFiles(graph, { entryPointPatterns });
 
+  let dependencyIssues: ScanResult['dependencyIssues'];
+  if (shouldDetectUnusedDeps) {
+    try {
+      const packageJsonPath = path.join(resolvedRoot, 'package.json');
+      const packageJson = JSON.parse(await fs.readFile(packageJsonPath, 'utf-8')) as {
+        name?: string;
+        dependencies?: Record<string, string>;
+        devDependencies?: Record<string, string>;
+        peerDependencies?: Record<string, string>;
+        optionalDependencies?: Record<string, string>;
+      };
+      const importReferences = [...fileImportsMap.values()]
+        .flat()
+        .map((resolved) => ({
+          importSpecifier: resolved.raw.source,
+        }));
+      dependencyIssues = detectUnusedDeps(resolvedRoot, importReferences, packageJson);
+    } catch (err) {
+      dependencyIssues = { unused: [], unlisted: [] };
+      errors.push({
+        filePath: path.join(resolvedRoot, 'package.json'),
+        error: `Failed to analyze package dependencies: ${(err as Error).message}`,
+      });
+    }
+  }
+
   // ── Return the complete result ───────────────────────────────────────
   const finalDurationMs = performance.now() - startTime;
   graph.metadata.scanDurationMs = finalDurationMs;
@@ -255,6 +284,7 @@ export async function scanProject(options: ScanOptions): Promise<ScanResult> {
     totalImports: graph.edges.length,
     circularCount: graph.circularDependencies.length,
     orphanFiles,
+    ...(dependencyIssues ? { dependencyIssues } : {}),
     errors,
     durationMs: finalDurationMs,
   };
