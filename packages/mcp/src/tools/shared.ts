@@ -22,6 +22,8 @@ export interface ExplorerGraphNode extends StructureGraphNode {
   componentName?: string;
   workspace?: string;
   metrics?: ScanResult['graph']['nodes'][number]['metrics'];
+  unusedExports?: ScanResult['graph']['nodes'][number]['unusedExports'];
+  unresolvedImports?: ScanResult['graph']['nodes'][number]['unresolvedImports'];
   pluginData?: Record<string, unknown>;
 }
 
@@ -47,6 +49,7 @@ export interface ExplorerGraphData {
   circularCount: number;
   circularDependencies: ScanResult['graph']['circularDependencies'];
   orphanFiles: string[];
+  unresolvedImports: ScanResult['unresolvedImports'];
   ruleValidation?: ScanResult['ruleValidation'];
   pluginData?: Record<string, unknown>;
   generatedBy: string;
@@ -105,6 +108,7 @@ export function toStructureGraphData(graph: StructureGraph): ExplorerGraphData {
     circularCount: 0,
     circularDependencies: [],
     orphanFiles: [],
+    unresolvedImports: [],
     generatedBy: getGeneratedBy(),
     errors: [],
     nodes: graph.nodes,
@@ -136,6 +140,8 @@ export function toDependencyGraphData(result: ScanResult): ExplorerGraphData {
     ...(node.workspace ? { workspace: node.workspace } : {}),
     ...(node.metrics ? { metrics: node.metrics } : {}),
     ...(node.componentName ? { componentName: node.componentName } : {}),
+    ...(node.unusedExports ? { unusedExports: node.unusedExports } : {}),
+    ...(node.unresolvedImports ? { unresolvedImports: node.unresolvedImports } : {}),
     ...(node.pluginData ? { pluginData: node.pluginData } : {}),
   }));
 
@@ -164,6 +170,7 @@ export function toDependencyGraphData(result: ScanResult): ExplorerGraphData {
     circularCount: result.circularCount,
     circularDependencies: result.graph.circularDependencies,
     orphanFiles: result.orphanFiles,
+    unresolvedImports: result.unresolvedImports,
     ...(result.ruleValidation ? { ruleValidation: result.ruleValidation } : {}),
     ...(result.pluginData ? { pluginData: result.pluginData } : {}),
     generatedBy: getGeneratedBy(),

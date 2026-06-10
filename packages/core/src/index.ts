@@ -11,12 +11,14 @@ export { exportGraphJSON } from './exportGraph.js';
 export { scanFileTree } from './scanFileTree.js';
 export { filterTreeByDepth } from './filterTreeByDepth.js';
 export { buildStructureGraph } from './buildStructureGraph.js';
+export { parseExports } from './parseExports.js';
 
 // ─── Individual modules (for advanced usage) ──────────────────────────────
 export { parseImports } from './parseImports.js';
 export { resolveImport, resolveImports } from './resolveImports.js';
 export { buildGraph } from './buildGraph.js';
 export { detectCircularDeps } from './detectCircularDeps.js';
+export { detectUnusedExports } from './detectUnusedExports.js';
 export { detectOrphanFiles, matchesAnyPattern } from './detectOrphanFiles.js';
 export { detectUnusedDeps } from './detectUnusedDeps.js';
 export {
@@ -46,7 +48,10 @@ export type {
   GraphNode,
   GraphEdge,
   FileMetrics,
+  RawExportInfo,
   UnusedDepsResult,
+  UnusedExport,
+  UnresolvedImport,
   WorkspaceInfo,
   ArchitectureRule,
   DepxrayPlugin,

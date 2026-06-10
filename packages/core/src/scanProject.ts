@@ -27,17 +27,25 @@ import type {
   ScanMetadata,
   ResolvedImport,
   FileMetrics,
+  RawExportInfo,
+  UnresolvedImport,
 } from './types.js';
-import { DEFAULT_EXTENSIONS, DEFAULT_IGNORE_PATTERNS } from './types.js';
+import {
+  DEFAULT_ENTRY_POINT_PATTERNS,
+  DEFAULT_EXTENSIONS,
+  DEFAULT_IGNORE_PATTERNS,
+} from './types.js';
 import { discoverFiles } from './fileDiscovery.js';
+import { parseExports } from './parseExports.js';
 import { parseImports } from './parseImports.js';
 import { resolveImports } from './resolveImports.js';
 import { buildGraph } from './buildGraph.js';
 import { detectCircularDeps } from './detectCircularDeps.js';
-import { detectOrphanFiles } from './detectOrphanFiles.js';
+import { detectOrphanFiles, matchesAnyPattern } from './detectOrphanFiles.js';
 import { loadAliases } from './configLoader.js';
 import { computeFileMetrics } from './computeMetrics.js';
 import { detectUnusedDeps } from './detectUnusedDeps.js';
+import { detectUnusedExports } from './detectUnusedExports.js';
 import {
   createWorkspaceAliases,
   detectWorkspaces,
@@ -45,6 +53,34 @@ import {
 } from './detectWorkspaces.js';
 import { attachRuleViolations, validateRules } from './validateRules.js';
 import { runAfterBuildGraphHooks, runAfterScanHooks } from './plugins.js';
+
+const KNOWN_ASSET_EXTENSIONS = new Set([
+  '.css',
+  '.scss',
+  '.sass',
+  '.less',
+  '.svg',
+  '.png',
+  '.jpg',
+  '.jpeg',
+  '.gif',
+  '.webp',
+  '.avif',
+  '.ico',
+  '.woff',
+  '.woff2',
+  '.ttf',
+  '.eot',
+  '.mp4',
+  '.mp3',
+  '.webm',
+  '.json',
+]);
+
+function isKnownAssetImport(specifier: string): boolean {
+  const cleaned = specifier.split('?')[0]?.split('#')[0] ?? specifier;
+  return KNOWN_ASSET_EXTENSIONS.has(path.extname(cleaned).toLowerCase());
+}
 
 /**
  * Scan a React project and build its dependency graph.
@@ -165,6 +201,7 @@ export async function scanProject(options: ScanOptions): Promise<ScanResult> {
       totalImports: 0,
       circularCount: 0,
       orphanFiles: [],
+      unresolvedImports: [],
       ...(shouldDetectUnusedDeps ? { dependencyIssues: { unused: [], unlisted: [] } } : {}),
       ...(rules.length > 0 ? { ruleValidation: { violations: [], errorCount: 0, warningCount: 0 } } : {}),
       errors: [],
@@ -175,7 +212,10 @@ export async function scanProject(options: ScanOptions): Promise<ScanResult> {
 
   // ── Step 3 & 4: Parse imports and resolve paths for each file ────────
   const fileImportsMap = new Map<string, ResolvedImport[]>();
+  const fileExportsMap = new Map<string, RawExportInfo[]>();
   const fileMetricsMap = new Map<string, Omit<FileMetrics, 'instability'>>();
+  const unresolvedImports: UnresolvedImport[] = [];
+  const unresolvedImportsByFile = new Map<string, UnresolvedImport[]>();
 
   // Process files concurrently for performance, but limit concurrency
   // to avoid opening too many file handles at once
@@ -190,6 +230,7 @@ export async function scanProject(options: ScanOptions): Promise<ScanResult> {
           const sourceCode = await fs.readFile(filePath, 'utf-8');
 
           fileMetricsMap.set(filePath, computeFileMetrics(sourceCode, filePath));
+          fileExportsMap.set(filePath, parseExports(sourceCode, filePath));
 
           // Parse imports from the AST
           let rawImports = parseImports(sourceCode, filePath);
@@ -211,6 +252,23 @@ export async function scanProject(options: ScanOptions): Promise<ScanResult> {
           );
 
           fileImportsMap.set(filePath, resolved);
+          const fileUnresolvedImports = resolved
+            .filter((resolvedImport) => (
+              !resolvedImport.resolvedPath &&
+              resolvedImport.error !== 'external_package' &&
+              !isKnownAssetImport(resolvedImport.raw.source)
+            ))
+            .map<UnresolvedImport>((resolvedImport) => ({
+              file: path.relative(resolvedRoot, filePath),
+              absoluteFilePath: filePath,
+              importSpecifier: resolvedImport.raw.source,
+              line: resolvedImport.raw.line,
+              isTypeOnly: resolvedImport.raw.isTypeOnly,
+              isDynamic: resolvedImport.raw.isDynamic,
+              ...(resolvedImport.error ? { error: resolvedImport.error } : {}),
+            }));
+          unresolvedImports.push(...fileUnresolvedImports);
+          unresolvedImportsByFile.set(filePath, fileUnresolvedImports);
         } catch (err) {
           errors.push({
             filePath,
@@ -218,6 +276,8 @@ export async function scanProject(options: ScanOptions): Promise<ScanResult> {
           });
           // Still add the file to the map so it appears as a node
           fileImportsMap.set(filePath, []);
+          fileExportsMap.set(filePath, []);
+          unresolvedImportsByFile.set(filePath, []);
         }
       }),
     );
@@ -295,6 +355,28 @@ export async function scanProject(options: ScanOptions): Promise<ScanResult> {
 
   // ── Step 7: Detect orphan files ─────────────────────────────────────
   const orphanFiles = detectOrphanFiles(graph, { entryPointPatterns });
+  const effectiveEntryPointPatterns = entryPointPatterns ?? DEFAULT_ENTRY_POINT_PATTERNS;
+  const entryPointFiles = new Set(
+    graph.nodes
+      .filter((node) => matchesAnyPattern(node.relativePath, effectiveEntryPointPatterns))
+      .map((node) => node.id),
+  );
+  const unusedExportsByFile = detectUnusedExports(fileImportsMap, fileExportsMap, {
+    entryPointFiles,
+  });
+
+  graph = {
+    ...graph,
+    nodes: graph.nodes.map((node) => ({
+      ...node,
+      ...(unusedExportsByFile.get(node.id)?.length
+        ? { unusedExports: unusedExportsByFile.get(node.id) }
+        : {}),
+      ...(unresolvedImportsByFile.get(node.id)?.length
+        ? { unresolvedImports: unresolvedImportsByFile.get(node.id) }
+        : {}),
+    })),
+  };
 
   const ruleValidation = rules.length > 0
     ? validateRules(graph, rules)
@@ -339,6 +421,7 @@ export async function scanProject(options: ScanOptions): Promise<ScanResult> {
     totalImports: graph.edges.length,
     circularCount: graph.circularDependencies.length,
     orphanFiles,
+    unresolvedImports,
     ...(dependencyIssues ? { dependencyIssues } : {}),
     ...(ruleValidation ? { ruleValidation } : {}),
     errors,

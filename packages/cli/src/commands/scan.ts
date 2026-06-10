@@ -38,6 +38,8 @@ interface ExplorerGraphNode extends StructureGraphNode {
   componentName?: string;
   workspace?: string;
   metrics?: ScanResult['graph']['nodes'][number]['metrics'];
+  unusedExports?: ScanResult['graph']['nodes'][number]['unusedExports'];
+  unresolvedImports?: ScanResult['graph']['nodes'][number]['unresolvedImports'];
   pluginData?: Record<string, unknown>;
 }
 
@@ -63,6 +65,7 @@ interface ExplorerGraphData {
   circularCount: number;
   circularDependencies: ScanResult['graph']['circularDependencies'];
   orphanFiles: string[];
+  unresolvedImports: ScanResult['unresolvedImports'];
   dependencyIssues?: ScanResult['dependencyIssues'];
   ruleValidation?: ScanResult['ruleValidation'];
   pluginData?: Record<string, unknown>;
@@ -95,6 +98,8 @@ interface ScanCommandOptions {
   aliases?: boolean;
   extensions?: string[];
   orphans?: boolean;
+  unusedExports?: boolean;
+  unresolved?: boolean;
   deps?: boolean;
   validate?: boolean;
   rules?: DepxrayConfig['rules'];
@@ -289,6 +294,7 @@ function toStructureGraphData(graph: StructureGraph): ExplorerGraphData {
     circularCount: 0,
     circularDependencies: [],
     orphanFiles: [],
+    unresolvedImports: [],
     dependencyIssues: undefined,
     ruleValidation: undefined,
     generatedBy: getGeneratedBy(),
@@ -322,6 +328,8 @@ function toDependencyGraphData(result: ScanResult): ExplorerGraphData {
     ...(node.workspace ? { workspace: node.workspace } : {}),
     ...(node.metrics ? { metrics: node.metrics } : {}),
     ...(node.componentName ? { componentName: node.componentName } : {}),
+    ...(node.unusedExports ? { unusedExports: node.unusedExports } : {}),
+    ...(node.unresolvedImports ? { unresolvedImports: node.unresolvedImports } : {}),
     ...(node.pluginData ? { pluginData: node.pluginData } : {}),
   }));
 
@@ -350,6 +358,7 @@ function toDependencyGraphData(result: ScanResult): ExplorerGraphData {
     circularCount: result.circularCount,
     circularDependencies: result.graph.circularDependencies,
     orphanFiles: result.orphanFiles,
+    unresolvedImports: result.unresolvedImports,
     ...(result.dependencyIssues ? { dependencyIssues: result.dependencyIssues } : {}),
     ...(result.ruleValidation ? { ruleValidation: result.ruleValidation } : {}),
     ...(result.pluginData ? { pluginData: result.pluginData } : {}),
@@ -377,6 +386,52 @@ function printOrphanFiles(orphanFiles: string[]): void {
   process.stderr.write(`Orphan files (${orphanFiles.length}):\n`);
   for (const orphanFile of orphanFiles) {
     process.stderr.write(`  ${orphanFile}\n`);
+  }
+}
+
+function printUnusedExports(result: ScanResult): void {
+  const filesWithUnusedExports = result.graph.nodes
+    .filter((node) => (node.unusedExports?.length ?? 0) > 0)
+    .sort((a, b) => (
+      (b.unusedExports?.length ?? 0) - (a.unusedExports?.length ?? 0)
+      || a.relativePath.localeCompare(b.relativePath)
+    ));
+
+  if (filesWithUnusedExports.length === 0) {
+    process.stderr.write('No unused exports found.\n');
+    return;
+  }
+
+  const totalUnusedExports = filesWithUnusedExports.reduce(
+    (count, node) => count + (node.unusedExports?.length ?? 0),
+    0,
+  );
+  process.stderr.write(
+    `Unused exports (${totalUnusedExports}) across ${filesWithUnusedExports.length} file(s):\n`,
+  );
+
+  for (const node of filesWithUnusedExports) {
+    process.stderr.write(`  ${node.relativePath}\n`);
+    for (const unusedExport of node.unusedExports ?? []) {
+      const flags = unusedExport.isTypeOnly ? ' type-only' : '';
+      process.stderr.write(
+        `    - ${unusedExport.name} (${unusedExport.kind}${flags}) line ${unusedExport.line}\n`,
+      );
+    }
+  }
+}
+
+function printUnresolvedImports(unresolvedImports: ScanResult['unresolvedImports']): void {
+  if (unresolvedImports.length === 0) {
+    process.stderr.write('No unresolved imports found.\n');
+    return;
+  }
+
+  process.stderr.write(`Unresolved imports (${unresolvedImports.length}):\n`);
+  for (const unresolvedImport of unresolvedImports) {
+    process.stderr.write(
+      `  ${unresolvedImport.file}:${unresolvedImport.line} -> ${unresolvedImport.importSpecifier}\n`,
+    );
   }
 }
 
@@ -919,6 +974,8 @@ export function createScanCommand(): Command {
     .option('--no-circular', 'Skip circular dependency detection in dependency mode')
     .option('--no-aliases', 'Skip tsconfig/jsconfig path alias resolution in dependency mode')
     .option('--orphans', 'Print orphan files to stderr after dependency scanning')
+    .option('--unused-exports', 'Print unused exports to stderr after dependency scanning')
+    .option('--unresolved', 'Print unresolved imports to stderr after dependency scanning')
     .option('--deps', 'Include unused and unlisted npm dependency analysis in dependency JSON')
     .option('--validate', 'Validate dependency edges against architecture rules from depxray config')
     .option(
@@ -971,6 +1028,14 @@ export function createScanCommand(): Command {
           throw new Error('--validate is only supported with --mode dependencies when using --json.');
         }
 
+        if (options.unusedExports && options.json && parseMode(options.mode) !== 'dependencies') {
+          throw new Error('--unused-exports is only supported with --mode dependencies when using --json.');
+        }
+
+        if (options.unresolved && options.json && parseMode(options.mode) !== 'dependencies') {
+          throw new Error('--unresolved is only supported with --mode dependencies when using --json.');
+        }
+
         if (outputFormat !== 'json' && !options.json) {
           throw new Error('--format is only supported together with --json.');
         }
@@ -986,19 +1051,41 @@ export function createScanCommand(): Command {
           let output: string;
           let validation: RuleValidationResult | undefined;
           if (outputFormat === 'json') {
-            const graphData = await buildSelectedGraphData(rootDir, options);
-            if (options.orphans && graphData.mode === 'dependencies') {
-              printOrphanFiles(graphData.orphanFiles);
+            const mode = parseMode(options.mode);
+            if (mode === 'dependencies') {
+              const result = await buildDependencyScanResult(rootDir, options);
+              if (options.orphans) {
+                printOrphanFiles(result.orphanFiles);
+              }
+              if (options.unusedExports) {
+                printUnusedExports(result);
+              }
+              if (options.unresolved) {
+                printUnresolvedImports(result.unresolvedImports);
+              }
+              validation = result.ruleValidation;
+              if (options.validate) {
+                printRuleViolations(validation);
+              }
+              output = serializeGraphData(toDependencyGraphData(result));
+            } else {
+              const graphData = await buildSelectedGraphData(rootDir, options);
+              validation = graphData.ruleValidation;
+              if (options.validate) {
+                printRuleViolations(validation);
+              }
+              output = serializeGraphData(graphData);
             }
-            validation = graphData.ruleValidation;
-            if (options.validate) {
-              printRuleViolations(validation);
-            }
-            output = serializeGraphData(graphData);
           } else {
             const result = await buildDependencyScanResult(rootDir, options);
             if (options.orphans) {
               printOrphanFiles(result.orphanFiles);
+            }
+            if (options.unusedExports) {
+              printUnusedExports(result);
+            }
+            if (options.unresolved) {
+              printUnresolvedImports(result.unresolvedImports);
             }
             validation = result.ruleValidation;
             if (options.validate) {
@@ -1040,6 +1127,15 @@ export function createScanCommand(): Command {
         const { tree, graphSet } = await buildGraphSet(rootDir, options);
         if (options.orphans) {
           printOrphanFiles(graphSet.graphs.dependencies?.orphanFiles ?? []);
+        }
+        if (options.unusedExports || options.unresolved) {
+          const dependencyResult = await buildDependencyScanResult(rootDir, options);
+          if (options.unusedExports) {
+            printUnusedExports(dependencyResult);
+          }
+          if (options.unresolved) {
+            printUnresolvedImports(dependencyResult.unresolvedImports);
+          }
         }
         if (options.validate) {
           const validation = graphSet.graphs.dependencies?.ruleValidation;

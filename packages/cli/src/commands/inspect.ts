@@ -67,6 +67,11 @@ export function createInspectCommand(): Command {
             inDegree: node.inDegree,
             outDegree: node.outDegree,
             isCircular: node.isCircular,
+            isOrphan: result.orphanFiles.includes(node.relativePath),
+            workspace: node.workspace,
+            metrics: node.metrics,
+            unusedExports: node.unusedExports ?? [],
+            unresolvedImports: node.unresolvedImports ?? [],
             imports: imports.map((e) => ({
               file: path.relative(rootDir, e.target),
               specifier: e.importSpecifier,
@@ -93,6 +98,30 @@ export function createInspectCommand(): Command {
           lines.push(`     Extension: ${node.extension}`);
           lines.push(`     Imports:   ${node.outDegree} files`);
           lines.push(`     Used by:   ${node.inDegree} files`);
+          if (node.workspace) {
+            lines.push(`     Workspace: ${node.workspace}`);
+          }
+
+          if ((node.unusedExports?.length ?? 0) > 0) {
+            lines.push('');
+            lines.push('  Unused exports:');
+            for (const unusedExport of node.unusedExports ?? []) {
+              const suffix = unusedExport.isTypeOnly ? ' [type-only]' : '';
+              lines.push(
+                `     - ${unusedExport.name} (${unusedExport.kind}) line ${unusedExport.line}${suffix}`,
+              );
+            }
+          }
+
+          if ((node.unresolvedImports?.length ?? 0) > 0) {
+            lines.push('');
+            lines.push('  Unresolved imports:');
+            for (const unresolvedImport of node.unresolvedImports ?? []) {
+              lines.push(
+                `     - line ${unresolvedImport.line}: ${unresolvedImport.importSpecifier}`,
+              );
+            }
+          }
 
           if (imports.length > 0) {
             lines.push('');

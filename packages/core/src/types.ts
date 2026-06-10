@@ -146,6 +146,12 @@ export interface GraphNode {
   /** Detected component or export name (from default export, if any) */
   componentName?: string;
 
+  /** Exported symbols from this file that are not used anywhere internally */
+  unusedExports?: UnusedExport[];
+
+  /** Imports in this file that could not be resolved to a local source file */
+  unresolvedImports?: UnresolvedImport[];
+
   /** Namespaced metadata added by plugins */
   pluginData?: Record<string, unknown>;
 }
@@ -303,6 +309,43 @@ export interface RuleValidationResult {
   violations: RuleViolation[];
   errorCount: number;
   warningCount: number;
+}
+
+export interface UnusedExport {
+  /** Export name, or "default" for default exports */
+  name: string;
+
+  /** Export classification */
+  kind: 'named' | 'default' | 'reexport';
+
+  /** Whether this is a type-only export */
+  isTypeOnly: boolean;
+
+  /** 1-based source line number */
+  line: number;
+}
+
+export interface UnresolvedImport {
+  /** File relative path containing the unresolved import */
+  file: string;
+
+  /** Absolute source file path */
+  absoluteFilePath: string;
+
+  /** Import specifier as written in source */
+  importSpecifier: string;
+
+  /** 1-based source line number */
+  line: number;
+
+  /** Whether this import is type-only */
+  isTypeOnly: boolean;
+
+  /** Whether this import is dynamic */
+  isDynamic: boolean;
+
+  /** Optional resolution error details */
+  error?: string;
 }
 
 // ─── Scan Configuration ────────────────────────────────────────────────────
@@ -502,6 +545,9 @@ export interface ScanResult {
   /** Relative paths of files with no incoming imports, excluding entry points */
   orphanFiles: string[];
 
+  /** Imports that could not be resolved to local source files */
+  unresolvedImports: UnresolvedImport[];
+
   /** Optional npm dependency usage analysis */
   dependencyIssues?: UnusedDepsResult;
 
@@ -568,6 +614,9 @@ export interface RawImportInfo {
   /** Named imports: ['Button', 'ButtonProps'] */
   specifiers: string[];
 
+  /** Export names referenced from the target module */
+  referencedExports?: string[];
+
   /** Whether this is `import type { ... }` */
   isTypeOnly: boolean;
 
@@ -576,6 +625,29 @@ export interface RawImportInfo {
 
   /** Line number in the source file */
   line: number;
+
+  /** AST construct that created this dependency */
+  originKind?: 'import' | 'reexport_named' | 'reexport_all' | 'dynamic' | 'require';
+}
+
+export interface RawExportInfo {
+  /** Export name visible from this module */
+  name: string;
+
+  /** Export classification */
+  kind: 'named' | 'default' | 'reexport' | 'export_all';
+
+  /** Whether this is a type-only export */
+  isTypeOnly: boolean;
+
+  /** 1-based source line number */
+  line: number;
+
+  /** Re-export source specifier if this export comes from another module */
+  source?: string;
+
+  /** Original export name from the source module for re-exports */
+  sourceExportName?: string;
 }
 
 /**

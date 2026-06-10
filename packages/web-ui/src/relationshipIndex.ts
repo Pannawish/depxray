@@ -20,6 +20,8 @@ export interface FileRelationshipIndex {
   importedByTargetId: Map<string, ExplorerGraphEdge[]>;
   circularNodeIds: Set<string>;
   orphanNodeIds: Set<string>;
+  unusedExportNodeIds: Set<string>;
+  unresolvedImportNodeIds: Set<string>;
   descendantsById: Map<string, string[]>;
   filesByFolderId: Map<string, string[]>;
   dependencyEdges: ExplorerGraphEdge[];
@@ -71,6 +73,9 @@ function mergeNode(
     componentName: dependencyNode.componentName,
     workspace: dependencyNode.workspace,
     metrics: dependencyNode.metrics,
+    unusedExports: dependencyNode.unusedExports,
+    unresolvedImports: dependencyNode.unresolvedImports,
+    pluginData: dependencyNode.pluginData,
   };
 }
 
@@ -136,6 +141,8 @@ export function buildRelationshipIndex(
   const importedByTargetId = new Map<string, ExplorerGraphEdge[]>();
   const circularNodeIds = new Set<string>();
   const orphanNodeIds = new Set<string>();
+  const unusedExportNodeIds = new Set<string>();
+  const unresolvedImportNodeIds = new Set<string>();
   const descendantsById = new Map<string, string[]>();
   const filesByFolderId = new Map<string, string[]>();
 
@@ -154,6 +161,14 @@ export function buildRelationshipIndex(
 
     if (node.isOrphan) {
       orphanNodeIds.add(node.id);
+    }
+
+    if ((node.unusedExports?.length ?? 0) > 0) {
+      unusedExportNodeIds.add(node.id);
+    }
+
+    if ((node.unresolvedImports?.length ?? 0) > 0) {
+      unresolvedImportNodeIds.add(node.id);
     }
   }
 
@@ -208,6 +223,8 @@ export function buildRelationshipIndex(
     importedByTargetId,
     circularNodeIds,
     orphanNodeIds,
+    unusedExportNodeIds,
+    unresolvedImportNodeIds,
     descendantsById,
     filesByFolderId,
     dependencyEdges,

@@ -224,6 +224,51 @@ describe('CLI Integration Tests', () => {
       expect(parsed.nodes.some((node: any) => node.isCircular)).toBe(true);
     });
 
+    it('should surface unused exports and unresolved imports in dependency JSON and stderr', async () => {
+      await fs.mkdir(path.join(TEMP_DIR, 'src'), { recursive: true });
+      await fs.writeFile(
+        path.join(TEMP_DIR, 'src/index.ts'),
+        [
+          "import { usedValue } from './feature';",
+          "import './missing-module';",
+          'export const value = usedValue;',
+        ].join('\n'),
+        'utf-8',
+      );
+      await fs.writeFile(
+        path.join(TEMP_DIR, 'src/feature.ts'),
+        [
+          'export const usedValue = "used";',
+          'export const unusedValue = "unused";',
+        ].join('\n'),
+        'utf-8',
+      );
+
+      const { stdout, stderr, exitCode } = await execa('node', [
+        CLI_PATH,
+        'scan',
+        TEMP_DIR,
+        '--mode',
+        'dependencies',
+        '--json',
+        '--unused-exports',
+        '--unresolved',
+      ]);
+
+      expect(exitCode).toBe(0);
+      const parsed = JSON.parse(stdout);
+      expect(parsed.unresolvedImports).toHaveLength(1);
+      expect(parsed.unresolvedImports[0].importSpecifier).toBe('./missing-module');
+      expect(parsed.nodes.some((node: any) => (
+        node.relativePath === 'src/feature.ts'
+        && node.unusedExports?.some((issue: any) => issue.name === 'unusedValue')
+      ))).toBe(true);
+      expect(stderr).toContain('Unused exports');
+      expect(stderr).toContain('unusedValue');
+      expect(stderr).toContain('Unresolved imports');
+      expect(stderr).toContain('./missing-module');
+    });
+
     it('should include unused and unlisted npm dependencies with --deps', async () => {
       await fs.mkdir(path.join(TEMP_DIR, 'src'), { recursive: true });
       await fs.writeFile(

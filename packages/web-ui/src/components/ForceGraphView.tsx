@@ -34,6 +34,8 @@ interface ForceGraphNode {
   isCircular?: boolean;
   isOrphan?: boolean;
   workspace?: string;
+  unusedExportsCount?: number;
+  unresolvedImportsCount?: number;
 }
 
 interface ForceGraphLink {
@@ -96,8 +98,16 @@ function getNodeColor(node: ForceGraphNode, selectedNodeId: string | null): stri
     return '#b33a32';
   }
 
+  if ((node.unresolvedImportsCount ?? 0) > 0) {
+    return '#c2410c';
+  }
+
   if (node.isOrphan) {
     return '#9a5b14';
+  }
+
+  if ((node.unusedExportsCount ?? 0) > 0) {
+    return '#7c3aed';
   }
 
   if (node.kind === 'directory') {
@@ -237,6 +247,8 @@ export function ForceGraphView({
       isCircular: circularNodeIds.has(node.id),
       isOrphan: orphanNodeIds.has(node.id),
       workspace: node.workspace,
+      unusedExportsCount: node.unusedExports?.length ?? 0,
+      unresolvedImportsCount: node.unresolvedImports?.length ?? 0,
     }));
 
     const graphLinks: ForceGraphLink[] = edges
@@ -326,6 +338,8 @@ export function ForceGraphView({
           </label>
           <div className="graph-summary">
             <span>{graphData.links.length.toLocaleString()} edges</span>
+            <span>{graphData.nodes.filter((node) => (node.unusedExportsCount ?? 0) > 0).length} unused</span>
+            <span>{graphData.nodes.filter((node) => (node.unresolvedImportsCount ?? 0) > 0).length} unresolved</span>
             <span>{graphMode}</span>
           </div>
         </div>
@@ -388,7 +402,14 @@ export function ForceGraphView({
               ? `in ${graphNode.inDegree ?? 0} / out ${graphNode.outDegree ?? 0}`
               : 'directory';
             const workspace = graphNode.workspace ? ` - ${graphNode.workspace}` : '';
-            return `${graphNode.relativePath}${workspace} - ${details}`;
+            const issues: string[] = [];
+            if ((graphNode.unusedExportsCount ?? 0) > 0) {
+              issues.push(`${graphNode.unusedExportsCount} unused export(s)`);
+            }
+            if ((graphNode.unresolvedImportsCount ?? 0) > 0) {
+              issues.push(`${graphNode.unresolvedImportsCount} unresolved import(s)`);
+            }
+            return `${graphNode.relativePath}${workspace} - ${details}${issues.length > 0 ? ` - ${issues.join(', ')}` : ''}`;
           }}
           nodePointerAreaPaint={(node, color, context) => {
             const graphNode = node as NodeObject<ForceGraphNode> & ForceGraphNode;

@@ -42,6 +42,8 @@ export async function inspectFileTool(input: InspectFileInput) {
     isOrphan: result.orphanFiles.includes(node.relativePath),
     workspace: node.workspace,
     metrics: node.metrics,
+    unusedExports: node.unusedExports ?? [],
+    unresolvedImports: node.unresolvedImports ?? [],
     pluginData: node.pluginData,
     imports: imports.map((edge) => ({
       file: path.relative(rootDir, edge.target),

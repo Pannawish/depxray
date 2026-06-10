@@ -123,13 +123,27 @@ export function parseImports(
         // ImportSpecifier
         return s.local.name;
       });
+      const referencedExports = path.node.specifiers.flatMap((specifier) => {
+        if (specifier.type === 'ImportDefaultSpecifier') {
+          return ['default'];
+        }
+        if (specifier.type === 'ImportNamespaceSpecifier') {
+          return ['*'];
+        }
+        if (specifier.imported.type === 'Identifier') {
+          return [specifier.imported.name];
+        }
+        return [specifier.imported.value];
+      });
 
       imports.push({
         source: path.node.source.value,
         specifiers,
+        referencedExports,
         isTypeOnly: path.node.importKind === 'type',
         isDynamic: false,
         line: path.node.loc?.start.line ?? 0,
+        originKind: 'import',
       });
     },
 
@@ -152,9 +166,23 @@ export function parseImports(
         imports.push({
           source: path.node.source.value,
           specifiers: specifiers.filter(Boolean),
+          referencedExports: path.node.specifiers
+            .filter((specifier): specifier is typeof specifier & { type: 'ExportSpecifier' } => (
+              specifier.type === 'ExportSpecifier'
+            ))
+            .map((specifier) => (
+              'name' in specifier.local
+                ? specifier.local.name
+                : (
+                  specifier.exported.type === 'Identifier'
+                    ? specifier.exported.name
+                    : specifier.exported.value
+                )
+            )),
           isTypeOnly: path.node.exportKind === 'type',
           isDynamic: false,
           line: path.node.loc?.start.line ?? 0,
+          originKind: 'reexport_named',
         });
       }
     },
@@ -165,9 +193,11 @@ export function parseImports(
       imports.push({
         source: path.node.source.value,
         specifiers: ['*'],
+        referencedExports: ['*'],
         isTypeOnly: false,
         isDynamic: false,
         line: path.node.loc?.start.line ?? 0,
+        originKind: 'reexport_all',
       });
     },
 
@@ -184,9 +214,11 @@ export function parseImports(
         imports.push({
           source: path.node.arguments[0].value,
           specifiers: [],
+          referencedExports: ['*'],
           isTypeOnly: false,
           isDynamic: true,
           line: path.node.loc?.start.line ?? 0,
+          originKind: 'dynamic',
         });
         return;
       }
@@ -201,9 +233,11 @@ export function parseImports(
         imports.push({
           source: path.node.arguments[0].value,
           specifiers: [],
+          referencedExports: ['*'],
           isTypeOnly: false,
           isDynamic: false,
           line: path.node.loc?.start.line ?? 0,
+          originKind: 'require',
         });
       }
     },

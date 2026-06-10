@@ -8,13 +8,16 @@ interface ExplorerToolbarProps {
   totalImports: number;
   circularCount: number;
   orphanCount: number;
+  unusedExportCount: number;
   visibleRows: number;
   circularOnly: boolean;
   orphanOnly: boolean;
+  unusedExportsOnly: boolean;
   centerViewMode: 'miller' | 'graph';
   onSearchChange: (searchTerm: string) => void;
   onCircularOnlyChange: (circularOnly: boolean) => void;
   onOrphanOnlyChange: (orphanOnly: boolean) => void;
+  onUnusedExportsOnlyChange: (unusedExportsOnly: boolean) => void;
   onCenterViewModeChange: (viewMode: 'miller' | 'graph') => void;
 }
 
@@ -26,13 +29,16 @@ export function ExplorerToolbar({
   totalImports,
   circularCount,
   orphanCount,
+  unusedExportCount,
   visibleRows,
   circularOnly,
   orphanOnly,
+  unusedExportsOnly,
   centerViewMode,
   onSearchChange,
   onCircularOnlyChange,
   onOrphanOnlyChange,
+  onUnusedExportsOnlyChange,
   onCenterViewModeChange,
 }: ExplorerToolbarProps) {
   return (
@@ -109,6 +115,17 @@ export function ExplorerToolbar({
           <span className="orphans-dot"></span>
           Orphans Only
           {orphanCount > 0 && <span className="orphans-count-badge">{orphanCount}</span>}
+        </button>
+
+        <button
+          className={`unused-toggle-btn ${unusedExportsOnly ? 'active' : ''} ${unusedExportCount > 0 ? 'has-unused' : ''}`}
+          onClick={() => onUnusedExportsOnlyChange(!unusedExportsOnly)}
+          type="button"
+          title="Filter project tree to show files with unused exports"
+        >
+          <span className="unused-dot"></span>
+          Unused Exports
+          {unusedExportCount > 0 && <span className="unused-count-badge">{unusedExportCount}</span>}
         </button>
 
         {/* Low-profile Summary Stats */}

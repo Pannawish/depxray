@@ -42,6 +42,14 @@ function formatInstability(value: number): string {
   return `${Math.round(value * 100)}%`;
 }
 
+function formatExportLabel(kind: 'named' | 'default' | 'reexport', name: string): string {
+  if (kind === 'default') {
+    return 'default';
+  }
+
+  return name;
+}
+
 export function SelectionPanel({
   node,
   index,
@@ -104,6 +112,8 @@ export function SelectionPanel({
   const hasOrphans = isDirectory
     ? Boolean(folderSummary && folderSummary.orphanFiles.length > 0)
     : node.isOrphan;
+  const unusedExports = !isDirectory ? (node.unusedExports ?? []) : [];
+  const unresolvedImports = !isDirectory ? (node.unresolvedImports ?? []) : [];
 
   return (
     <section className="details-panel">
@@ -167,6 +177,16 @@ export function SelectionPanel({
               Orphan
             </span>
           )}
+          {unusedExports.length > 0 && (
+            <span className="issue-chip unused">
+              Unused exports {unusedExports.length}
+            </span>
+          )}
+          {unresolvedImports.length > 0 && (
+            <span className="issue-chip unresolved">
+              Warning {unresolvedImports.length}
+            </span>
+          )}
           <button 
             className="swap-layout-btn"
             onClick={onSwapVertical}
@@ -192,6 +212,8 @@ export function SelectionPanel({
         {node.extension ? <span>{node.extension}</span> : null}
         {node.isCircular ? <span className="danger">circular</span> : null}
         {node.isOrphan ? <span className="warning">orphan</span> : null}
+        {unusedExports.length > 0 ? <span className="info">unused exports {unusedExports.length}</span> : null}
+        {unresolvedImports.length > 0 ? <span className="warning">unresolved imports {unresolvedImports.length}</span> : null}
       </div>
 
       <dl className="detail-list">
@@ -225,10 +247,57 @@ export function SelectionPanel({
                 <DetailRow label="Instability" value={formatInstability(node.metrics.instability)} />
               </>
             ) : null}
+            <DetailRow label="Unused exports" value={unusedExports.length} />
+            <DetailRow label="Unresolved imports" value={unresolvedImports.length} />
             {node.componentName ? <DetailRow label="Component" value={node.componentName} /> : null}
           </>
         )}
       </dl>
+
+      {!isDirectory && unusedExports.length > 0 ? (
+        <div className="issue-section">
+          <div className="relationship-heading">
+            <h3>Unused exports</h3>
+            <span>{unusedExports.length}</span>
+          </div>
+          <div className="issue-list">
+            {unusedExports.map((unusedExport) => (
+              <div className="issue-item" key={`${unusedExport.name}-${unusedExport.line}`}>
+                <strong>{formatExportLabel(unusedExport.kind, unusedExport.name)}</strong>
+                <span>
+                  {unusedExport.kind}
+                  {unusedExport.isTypeOnly ? ' type-only' : ''}
+                  {' '}
+                  line {unusedExport.line}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
+      {!isDirectory && unresolvedImports.length > 0 ? (
+        <div className="issue-section">
+          <div className="relationship-heading">
+            <h3>Unresolved imports</h3>
+            <span>{unresolvedImports.length}</span>
+          </div>
+          <div className="issue-list">
+            {unresolvedImports.map((unresolvedImport) => (
+              <div
+                className="issue-item unresolved"
+                key={`${unresolvedImport.importSpecifier}-${unresolvedImport.line}`}
+              >
+                <strong>{unresolvedImport.importSpecifier}</strong>
+                <span>
+                  line {unresolvedImport.line}
+                  {unresolvedImport.error ? ` · ${unresolvedImport.error}` : ''}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      ) : null}
 
       {error ? <p className="panel-warning">Using sample data: {error}</p> : null}
     </section>

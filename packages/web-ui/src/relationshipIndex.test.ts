@@ -34,6 +34,7 @@ function makeDataSet(): ExplorerGraphSet {
         circularCount: 0,
         circularDependencies: [],
         orphanFiles: [],
+        unresolvedImports: [],
         generatedBy: 'test',
         errors: [],
         nodes: [
@@ -154,6 +155,7 @@ function makeDataSet(): ExplorerGraphSet {
           },
         ],
         orphanFiles: ['external.ts'],
+        unresolvedImports: [],
         generatedBy: 'test',
         errors: [],
         nodes: [

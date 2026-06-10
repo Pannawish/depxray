@@ -2,7 +2,7 @@
 // exportGraph — Serialize a DependencyGraph to JSON
 // ============================================================================
 
-import type { DependencyGraph } from './types.js';
+import type { DependencyGraph, UnresolvedImport } from './types.js';
 
 /**
  * Serialize a DependencyGraph to a formatted JSON string.
@@ -21,6 +21,8 @@ export function exportGraphJSON(
   graph: DependencyGraph,
   pretty: boolean = true,
 ): string {
+  const unresolvedImports: UnresolvedImport[] = graph.nodes.flatMap((node) => node.unresolvedImports ?? []);
+
   // Create a clean export object with relative paths for portability
   const exportData = {
     version: '1.0.0',
@@ -35,6 +37,8 @@ export function exportGraphJSON(
       ...(node.workspace ? { workspace: node.workspace } : {}),
       ...(node.metrics ? { metrics: node.metrics } : {}),
       ...(node.componentName ? { componentName: node.componentName } : {}),
+      ...(node.unusedExports ? { unusedExports: node.unusedExports } : {}),
+      ...(node.unresolvedImports ? { unresolvedImports: node.unresolvedImports } : {}),
       ...(node.pluginData ? { pluginData: node.pluginData } : {}),
     })),
     edges: graph.edges.map((edge) => ({
@@ -53,6 +57,7 @@ export function exportGraphJSON(
       ...(edge.pluginData ? { pluginData: edge.pluginData } : {}),
     })),
     circularDependencies: graph.circularDependencies,
+    unresolvedImports,
     ...(graph.pluginData ? { pluginData: graph.pluginData } : {}),
   };
 

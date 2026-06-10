@@ -25,6 +25,10 @@ const SOURCE_LABELS = {
   sample: 'sample preview',
 } as const;
 
+function hasUnusedExports(node: ExplorerGraphNode): boolean {
+  return (node.unusedExports?.length ?? 0) > 0;
+}
+
 
 
 function buildInitialExpandedIds(index: FileRelationshipIndex): Set<string> {
@@ -53,11 +57,12 @@ function buildTreeRows(
 ): FileTreeRowData[] {
   const rows: FileTreeRowData[] = [];
   const normalizedSearch = searchTerm.trim().toLowerCase();
-  const structureNodes = index.structureGraph?.nodes ?? Array.from(index.nodeById.values());
+  const structureNodes = Array.from(index.nodeById.values());
   const searchMatchedIds = new Set<string>();
   const searchVisibleIds = new Set<string>();
   const circularVisibleIds = new Set<string>();
   const orphanVisibleIds = new Set<string>();
+  const unusedExportVisibleIds = new Set<string>();
 
   if (normalizedSearch) {
     for (const node of structureNodes) {
@@ -92,6 +97,15 @@ function buildTreeRows(
     }
   }
 
+  if (filters.unusedExportsOnly) {
+    for (const nodeId of index.unusedExportNodeIds) {
+      unusedExportVisibleIds.add(nodeId);
+      for (const ancestorId of getAncestorIds(nodeId, index)) {
+        unusedExportVisibleIds.add(ancestorId);
+      }
+    }
+  }
+
   function shouldShowNode(nodeId: string): boolean {
     if (normalizedSearch && !searchVisibleIds.has(nodeId)) {
       return false;
@@ -105,6 +119,10 @@ function buildTreeRows(
       return false;
     }
 
+    if (filters.unusedExportsOnly && !unusedExportVisibleIds.has(nodeId)) {
+      return false;
+    }
+
     return true;
   }
 
@@ -114,7 +132,10 @@ function buildTreeRows(
     }
 
     const children = index.childrenByParentId.get(node.id) ?? [];
-    const forceExpanded = Boolean(normalizedSearch) || filters.circularOnly || filters.orphanOnly;
+    const forceExpanded = Boolean(normalizedSearch)
+      || filters.circularOnly
+      || filters.orphanOnly
+      || Boolean(filters.unusedExportsOnly);
     const expanded = expandedIds.has(node.id) || forceExpanded;
 
     rows.push({
@@ -125,6 +146,8 @@ function buildTreeRows(
       matched: searchMatchedIds.has(node.id),
       circular: index.circularNodeIds.has(node.id),
       orphan: index.orphanNodeIds.has(node.id),
+      unusedExports: hasUnusedExports(node),
+      unresolvedImports: (node.unresolvedImports?.length ?? 0) > 0,
     });
 
     if (!children.length || !expanded) {
@@ -162,8 +185,8 @@ function buildGraphNodes(
   const normalizedSearch = searchTerm.trim().toLowerCase();
   const visibleIds = new Set<string>();
 
-  if (!normalizedSearch && !filters.circularOnly && !filters.orphanOnly) {
-    return sourceNodes;
+  if (!normalizedSearch && !filters.circularOnly && !filters.orphanOnly && !filters.unusedExportsOnly) {
+    return sourceNodes.map((node) => index.nodeById.get(node.id) ?? node);
   }
 
   if (normalizedSearch) {
@@ -207,7 +230,21 @@ function buildGraphNodes(
     }
   }
 
-  return sourceNodes.filter((node) => visibleIds.has(node.id));
+  if (filters.unusedExportsOnly) {
+    for (const nodeId of index.unusedExportNodeIds) {
+      visibleIds.add(nodeId);
+
+      if (graphMode === 'structure') {
+        for (const ancestorId of getAncestorIds(nodeId, index)) {
+          visibleIds.add(ancestorId);
+        }
+      }
+    }
+  }
+
+  return sourceNodes
+    .map((node) => index.nodeById.get(node.id) ?? node)
+    .filter((node) => visibleIds.has(node.id));
 }
 
 export default function App() {
@@ -216,6 +253,7 @@ export default function App() {
   const [searchTerm, setSearchTerm] = useState('');
   const [circularOnly, setCircularOnly] = useState<boolean>(false);
   const [orphanOnly, setOrphanOnly] = useState<boolean>(false);
+  const [unusedExportsOnly, setUnusedExportsOnly] = useState<boolean>(false);
   const [centerViewMode, setCenterViewMode] = useState<'miller' | 'graph'>('graph');
   const [graphLabelMode, setGraphLabelMode] = useState<'smart' | 'all' | 'none'>('smart');
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
@@ -340,11 +378,23 @@ export default function App() {
   const activeCodeNode = activeCodeNodeId ? (index.nodeById.get(activeCodeNodeId) ?? null) : null;
 
   const folderSummary = activeCodeNode?.kind === 'directory'
-    ? getFolderSummary(activeCodeNode.id, index, { showTypeOnlyEdges: true, showDynamicEdges: true, circularOnly, orphanOnly })
+    ? getFolderSummary(activeCodeNode.id, index, {
+      showTypeOnlyEdges: true,
+      showDynamicEdges: true,
+      circularOnly,
+      orphanOnly,
+      unusedExportsOnly,
+    })
     : null;
   const visibleRows = useMemo(() => (
-    buildTreeRows(index, expandedIds, deferredSearchTerm, { showTypeOnlyEdges: true, showDynamicEdges: true, circularOnly, orphanOnly })
-  ), [deferredSearchTerm, circularOnly, orphanOnly, expandedIds, index]);
+    buildTreeRows(index, expandedIds, deferredSearchTerm, {
+      showTypeOnlyEdges: true,
+      showDynamicEdges: true,
+      circularOnly,
+      orphanOnly,
+      unusedExportsOnly,
+    })
+  ), [deferredSearchTerm, circularOnly, orphanOnly, unusedExportsOnly, expandedIds, index]);
   const graphMode: GraphMode = dataSet?.defaultMode === 'dependencies' && index.dependencyGraph
     ? 'dependencies'
     : 'structure';
@@ -354,8 +404,9 @@ export default function App() {
       showDynamicEdges: true,
       circularOnly,
       orphanOnly,
+      unusedExportsOnly,
     })
-  ), [circularOnly, deferredSearchTerm, graphMode, index, orphanOnly]);
+  ), [circularOnly, deferredSearchTerm, graphMode, index, orphanOnly, unusedExportsOnly]);
   const visibleGraphEdges = useMemo(() => (
     graphMode === 'dependencies'
       ? index.dependencyEdges
@@ -488,15 +539,18 @@ export default function App() {
         totalImports={index.dependencyGraph?.totalImports ?? 0}
         circularCount={index.circularNodeIds.size}
         orphanCount={index.orphanNodeIds.size}
+        unusedExportCount={index.unusedExportNodeIds.size}
         visibleRows={visibleRows.length}
         circularOnly={circularOnly}
         orphanOnly={orphanOnly}
+        unusedExportsOnly={unusedExportsOnly}
         centerViewMode={centerViewMode}
         onSearchChange={(nextSearch) => {
           startTransition(() => setSearchTerm(nextSearch));
         }}
         onCircularOnlyChange={setCircularOnly}
         onOrphanOnlyChange={setOrphanOnly}
+        onUnusedExportsOnlyChange={setUnusedExportsOnly}
         onCenterViewModeChange={setCenterViewMode}
       />
 

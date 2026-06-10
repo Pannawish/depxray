@@ -12,6 +12,8 @@
   --danger-soft: #f8e1de;
   --warning: #9a5b14;
   --warning-soft: #f7ead7;
+  --info: #7c3aed;
+  --info-soft: #efe7ff;
   font-family: "Avenir Next", "Segoe UI", sans-serif;
   color: var(--text);
   background: var(--bg);
@@ -237,7 +239,8 @@ button {
 }
 
 .cycles-toggle-btn,
-.orphans-toggle-btn {
+.orphans-toggle-btn,
+.unused-toggle-btn {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -254,14 +257,16 @@ button {
 }
 
 .cycles-toggle-btn:hover,
-.orphans-toggle-btn:hover {
+.orphans-toggle-btn:hover,
+.unused-toggle-btn:hover {
   border-color: var(--border-strong);
   background: var(--panel-subtle);
   color: var(--text);
 }
 
 .cycles-dot,
-.orphans-dot {
+.orphans-dot,
+.unused-dot {
   width: 8px;
   height: 8px;
   border-radius: 50%;
@@ -283,6 +288,13 @@ button {
   box-shadow: 0 0 8px rgba(154, 91, 20, 0.12);
 }
 
+.unused-toggle-btn.active {
+  border-color: var(--info);
+  background: var(--info-soft);
+  color: var(--info);
+  box-shadow: 0 0 8px rgba(124, 58, 237, 0.12);
+}
+
 .cycles-toggle-btn.active .cycles-dot {
   background: var(--danger);
   animation: pulse-dot 1.6s infinite;
@@ -293,8 +305,13 @@ button {
   animation: pulse-dot-warning 1.6s infinite;
 }
 
+.unused-toggle-btn.active .unused-dot {
+  background: var(--info);
+}
+
 .cycles-count-badge,
-.orphans-count-badge {
+.orphans-count-badge,
+.unused-count-badge {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -320,6 +337,16 @@ button {
 
 .orphans-toggle-btn.active .orphans-count-badge {
   background: var(--warning);
+  color: #ffffff;
+}
+
+.unused-count-badge {
+  background: rgba(124, 58, 237, 0.12);
+  color: var(--info);
+}
+
+.unused-toggle-btn.active .unused-count-badge {
+  background: var(--info);
   color: #ffffff;
 }
 
@@ -405,6 +432,17 @@ button {
 .tree-meta.orphan-badge {
   background: var(--warning-soft);
   color: var(--warning);
+}
+
+.badge-row .info,
+.tree-meta.unused-badge {
+  background: var(--info-soft);
+  color: var(--info);
+}
+
+.tree-meta.unresolved-badge {
+  background: var(--danger-soft);
+  color: var(--danger);
 }
 
 @keyframes pulse-dot {
@@ -608,6 +646,14 @@ button {
   color: #063f35;
 }
 
+.tree-row.unused-exports:not(.selected) .tree-label {
+  color: var(--info);
+}
+
+.tree-row.unresolved-imports:not(.selected) .tree-label {
+  color: var(--danger);
+}
+
 .tree-row.matched .tree-label {
   font-weight: 800;
 }
@@ -632,6 +678,14 @@ button {
 .tree-meta {
   color: var(--muted);
   font-size: 0.72rem;
+}
+
+.tree-meta-group {
+  display: inline-flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 4px;
+  align-items: center;
 }
 
 .details-panel .badge-row,
@@ -750,6 +804,64 @@ button {
   border-radius: 6px;
   background: var(--warning-soft);
   color: var(--warning);
+}
+
+.issue-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.issue-chip.unused {
+  background: var(--info-soft);
+  border-color: rgba(124, 58, 237, 0.2);
+  color: var(--info);
+}
+
+.issue-chip.unresolved {
+  background: var(--danger-soft);
+  border-color: rgba(179, 58, 50, 0.2);
+  color: var(--danger);
+}
+
+.issue-section {
+  margin: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+
+.issue-list {
+  display: grid;
+  gap: 6px;
+}
+
+.issue-item {
+  display: grid;
+  gap: 2px;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: #ffffff;
+}
+
+.issue-item strong {
+  font-size: 0.88rem;
+}
+
+.issue-item span {
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.issue-item.unresolved {
+  border-color: #e6aaa5;
+  background: #fff8f7;
 }
 
 /* Miller Columns Panel Layout */

@@ -3,6 +3,8 @@ import type {
   GraphNode as DependencyGraphNode,
   StructureGraphEdge,
   StructureGraphNode,
+  UnresolvedImport,
+  RuleValidationResult,
 } from '@depxray/core';
 
 export type {
@@ -23,6 +25,8 @@ export interface ExplorerGraphNode extends StructureGraphNode {
   componentName?: string;
   workspace?: DependencyGraphNode['workspace'];
   metrics?: DependencyGraphNode['metrics'];
+  unusedExports?: DependencyGraphNode['unusedExports'];
+  unresolvedImports?: DependencyGraphNode['unresolvedImports'];
   pluginData?: DependencyGraphNode['pluginData'];
 }
 
@@ -48,6 +52,12 @@ export interface ExplorerGraphData {
   circularCount: number;
   circularDependencies: Array<{ chain: string[]; description: string }>;
   orphanFiles: string[];
+  unresolvedImports: UnresolvedImport[];
+  dependencyIssues?: {
+    unused: string[];
+    unlisted: string[];
+  };
+  ruleValidation?: RuleValidationResult;
   pluginData?: Record<string, unknown>;
   generatedBy: string;
   errors: Array<{ filePath: string; error: string }>;
@@ -70,6 +80,7 @@ export interface DependencyFilters {
   showDynamicEdges: boolean;
   circularOnly: boolean;
   orphanOnly: boolean;
+  unusedExportsOnly?: boolean;
 }
 
 declare global {

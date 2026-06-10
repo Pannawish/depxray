@@ -205,6 +205,114 @@ describe('scanProject — integration', () => {
     );
   });
 
+  it('should detect unused exports across barrels and export-all re-exports', async () => {
+    const projectDir = path.join(__dirname, 'tmp-unused-exports-project');
+    await fs.rm(projectDir, { recursive: true, force: true });
+    await fs.mkdir(path.join(projectDir, 'src'), { recursive: true });
+    await fs.writeFile(
+      path.join(projectDir, 'src/index.ts'),
+      [
+        "import { usedValue, starUsed } from './barrel';",
+        'export const entry = [usedValue, starUsed].join(":");',
+      ].join('\n'),
+      'utf-8',
+    );
+    await fs.writeFile(
+      path.join(projectDir, 'src/barrel.ts'),
+      [
+        "export { usedValue, unusedValue, type SharedType } from './feature';",
+        "export * from './widgets';",
+      ].join('\n'),
+      'utf-8',
+    );
+    await fs.writeFile(
+      path.join(projectDir, 'src/feature.ts'),
+      [
+        'export const usedValue = "used";',
+        'export const unusedValue = "unused";',
+        'export default function Feature() { return usedValue; }',
+        'export type SharedType = { value: string };',
+      ].join('\n'),
+      'utf-8',
+    );
+    await fs.writeFile(
+      path.join(projectDir, 'src/widgets.ts'),
+      [
+        'export const starUsed = "used";',
+        'export const starUnused = "unused";',
+      ].join('\n'),
+      'utf-8',
+    );
+    await fs.writeFile(
+      path.join(projectDir, 'src/public-api.ts'),
+      'export const publicValue = "entry-point";\n',
+      'utf-8',
+    );
+
+    try {
+      const result = await scanProject({
+        rootDir: projectDir,
+        entryPointPatterns: ['src/index.ts', 'src/public-api.ts'],
+      });
+
+      const byRelativePath = new Map(
+        result.graph.nodes.map((node) => [node.relativePath, node]),
+      );
+
+      expect(byRelativePath.get('src/index.ts')?.unusedExports ?? []).toEqual([]);
+      expect(byRelativePath.get('src/public-api.ts')?.unusedExports ?? []).toEqual([]);
+      expect(byRelativePath.get('src/barrel.ts')?.unusedExports).toEqual([
+        { name: 'SharedType', kind: 'reexport', isTypeOnly: true, line: 1 },
+        { name: 'unusedValue', kind: 'reexport', isTypeOnly: false, line: 1 },
+      ]);
+      expect(byRelativePath.get('src/feature.ts')?.unusedExports).toEqual([
+        { name: 'unusedValue', kind: 'named', isTypeOnly: false, line: 2 },
+        { name: 'default', kind: 'default', isTypeOnly: false, line: 3 },
+        { name: 'SharedType', kind: 'named', isTypeOnly: true, line: 4 },
+      ]);
+      expect(byRelativePath.get('src/widgets.ts')?.unusedExports).toEqual([
+        { name: 'starUnused', kind: 'named', isTypeOnly: false, line: 2 },
+      ]);
+    } finally {
+      await fs.rm(projectDir, { recursive: true, force: true });
+    }
+  });
+
+  it('should collect unresolved imports while ignoring external packages and assets', async () => {
+    const projectDir = path.join(__dirname, 'tmp-unresolved-imports-project');
+    await fs.rm(projectDir, { recursive: true, force: true });
+    await fs.mkdir(path.join(projectDir, 'src'), { recursive: true });
+    await fs.writeFile(
+      path.join(projectDir, 'src/index.ts'),
+      [
+        "import { helper } from './missing-helper';",
+        "import './missing.css';",
+        "import React from 'react';",
+        'export const value = helper;',
+      ].join('\n'),
+      'utf-8',
+    );
+
+    try {
+      const result = await scanProject({ rootDir: projectDir });
+      const indexNode = result.graph.nodes.find((node) => node.relativePath === 'src/index.ts');
+
+      expect(result.unresolvedImports).toHaveLength(1);
+      expect(result.unresolvedImports[0]).toMatchObject({
+        file: 'src/index.ts',
+        absoluteFilePath: path.join(projectDir, 'src/index.ts'),
+        importSpecifier: './missing-helper',
+        line: 1,
+        isTypeOnly: false,
+        isDynamic: false,
+      });
+      expect(result.unresolvedImports[0]?.error).toContain('Could not resolve');
+      expect(indexNode?.unresolvedImports).toEqual(result.unresolvedImports);
+    } finally {
+      await fs.rm(projectDir, { recursive: true, force: true });
+    }
+  });
+
   it('should optionally detect unused and unlisted npm dependencies', async () => {
     const projectDir = path.join(__dirname, 'tmp-unused-deps-project');
     await fs.rm(projectDir, { recursive: true, force: true });

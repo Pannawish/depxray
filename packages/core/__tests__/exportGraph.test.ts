@@ -112,4 +112,35 @@ describe('exportGraphJSON', () => {
     expect(parsed.edges[0].target).toBe('src/Button.tsx');
     expect(parsed.edges[0].importSpecifier).toBe('./Button');
   });
+
+  it('should include top-level unresolved imports aggregated from nodes', () => {
+    const fileImports = new Map<string, ResolvedImport[]>();
+    fileImports.set(`${ROOT_DIR}/src/App.tsx`, []);
+    const graph = buildGraph(fileImports, ROOT_DIR, makeMeta());
+    graph.nodes[0] = {
+      ...graph.nodes[0],
+      unresolvedImports: [
+        {
+          file: 'src/App.tsx',
+          absoluteFilePath: `${ROOT_DIR}/src/App.tsx`,
+          importSpecifier: './missing',
+          line: 3,
+          isTypeOnly: false,
+          isDynamic: false,
+        },
+      ],
+    };
+
+    const parsed = JSON.parse(exportGraphJSON(graph));
+    expect(parsed.unresolvedImports).toEqual([
+      {
+        file: 'src/App.tsx',
+        absoluteFilePath: `${ROOT_DIR}/src/App.tsx`,
+        importSpecifier: './missing',
+        line: 3,
+        isTypeOnly: false,
+        isDynamic: false,
+      },
+    ]);
+  });
 });

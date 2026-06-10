@@ -169,6 +169,52 @@ function addBulletList(lines: string[], items: string[]): void {
   lines.push('');
 }
 
+function addUnusedExportsTable(lines: string[], nodes: GraphNode[]): void {
+  const filesWithUnusedExports = nodes
+    .filter((node) => (node.unusedExports?.length ?? 0) > 0)
+    .sort((a, b) => (
+      (b.unusedExports?.length ?? 0) - (a.unusedExports?.length ?? 0)
+      || a.relativePath.localeCompare(b.relativePath)
+    ));
+
+  if (filesWithUnusedExports.length === 0) {
+    lines.push('_None_');
+    lines.push('');
+    return;
+  }
+
+  lines.push('| File | Unused exports |');
+  lines.push('| --- | --- |');
+  for (const node of filesWithUnusedExports) {
+    const exportsText = (node.unusedExports ?? [])
+      .map((unusedExport) => (
+        `${unusedExport.name} (${unusedExport.kind}${unusedExport.isTypeOnly ? ', type-only' : ''}, line ${unusedExport.line})`
+      ))
+      .join('<br>');
+    lines.push(
+      `| \`${escapeMarkdownTableCell(node.relativePath)}\` | ${escapeMarkdownTableCell(exportsText)} |`,
+    );
+  }
+  lines.push('');
+}
+
+function addUnresolvedImportsTable(lines: string[], unresolvedImports: ScanResult['unresolvedImports']): void {
+  if (unresolvedImports.length === 0) {
+    lines.push('_None_');
+    lines.push('');
+    return;
+  }
+
+  lines.push('| File | Line | Import |');
+  lines.push('| --- | ---: | --- |');
+  for (const unresolvedImport of unresolvedImports) {
+    lines.push(
+      `| \`${escapeMarkdownTableCell(unresolvedImport.file)}\` | ${unresolvedImport.line} | \`${escapeMarkdownTableCell(unresolvedImport.importSpecifier)}\` |`,
+    );
+  }
+  lines.push('');
+}
+
 export function generateMarkdownReport(
   result: ScanResult,
   reportData?: ReportHookData,
@@ -197,6 +243,8 @@ export function generateMarkdownReport(
   lines.push(`| Imports | ${result.totalImports} |`);
   lines.push(`| Circular chains | ${result.circularCount} |`);
   lines.push(`| Orphan files | ${result.orphanFiles.length} |`);
+  lines.push(`| Files with unused exports | ${nodes.filter((node) => (node.unusedExports?.length ?? 0) > 0).length} |`);
+  lines.push(`| Unresolved imports | ${result.unresolvedImports.length} |`);
   lines.push(`| Total LOC | ${totalLoc} |`);
   lines.push(`| Scan duration | ${formatNumber(result.durationMs)} ms |`);
   lines.push('');
@@ -215,6 +263,12 @@ export function generateMarkdownReport(
   lines.push('## Circular Dependency Chains');
   lines.push('');
   addBulletList(lines, circularChains);
+  lines.push('## Unused Exports');
+  lines.push('');
+  addUnusedExportsTable(lines, nodes);
+  lines.push('## Unresolved Imports');
+  lines.push('');
+  addUnresolvedImportsTable(lines, result.unresolvedImports);
   if (reportData?.sections.length) {
     for (const section of reportData.sections) {
       lines.push(section.trimEnd());

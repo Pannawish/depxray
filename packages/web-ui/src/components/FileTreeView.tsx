@@ -8,6 +8,8 @@ export interface FileTreeRowData {
   matched: boolean;
   circular: boolean;
   orphan: boolean;
+  unusedExports: boolean;
+  unresolvedImports: boolean;
 }
 
 interface FileTreeViewProps {
@@ -104,6 +106,8 @@ export function FileTreeView({
               row.matched ? 'matched' : '',
               row.circular ? 'circular' : '',
               row.orphan ? 'orphan' : '',
+              row.unusedExports ? 'unused-exports' : '',
+              row.unresolvedImports ? 'unresolved-imports' : '',
             ].filter(Boolean).join(' ')}
             key={row.node.id}
             onClick={() => onSelectNode(row.node.id)}
@@ -127,10 +131,19 @@ export function FileTreeView({
             <span className="tree-label">{row.node.label}</span>
             {row.node.kind === 'directory' ? (
               <span className="tree-meta">{row.node.childCount}</span>
-            ) : row.orphan ? (
-              <span className="tree-meta orphan-badge" title="No incoming imports">orphan</span>
             ) : (
-              <span className="tree-meta">{row.node.extension ?? 'file'}</span>
+              <span className="tree-meta-group">
+                {row.orphan ? (
+                  <span className="tree-meta orphan-badge" title="No incoming imports">orphan</span>
+                ) : null}
+                {row.unusedExports ? (
+                  <span className="tree-meta unused-badge" title="File has unused exports">unused</span>
+                ) : null}
+                {row.unresolvedImports ? (
+                  <span className="tree-meta unresolved-badge" title="File has unresolved imports">warn</span>
+                ) : null}
+                <span className="tree-meta">{row.node.extension ?? 'file'}</span>
+              </span>
             )}
           </button>
         ))}
