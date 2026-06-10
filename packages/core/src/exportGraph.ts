@@ -32,6 +32,7 @@ export function exportGraphJSON(
       inDegree: node.inDegree,
       outDegree: node.outDegree,
       isCircular: node.isCircular,
+      ...(node.workspace ? { workspace: node.workspace } : {}),
       ...(node.metrics ? { metrics: node.metrics } : {}),
       ...(node.componentName ? { componentName: node.componentName } : {}),
     })),
@@ -46,6 +47,7 @@ export function exportGraphJSON(
       importedNames: edge.importedNames,
       isTypeOnly: edge.isTypeOnly,
       isDynamic: edge.isDynamic,
+      ...(edge.isCrossPackage ? { isCrossPackage: edge.isCrossPackage } : {}),
     })),
     circularDependencies: graph.circularDependencies,
   };

@@ -21,6 +21,7 @@ export interface ExplorerGraphNode extends StructureGraphNode {
   isCircular?: boolean;
   isOrphan?: boolean;
   componentName?: string;
+  workspace?: DependencyGraphNode['workspace'];
   metrics?: DependencyGraphNode['metrics'];
 }
 
@@ -30,6 +31,7 @@ export interface ExplorerGraphEdge extends StructureGraphEdge {
   importedNames?: string[];
   isTypeOnly?: boolean;
   isDynamic?: boolean;
+  isCrossPackage?: DependencyGraphEdge['isCrossPackage'];
 }
 
 export interface ExplorerGraphData {

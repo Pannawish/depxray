@@ -137,6 +137,9 @@ export interface GraphNode {
   /** Whether this file participates in a circular dependency */
   isCircular: boolean;
 
+  /** Workspace/package this file belongs to in a monorepo */
+  workspace?: string;
+
   /** Complexity and health metrics for this file */
   metrics?: FileMetrics;
 
@@ -185,6 +188,9 @@ export interface GraphEdge {
 
   /** Whether this is a dynamic import (`import('...')`) */
   isDynamic: boolean;
+
+  /** Whether this import crosses workspace/package boundaries */
+  isCrossPackage?: boolean;
 }
 
 /**
@@ -219,6 +225,20 @@ export interface DependencyGraph {
 
   /** Metadata about the scan */
   metadata: ScanMetadata;
+}
+
+/**
+ * A detected workspace package inside a monorepo.
+ */
+export interface WorkspaceInfo {
+  /** Workspace display name, usually package.json name */
+  name: string;
+
+  /** Path relative to the project root */
+  relativePath: string;
+
+  /** Absolute workspace directory path */
+  absolutePath: string;
 }
 
 // ─── Scan Configuration ────────────────────────────────────────────────────

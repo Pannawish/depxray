@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- Added monorepo workspace awareness for dependency scans, including per-node workspace labels and cross-package edge metadata.
+- Added browser graph workspace coloring and dashed cross-package dependency edges.
+
 ## 1.4.0 - 10/06/2026
 
 ### Added

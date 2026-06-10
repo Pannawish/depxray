@@ -33,7 +33,10 @@ function isExternalImport(
 
   // Check if it matches an alias
   for (const alias of aliases) {
-    if (specifier.startsWith(alias.prefix)) {
+    if (
+      specifier === alias.prefix ||
+      (alias.prefix.endsWith('/') && specifier.startsWith(alias.prefix))
+    ) {
       return false;
     }
   }
@@ -96,8 +99,10 @@ function resolveAlias(
   extensions: string[],
 ): string | null {
   for (const alias of aliases) {
-    if (specifier.startsWith(alias.prefix)) {
-      const remainder = specifier.slice(alias.prefix.length);
+    const isExactAlias = specifier === alias.prefix;
+    const isPrefixAlias = alias.prefix.endsWith('/') && specifier.startsWith(alias.prefix);
+    if (isExactAlias || isPrefixAlias) {
+      const remainder = specifier.slice(alias.prefix.length).replace(/^[/\\]/, '');
 
       // Try each alias target path
       for (const aliasPath of alias.paths) {

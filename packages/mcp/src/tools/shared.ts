@@ -20,6 +20,7 @@ export interface ExplorerGraphNode extends StructureGraphNode {
   isCircular?: boolean;
   isOrphan?: boolean;
   componentName?: string;
+  workspace?: string;
   metrics?: ScanResult['graph']['nodes'][number]['metrics'];
 }
 
@@ -29,6 +30,7 @@ export interface ExplorerGraphEdge extends StructureGraphEdge {
   importedNames?: string[];
   isTypeOnly?: boolean;
   isDynamic?: boolean;
+  isCrossPackage?: boolean;
 }
 
 export interface ExplorerGraphData {
@@ -124,6 +126,7 @@ export function toDependencyGraphData(result: ScanResult): ExplorerGraphData {
     outDegree: node.outDegree,
     isCircular: node.isCircular,
     isOrphan: orphanFileSet.has(node.relativePath),
+    ...(node.workspace ? { workspace: node.workspace } : {}),
     ...(node.metrics ? { metrics: node.metrics } : {}),
     ...(node.componentName ? { componentName: node.componentName } : {}),
   }));
@@ -137,6 +140,7 @@ export function toDependencyGraphData(result: ScanResult): ExplorerGraphData {
     importedNames: edge.importedNames,
     isTypeOnly: edge.isTypeOnly,
     isDynamic: edge.isDynamic,
+    ...(edge.isCrossPackage ? { isCrossPackage: edge.isCrossPackage } : {}),
   }));
 
   return {

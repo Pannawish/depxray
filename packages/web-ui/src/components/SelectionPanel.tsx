@@ -216,6 +216,7 @@ export function SelectionPanel({
             <DetailRow label="Incoming imports" value={importedBy.length} />
             <DetailRow label="Circular" value={node.isCircular ? 'yes' : 'no'} />
             <DetailRow label="Orphan" value={node.isOrphan ? 'yes' : 'no'} />
+            {node.workspace ? <DetailRow label="Workspace" value={node.workspace} /> : null}
             {node.metrics ? (
               <>
                 <DetailRow label="Lines of code" value={node.metrics.loc} />

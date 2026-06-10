@@ -19,6 +19,11 @@ export { buildGraph } from './buildGraph.js';
 export { detectCircularDeps } from './detectCircularDeps.js';
 export { detectOrphanFiles, matchesAnyPattern } from './detectOrphanFiles.js';
 export { detectUnusedDeps } from './detectUnusedDeps.js';
+export {
+  createWorkspaceAliases,
+  detectWorkspaces,
+  getWorkspaceForPath,
+} from './detectWorkspaces.js';
 export { discoverFiles } from './fileDiscovery.js';
 export { loadAliases } from './configLoader.js';
 export { loadConfig } from './loadConfig.js';
@@ -31,6 +36,7 @@ export type {
   GraphEdge,
   FileMetrics,
   UnusedDepsResult,
+  WorkspaceInfo,
   StructureGraphNode,
   StructureGraphEdge,
   StructureGraph,

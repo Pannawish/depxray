@@ -248,6 +248,56 @@ describe('scanProject — integration', () => {
     }
   });
 
+  it('should annotate workspace nodes and cross-package edges', async () => {
+    const projectDir = path.join(__dirname, 'tmp-monorepo-project');
+    await fs.rm(projectDir, { recursive: true, force: true });
+    await fs.mkdir(path.join(projectDir, 'packages/app/src'), { recursive: true });
+    await fs.mkdir(path.join(projectDir, 'packages/lib/src'), { recursive: true });
+    await fs.writeFile(
+      path.join(projectDir, 'package.json'),
+      JSON.stringify({ private: true, workspaces: ['packages/*'] }),
+      'utf-8',
+    );
+    await fs.writeFile(
+      path.join(projectDir, 'packages/app/package.json'),
+      JSON.stringify({ name: '@repo/app' }),
+      'utf-8',
+    );
+    await fs.writeFile(
+      path.join(projectDir, 'packages/lib/package.json'),
+      JSON.stringify({ name: '@repo/lib' }),
+      'utf-8',
+    );
+    await fs.writeFile(
+      path.join(projectDir, 'packages/lib/src/index.ts'),
+      'export function util() { return "ok"; }\n',
+      'utf-8',
+    );
+    await fs.writeFile(
+      path.join(projectDir, 'packages/app/src/index.ts'),
+      'import { util } from "@repo/lib";\nexport const value = util();\n',
+      'utf-8',
+    );
+
+    try {
+      const result = await scanProject({ rootDir: projectDir });
+      const appNode = result.graph.nodes.find((node) => (
+        node.relativePath === 'packages/app/src/index.ts'
+      ));
+      const libNode = result.graph.nodes.find((node) => (
+        node.relativePath === 'packages/lib/src/index.ts'
+      ));
+      const crossPackageEdge = result.graph.edges.find((edge) => edge.isCrossPackage);
+
+      expect(appNode?.workspace).toBe('@repo/app');
+      expect(libNode?.workspace).toBe('@repo/lib');
+      expect(crossPackageEdge).toBeDefined();
+      expect(crossPackageEdge?.importSpecifier).toBe('@repo/lib');
+    } finally {
+      await fs.rm(projectDir, { recursive: true, force: true });
+    }
+  });
+
   // ─── Export ──────────────────────────────────────────────────────────
 
   it('should produce valid exportable JSON', async () => {

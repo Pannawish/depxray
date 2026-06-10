@@ -38,6 +38,11 @@ import { detectOrphanFiles } from './detectOrphanFiles.js';
 import { loadAliases } from './configLoader.js';
 import { computeFileMetrics } from './computeMetrics.js';
 import { detectUnusedDeps } from './detectUnusedDeps.js';
+import {
+  createWorkspaceAliases,
+  detectWorkspaces,
+  getWorkspaceForPath,
+} from './detectWorkspaces.js';
 
 /**
  * Scan a React project and build its dependency graph.
@@ -113,7 +118,10 @@ export async function scanProject(options: ScanOptions): Promise<ScanResult> {
   ];
 
   // ── Step 1: Load aliases from tsconfig.json ──────────────────────────
-  const aliases = resolveAliases ? loadAliases(resolvedRoot) : [];
+  const workspaces = await detectWorkspaces(resolvedRoot);
+  const aliases = resolveAliases
+    ? [...loadAliases(resolvedRoot), ...createWorkspaceAliases(workspaces)]
+    : createWorkspaceAliases(workspaces);
 
   // ── Step 2: Discover all scannable files ─────────────────────────────
   const filePaths = await discoverFiles(
@@ -217,22 +225,48 @@ export async function scanProject(options: ScanOptions): Promise<ScanResult> {
   };
 
   let graph = buildGraph(fileImportsMap, resolvedRoot, metadata);
+  const workspaceByNodeId = new Map<string, string>();
 
   graph = {
     ...graph,
     nodes: graph.nodes.map((node) => {
+      const workspace = getWorkspaceForPath(node.id, workspaces)?.name;
+      if (workspace) {
+        workspaceByNodeId.set(node.id, workspace);
+      }
+
       const baseMetrics = fileMetricsMap.get(node.id);
       if (!baseMetrics) {
-        return node;
+        return {
+          ...node,
+          ...(workspace ? { workspace } : {}),
+        };
       }
 
       const totalDegree = node.inDegree + node.outDegree;
       return {
         ...node,
+        ...(workspace ? { workspace } : {}),
         metrics: {
           ...baseMetrics,
           instability: totalDegree === 0 ? 0 : node.outDegree / totalDegree,
         },
+      };
+    }),
+  };
+
+  graph = {
+    ...graph,
+    edges: graph.edges.map((edge) => {
+      const sourceWorkspace = workspaceByNodeId.get(edge.source);
+      const targetWorkspace = workspaceByNodeId.get(edge.target);
+      if (!sourceWorkspace || !targetWorkspace || sourceWorkspace === targetWorkspace) {
+        return edge;
+      }
+
+      return {
+        ...edge,
+        isCrossPackage: true,
       };
     }),
   };

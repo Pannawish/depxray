@@ -18,6 +18,7 @@
 - Detect circular dependencies
 - Detect orphan files with no incoming imports in dependency mode
 - Detect unused and unlisted npm dependencies
+- Detect workspace ownership and cross-package imports in monorepos
 - Export machine-readable JSON for scripts and AI workflows
 - Expose dependency-analysis tools to AI clients through `@depxray/mcp`
 - Generate Markdown project health reports
@@ -84,6 +85,7 @@ Current UI and graph-data capabilities include:
 - graph zoom, pan, node dragging, click-to-select, and selected-node centering
 - graph node labels with Smart, All, and None label visibility modes
 - graph node coloring by file extension, circular status, and orphan status
+- graph node coloring by workspace in monorepos, with dashed cross-package dependency edges
 - directional dependency arrows with circular relationships highlighted
 - file details such as relative path, absolute path, extension, depth, size, incoming count, outgoing count, circular status, and orphan status
 - file metrics such as lines of code, cyclomatic complexity, export count, and instability
@@ -314,6 +316,7 @@ It supports:
 - circular dependency detection
 - orphan file detection with configurable entry point exclusions
 - unused and unlisted npm dependency detection
+- monorepo workspace metadata and cross-package dependency detection
 - per-file LOC, cyclomatic complexity, export count, and instability metrics
 - interactive force-directed dependency and structure graph visualization
 - watch mode with live browser UI updates

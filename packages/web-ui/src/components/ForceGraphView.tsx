@@ -33,6 +33,7 @@ interface ForceGraphNode {
   outDegree?: number;
   isCircular?: boolean;
   isOrphan?: boolean;
+  workspace?: string;
 }
 
 interface ForceGraphLink {
@@ -43,6 +44,7 @@ interface ForceGraphLink {
   circular: boolean;
   typeOnly?: boolean;
   dynamic?: boolean;
+  crossPackage?: boolean;
 }
 
 interface LabelBounds {
@@ -61,6 +63,29 @@ const EXTENSION_COLORS = new Map<string, string>([
   ['.json', '#0f766e'],
 ]);
 
+const WORKSPACE_COLORS = [
+  '#2563eb',
+  '#0f766e',
+  '#7c3aed',
+  '#b45309',
+  '#be123c',
+  '#047857',
+  '#4338ca',
+  '#a16207',
+];
+
+function hashString(value: string): number {
+  let hash = 0;
+  for (let index = 0; index < value.length; index += 1) {
+    hash = (hash * 31 + value.charCodeAt(index)) >>> 0;
+  }
+  return hash;
+}
+
+function getWorkspaceColor(workspace: string): string {
+  return WORKSPACE_COLORS[hashString(workspace) % WORKSPACE_COLORS.length];
+}
+
 function getNodeColor(node: ForceGraphNode, selectedNodeId: string | null): string {
   if (node.id === selectedNodeId) {
     return '#0f6b59';
@@ -76,6 +101,10 @@ function getNodeColor(node: ForceGraphNode, selectedNodeId: string | null): stri
 
   if (node.kind === 'directory') {
     return '#647080';
+  }
+
+  if (node.workspace) {
+    return getWorkspaceColor(node.workspace);
   }
 
   return EXTENSION_COLORS.get(node.extension ?? '') ?? '#334155';
@@ -206,6 +235,7 @@ export function ForceGraphView({
       outDegree: node.outDegree,
       isCircular: circularNodeIds.has(node.id),
       isOrphan: orphanNodeIds.has(node.id),
+      workspace: node.workspace,
     }));
 
     const graphLinks: ForceGraphLink[] = edges
@@ -218,6 +248,7 @@ export function ForceGraphView({
         circular: circularNodeIds.has(edge.source) && circularNodeIds.has(edge.target),
         typeOnly: edge.isTypeOnly,
         dynamic: edge.isDynamic,
+        crossPackage: edge.isCrossPackage,
       }));
 
     return {
@@ -307,7 +338,11 @@ export function ForceGraphView({
           enablePointerInteraction
           enableZoomInteraction
           linkColor={(link: LinkObject<ForceGraphNode, ForceGraphLink>) => (
-            (link as ForceGraphLink).circular ? '#b33a32' : '#b7c1cd'
+            (link as ForceGraphLink).circular
+              ? '#b33a32'
+              : (link as ForceGraphLink).crossPackage
+                ? '#475569'
+                : '#b7c1cd'
           )}
           linkDirectionalArrowColor={(link: LinkObject<ForceGraphNode, ForceGraphLink>) => (
             (link as ForceGraphLink).circular ? '#b33a32' : '#94a3b8'
@@ -315,10 +350,14 @@ export function ForceGraphView({
           linkDirectionalArrowLength={graphMode === 'dependencies' ? 5 : 3}
           linkDirectionalArrowRelPos={1}
           linkLineDash={(link: LinkObject<ForceGraphNode, ForceGraphLink>) => (
-            (link as ForceGraphLink).typeOnly ? [4, 3] : null
+            (link as ForceGraphLink).crossPackage
+              ? [7, 4]
+              : (link as ForceGraphLink).typeOnly
+                ? [4, 3]
+                : null
           )}
           linkWidth={(link: LinkObject<ForceGraphNode, ForceGraphLink>) => (
-            (link as ForceGraphLink).circular ? 2 : 1
+            (link as ForceGraphLink).circular || (link as ForceGraphLink).crossPackage ? 2 : 1
           )}
           nodeCanvasObject={(node, context, globalScale) => {
             drawNode(node, context, globalScale, selectedNodeId, occupiedLabelBoundsRef.current, labelMode);
@@ -328,7 +367,8 @@ export function ForceGraphView({
             const details = graphNode.kind === 'file'
               ? `in ${graphNode.inDegree ?? 0} / out ${graphNode.outDegree ?? 0}`
               : 'directory';
-            return `${graphNode.relativePath} - ${details}`;
+            const workspace = graphNode.workspace ? ` - ${graphNode.workspace}` : '';
+            return `${graphNode.relativePath}${workspace} - ${details}`;
           }}
           nodePointerAreaPaint={(node, color, context) => {
             const graphNode = node as NodeObject<ForceGraphNode> & ForceGraphNode;

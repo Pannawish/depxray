@@ -165,6 +165,7 @@ function makeDataSet(): ExplorerGraphSet {
             inDegree: 1,
             outDegree: 3,
             isCircular: true,
+            workspace: '@repo/app',
           },
           {
             id: header,
@@ -181,6 +182,7 @@ function makeDataSet(): ExplorerGraphSet {
             inDegree: 1,
             outDegree: 1,
             isCircular: true,
+            workspace: '@repo/app',
           },
           {
             id: types,
@@ -230,6 +232,7 @@ function makeDataSet(): ExplorerGraphSet {
             outDegree: 1,
             isCircular: false,
             isOrphan: true,
+            workspace: '@repo/tools',
           },
         ],
         edges: [
@@ -282,6 +285,7 @@ function makeDataSet(): ExplorerGraphSet {
             importedNames: ['Header'],
             isTypeOnly: false,
             isDynamic: false,
+            isCrossPackage: true,
           },
         ],
       },
@@ -313,6 +317,8 @@ describe('relationship index', () => {
     expect(Array.from(index.circularNodeIds)).toEqual([app, header]);
     expect(Array.from(index.orphanNodeIds)).toEqual([external]);
     expect(index.nodeById.get(external)?.isOrphan).toBe(true);
+    expect(index.nodeById.get(app)?.workspace).toBe('@repo/app');
+    expect(index.nodeById.get(external)?.workspace).toBe('@repo/tools');
   });
 
   it('filters type-only and dynamic edges', () => {
@@ -340,6 +346,7 @@ describe('relationship index', () => {
       'app-lazy',
     ]);
     expect(summary.incomingExternal.map((edge) => edge.id)).toEqual(['external-header']);
+    expect(summary.incomingExternal[0].isCrossPackage).toBe(true);
     expect(summary.outgoingExternal).toEqual([]);
     expect(summary.circularFiles.map((node) => node.id)).toEqual([app, header]);
     expect(summary.orphanFiles).toEqual([]);

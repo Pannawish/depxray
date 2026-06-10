@@ -15,6 +15,7 @@ For MCP-compatible AI clients, use the companion package `@depxray/mcp`.
 - Detect circular dependencies quickly
 - Detect orphan files with no incoming imports
 - Detect unused and unlisted npm dependencies
+- Detect workspace ownership and cross-package imports in monorepos
 - Export JSON for scripts, automation, and AI coding agents
 - Generate Markdown project health reports
 - Generate a standalone HTML report for local review or sharing
@@ -331,6 +332,7 @@ It supports:
 - circular dependency detection
 - orphan file detection with configurable entry point exclusions
 - unused and unlisted npm dependency detection
+- monorepo workspace metadata and cross-package dependency detection
 - per-file LOC, cyclomatic complexity, export count, and instability metrics
 - Markdown health reports with hub files, heavy importers, orphans, circular chains, and complexity hotspots
 - interactive force-directed dependency and structure graph visualization

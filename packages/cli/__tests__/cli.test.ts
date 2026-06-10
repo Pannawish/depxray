@@ -209,6 +209,55 @@ describe('CLI Integration Tests', () => {
       });
     });
 
+    it('should include workspace and cross-package metadata in dependency JSON', async () => {
+      await fs.mkdir(path.join(TEMP_DIR, 'packages/app/src'), { recursive: true });
+      await fs.mkdir(path.join(TEMP_DIR, 'packages/lib/src'), { recursive: true });
+      await fs.writeFile(
+        path.join(TEMP_DIR, 'package.json'),
+        JSON.stringify({ private: true, workspaces: ['packages/*'] }),
+        'utf-8',
+      );
+      await fs.writeFile(
+        path.join(TEMP_DIR, 'packages/app/package.json'),
+        JSON.stringify({ name: '@repo/app' }),
+        'utf-8',
+      );
+      await fs.writeFile(
+        path.join(TEMP_DIR, 'packages/lib/package.json'),
+        JSON.stringify({ name: '@repo/lib' }),
+        'utf-8',
+      );
+      await fs.writeFile(
+        path.join(TEMP_DIR, 'packages/lib/src/index.ts'),
+        'export function util() { return "ok"; }\n',
+        'utf-8',
+      );
+      await fs.writeFile(
+        path.join(TEMP_DIR, 'packages/app/src/index.ts'),
+        'import { util } from "@repo/lib";\nexport const value = util();\n',
+        'utf-8',
+      );
+
+      const { stdout, exitCode } = await execa('node', [
+        CLI_PATH,
+        'scan',
+        TEMP_DIR,
+        '--mode',
+        'dependencies',
+        '--json',
+      ]);
+
+      expect(exitCode).toBe(0);
+      const parsed = JSON.parse(stdout);
+      expect(parsed.nodes.some((node: any) => (
+        node.relativePath === 'packages/app/src/index.ts' && node.workspace === '@repo/app'
+      ))).toBe(true);
+      expect(parsed.nodes.some((node: any) => (
+        node.relativePath === 'packages/lib/src/index.ts' && node.workspace === '@repo/lib'
+      ))).toBe(true);
+      expect(parsed.edges.some((edge: any) => edge.isCrossPackage)).toBe(true);
+    });
+
     it('should reject --deps with structure JSON output', async () => {
       try {
         await execa('node', [
