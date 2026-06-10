@@ -4,6 +4,8 @@ Understand a JavaScript or TypeScript codebase through an interactive graph view
 
 `depxray` is a browser-first CLI for developers and AI coding agents that need repository context before editing code. It scans a project, builds structure and dependency data, and exposes that data through a local browser UI, machine-readable JSON, or a shareable static HTML export.
 
+For MCP-compatible AI clients, use the companion package `@depxray/mcp`.
+
 ## Why depxray
 
 - Explore a repo as a compact file tree instead of a noisy full-project graph
@@ -82,6 +84,21 @@ npx depxray inspect src/components/Button.tsx --dir /path/to/project --format js
 ```
 
 Use `scan --json` when an agent needs project-wide context. Use `inspect --format json` when an agent needs focused context for one file.
+
+For clients that support MCP, configure the dedicated server package instead:
+
+```json
+{
+  "mcpServers": {
+    "depxray": {
+      "command": "npx",
+      "args": ["@depxray/mcp"]
+    }
+  }
+}
+```
+
+The MCP server exposes project scanning, file inspection, circular dependency detection, orphan detection, file-tree retrieval, and folder summaries as callable tools.
 
 ## JSON Output Examples
 

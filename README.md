@@ -6,7 +6,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![NPM Version](https://img.shields.io/npm/v/depxray)](https://www.npmjs.com/package/depxray)
 
-`depxray` helps developers and AI coding agents understand how a repository is structured and how files depend on each other. It scans a project, builds structure and dependency data, then lets you inspect imports, dependents, circular relationships, orphan files, and file details from a local browser UI or JSON output, with inline source code available in the live browser UI.
+`depxray` helps developers and AI coding agents understand how a repository is structured and how files depend on each other. It scans a project, builds structure and dependency data, then lets you inspect imports, dependents, circular relationships, orphan files, and file details from a local browser UI, JSON output, or MCP server, with inline source code available in the live browser UI.
 
 ## What It Does
 
@@ -17,6 +17,7 @@
 - Detect circular dependencies
 - Detect orphan files with no incoming imports in dependency mode
 - Export machine-readable JSON for scripts and AI workflows
+- Expose dependency-analysis tools to AI clients through `@depxray/mcp`
 - Generate a static HTML report in `.depxray/`
 
 ## Quick Start
@@ -162,6 +163,27 @@ npx depxray scan /path/to/project --json > .depxray-context.json
 npx depxray inspect src/App.tsx --dir /path/to/project --format json
 ```
 
+For MCP-compatible clients, use the dedicated server package:
+
+```bash
+npx @depxray/mcp
+```
+
+Claude Desktop configuration example:
+
+```json
+{
+  "mcpServers": {
+    "depxray": {
+      "command": "npx",
+      "args": ["@depxray/mcp"]
+    }
+  }
+}
+```
+
+The MCP server exposes `scan_project`, `inspect_file`, `find_circular`, `find_orphans`, `get_file_tree`, and `get_folder_summary`.
+
 ## How It Works
 
 `depxray` performs static analysis for JavaScript and TypeScript projects using AST-based parsing rather than regex matching.
@@ -183,7 +205,7 @@ It supports:
 
 ## Monorepo Layout
 
-This repository is organized into three main workspaces:
+This repository is organized into four main workspaces:
 
 ```mermaid
 graph TD
@@ -191,10 +213,13 @@ graph TD
 Scanner and dependency engine"]
   WebUI["@depxray/web-ui
 React browser UI"]
+  MCP["@depxray/mcp
+MCP server for AI clients"]
   CLI["depxray
 Published CLI package"]
 
   Core --> WebUI
+  Core --> MCP
   Core --> CLI
   WebUI -->|bundled web assets| CLI
 ```
@@ -202,6 +227,7 @@ Published CLI package"]
 - [`packages/core`](./packages/core): scanner and dependency-analysis engine
 - [`packages/web-ui`](./packages/web-ui): React browser UI
 - [`packages/cli`](./packages/cli): published `depxray` package with the embedded web UI
+- [`packages/mcp`](./packages/mcp): MCP stdio server for agentic AI tools
 
 ## Local Development
 
@@ -230,6 +256,7 @@ Useful workspace commands:
 
 ```bash
 npm run build --workspace @depxray/core
+npm run build --workspace @depxray/mcp
 npm run build --workspace depxray
 ```
 

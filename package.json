@@ -6,11 +6,12 @@
   "workspaces": [
     "packages/core",
     "packages/cli",
-    "packages/web-ui"
+    "packages/web-ui",
+    "packages/mcp"
   ],
   "scripts": {
     "version:sync": "node ./scripts/sync-versions.mjs",
-    "build": "npm run version:sync && npm run build --workspace @depxray/core && npm run build --workspace @depxray/web-ui && npm run build --workspace depxray",
+    "build": "npm run version:sync && npm run build --workspace @depxray/core && npm run build --workspace @depxray/web-ui && npm run build --workspace @depxray/mcp && npm run build --workspace depxray",
     "test": "npm run test --workspaces --if-present",
     "clean": "npm run clean --workspaces --if-present"
   },

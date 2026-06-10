@@ -1,0 +1,51 @@
+{
+  "name": "@depxray/mcp",
+  "version": "1.2.0",
+  "description": "MCP server for depxray dependency analysis and AI-agent codebase context.",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": {
+    "depxray-mcp": "./dist/index.js"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "vitest run",
+    "clean": "rm -rf dist",
+    "prepublishOnly": "node ../../scripts/sync-versions.mjs && npm run build"
+  },
+  "dependencies": {
+    "@depxray/core": "1.2.0",
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.4.0",
+    "vitest": "^1.6.0"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "dependency-graph",
+    "static-analysis",
+    "codebase-context",
+    "ai-agent",
+    "coding-agent",
+    "agentic-ai",
+    "llm",
+    "typescript",
+    "javascript"
+  ],
+  "author": "Pannawish Kriengyakul",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Pannawish/depxray"
+  }
+}
