@@ -15,6 +15,7 @@ For MCP-compatible AI clients, use the companion package `@depxray/mcp`.
 - Detect circular dependencies quickly
 - Detect orphan files with no incoming imports
 - Export JSON for scripts, automation, and AI coding agents
+- Generate Markdown project health reports
 - Generate a standalone HTML report for local review or sharing
 
 ## Fastest Way To Try It
@@ -67,6 +68,12 @@ Generate a standalone HTML report:
 npx depxray scan /path/to/project --html
 ```
 
+Generate a Markdown health report:
+
+```bash
+npx depxray report /path/to/project --output depxray-report.md
+```
+
 Keep the browser UI updated while editing files:
 
 ```bash
@@ -94,9 +101,10 @@ Agent-oriented commands:
 ```bash
 npx depxray scan /path/to/project --mode dependencies --json --output dep-graph.json
 npx depxray inspect src/components/Button.tsx --dir /path/to/project --format json
+npx depxray report /path/to/project --output depxray-report.md
 ```
 
-Use `scan --json` when an agent needs project-wide context. Use `inspect --format json` when an agent needs focused context for one file.
+Use `scan --json` when an agent needs project-wide context. Use `inspect --format json` when an agent needs focused context for one file. Use `report` when an agent or reviewer needs a compact Markdown health summary.
 
 For clients that support MCP, configure the dedicated server package instead:
 
@@ -229,6 +237,30 @@ depxray inspect src/App.tsx --dir /path/to/project
 depxray inspect src/App.tsx --dir /path/to/project --format json
 ```
 
+### `report`
+
+Generate a Markdown project health report with summary counts, hub files, heavy importers, orphan files, circular chains, and complexity hotspots.
+
+```bash
+depxray report [dir] [options]
+```
+
+Options:
+
+- `-o, --output <file>`: write the Markdown report to a file instead of `stdout`
+- `--ignore <patterns...>`: exclude paths from scanning
+- `--no-circular`: skip circular dependency detection
+- `--no-aliases`: skip `tsconfig.json` / `jsconfig.json` path alias resolution
+- `--entry-points <patterns...>`: glob patterns to exclude from orphan detection
+- `--extensions <exts...>`: choose scanned extensions
+
+Examples:
+
+```bash
+depxray report /path/to/project
+depxray report /path/to/project --output depxray-report.md
+```
+
 ### `init`
 
 Create a `depxray.config.js` file with commented defaults.
@@ -289,6 +321,7 @@ It supports:
 - circular dependency detection
 - orphan file detection with configurable entry point exclusions
 - per-file LOC, cyclomatic complexity, export count, and instability metrics
+- Markdown health reports with hub files, heavy importers, orphans, circular chains, and complexity hotspots
 - interactive force-directed dependency and structure graph visualization
 - watch mode with live browser UI updates
 

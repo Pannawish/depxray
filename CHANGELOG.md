@@ -8,6 +8,7 @@
 - Added a live WebSocket update channel for browser graph refreshes.
 - Added per-file metrics for lines of code, cyclomatic complexity, export count, and instability.
 - Added file metrics to dependency JSON, MCP scan/inspect output, and browser file details.
+- Added `depxray report` to generate Markdown project health reports with summary counts, hub files, heavy importers, orphans, circular chains, and complexity hotspots.
 
 ## 1.3.1 - 2026-06-10
 

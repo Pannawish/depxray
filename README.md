@@ -19,6 +19,7 @@
 - Detect orphan files with no incoming imports in dependency mode
 - Export machine-readable JSON for scripts and AI workflows
 - Expose dependency-analysis tools to AI clients through `@depxray/mcp`
+- Generate Markdown project health reports
 - Generate a static HTML report in `.depxray/`
 
 ## Quick Start
@@ -51,6 +52,12 @@ Create a reusable project config:
 
 ```bash
 npx depxray init
+```
+
+Generate a Markdown health report:
+
+```bash
+npx depxray report /path/to/project --output depxray-report.md
 ```
 
 Install globally if you prefer:
@@ -133,6 +140,9 @@ npx depxray scan /path/to/project --mode dependencies --orphans --entry-points "
 # Generate a static HTML report bundle
 npx depxray scan /path/to/project --html
 
+# Generate a Markdown project health report
+npx depxray report /path/to/project --output depxray-report.md
+
 # Keep the browser UI updated while editing files
 npx depxray scan /path/to/project --watch
 ```
@@ -155,6 +165,30 @@ Examples:
 ```bash
 npx depxray inspect src/App.tsx --dir /path/to/project
 npx depxray inspect src/App.tsx --dir /path/to/project --format json
+```
+
+### `report`
+
+Generate a Markdown project health report with summary counts, hub files, heavy importers, orphan files, circular chains, and complexity hotspots.
+
+```bash
+depxray report [dir] [options]
+```
+
+Options:
+
+- `-o, --output <file>`: write the Markdown report to a file instead of `stdout`
+- `--ignore <patterns...>`: exclude additional paths
+- `--no-circular`: skip circular dependency detection
+- `--no-aliases`: skip `tsconfig.json` / `jsconfig.json` path alias resolution
+- `--entry-points <patterns...>`: glob patterns to exclude from orphan detection
+- `--extensions <exts...>`: choose scanned extensions
+
+Examples:
+
+```bash
+npx depxray report /path/to/project
+npx depxray report /path/to/project --output depxray-report.md
 ```
 
 ### `init`
@@ -222,6 +256,7 @@ Use cases:
 - generate project-wide structure data with `scan --json`
 - generate project-wide dependency data with `scan --mode dependencies --json`
 - inspect one file's outgoing imports and incoming dependents with `inspect --format json`
+- create a Markdown health summary with `report --output depxray-report.md`
 - save JSON into agent context files or use it in automated review pipelines
 
 Examples:
@@ -229,6 +264,7 @@ Examples:
 ```bash
 npx depxray scan /path/to/project --json > .depxray-context.json
 npx depxray inspect src/App.tsx --dir /path/to/project --format json
+npx depxray report /path/to/project --output depxray-report.md
 ```
 
 For MCP-compatible clients, use the dedicated server package:

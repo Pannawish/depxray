@@ -300,6 +300,56 @@ describe('CLI Integration Tests', () => {
     });
   });
 
+  describe('report command', () => {
+    it('should output a Markdown health report', async () => {
+      const { stdout, stderr, exitCode } = await execa('node', [
+        CLI_PATH,
+        'report',
+        SIMPLE_PROJECT,
+      ]);
+
+      expect(exitCode).toBe(0);
+      expect(stderr).toContain(`Generating report for ${SIMPLE_PROJECT}`);
+      expect(stdout).toContain('# depxray Project Health Report');
+      expect(stdout).toContain('## Summary');
+      expect(stdout).toContain('| Files | 7 |');
+      expect(stdout).toContain('| Imports |');
+      expect(stdout).toContain('## Top 10 Most Imported Files');
+      expect(stdout).toContain('## Top 10 Most Importing Files');
+      expect(stdout).toContain('## Complexity Hotspots');
+      expect(stdout).toContain('`src/components/Header.tsx`');
+    });
+
+    it('should write a Markdown health report to a file', async () => {
+      await fs.mkdir(TEMP_DIR, { recursive: true });
+      const outputPath = path.join(TEMP_DIR, 'report.md');
+      const { stdout, stderr, exitCode } = await execa('node', [
+        CLI_PATH,
+        'report',
+        CIRCULAR_PROJECT,
+        '--output',
+        outputPath,
+      ]);
+
+      expect(exitCode).toBe(0);
+      expect(stdout.trim()).toBe('');
+      expect(stderr).toContain(`Report written to ${outputPath}`);
+
+      const report = await fs.readFile(outputPath, 'utf-8');
+      expect(report).toContain('# depxray Project Health Report');
+      expect(report).toContain('## Orphan Files');
+      expect(report).toContain('`src/standalone.ts`');
+      expect(report).toContain('## Circular Dependency Chains');
+    });
+
+    it('should show report help from the root help output', async () => {
+      const { stdout, exitCode } = await execa('node', [CLI_PATH, '--help']);
+
+      expect(exitCode).toBe(0);
+      expect(stdout).toContain('report [options]');
+    });
+  });
+
   describe('error cases and help', () => {
     it('should fail if directory does not exist', async () => {
       try {
