@@ -44,6 +44,7 @@ import {
   getWorkspaceForPath,
 } from './detectWorkspaces.js';
 import { attachRuleViolations, validateRules } from './validateRules.js';
+import { runAfterBuildGraphHooks, runAfterScanHooks } from './plugins.js';
 
 /**
  * Scan a React project and build its dependency graph.
@@ -98,10 +99,12 @@ export async function scanProject(options: ScanOptions): Promise<ScanResult> {
     entryPointPatterns,
     detectUnusedDeps: shouldDetectUnusedDeps = false,
     rules = [],
+    plugins = [],
   } = options;
 
   // Validate rootDir
   const resolvedRoot = path.resolve(rootDir);
+  const pluginContext = { rootDir: resolvedRoot };
   try {
     const stat = await fs.stat(resolvedRoot);
     if (!stat.isDirectory()) {
@@ -145,14 +148,19 @@ export async function scanProject(options: ScanOptions): Promise<ScanResult> {
       depxrayVersion: packageJson.version,
     };
 
-    return {
-      graph: {
+    const emptyGraph = await runAfterBuildGraphHooks(
+      {
         rootDir: resolvedRoot,
         nodes: [],
         edges: [],
         circularDependencies: [],
         metadata: emptyMetadata,
       },
+      plugins,
+      pluginContext,
+    );
+    const emptyResult: ScanResult = {
+      graph: emptyGraph,
       totalFiles: 0,
       totalImports: 0,
       circularCount: 0,
@@ -162,6 +170,7 @@ export async function scanProject(options: ScanOptions): Promise<ScanResult> {
       errors: [],
       durationMs: emptyMetadata.scanDurationMs,
     };
+    return runAfterScanHooks(emptyResult, plugins, pluginContext);
   }
 
   // ── Step 3 & 4: Parse imports and resolve paths for each file ────────
@@ -274,6 +283,8 @@ export async function scanProject(options: ScanOptions): Promise<ScanResult> {
     }),
   };
 
+  graph = await runAfterBuildGraphHooks(graph, plugins, pluginContext);
+
   // Update metadata with actual edge count
   graph.metadata.totalEdges = graph.edges.length;
 
@@ -322,7 +333,7 @@ export async function scanProject(options: ScanOptions): Promise<ScanResult> {
   const finalDurationMs = performance.now() - startTime;
   graph.metadata.scanDurationMs = finalDurationMs;
 
-  return {
+  const result: ScanResult = {
     graph,
     totalFiles: graph.nodes.length,
     totalImports: graph.edges.length,
@@ -333,4 +344,13 @@ export async function scanProject(options: ScanOptions): Promise<ScanResult> {
     errors,
     durationMs: finalDurationMs,
   };
+
+  const pluginResult = await runAfterScanHooks(result, plugins, pluginContext);
+  pluginResult.totalFiles = pluginResult.graph.nodes.length;
+  pluginResult.totalImports = pluginResult.graph.edges.length;
+  pluginResult.circularCount = pluginResult.graph.circularDependencies.length;
+  pluginResult.graph.metadata.totalFiles = pluginResult.totalFiles;
+  pluginResult.graph.metadata.totalEdges = pluginResult.totalImports;
+  pluginResult.graph.metadata.circularCount = pluginResult.circularCount;
+  return pluginResult;
 }

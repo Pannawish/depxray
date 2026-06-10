@@ -8,6 +8,8 @@
 - Added browser graph highlighting for dependency edges that violate architecture rules.
 - Added graph diffing with `depxray diff <before.json> <after.json>` and `depxray diff --base <ref>`.
 - Added machine-readable `depxray diff --json` output for added and removed files, edges, and circular dependencies.
+- Added a config-driven plugin system with `afterBuildGraph`, `afterScan`, and `onReport` hooks.
+- Added built-in plugin aliases for `@depxray/plugin-complexity` and `@depxray/plugin-mcp`.
 
 ## 1.5.0 - 10/06/2026
 

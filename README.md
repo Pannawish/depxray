@@ -20,6 +20,7 @@
 - Detect unused and unlisted npm dependencies
 - Detect workspace ownership and cross-package imports in monorepos
 - Validate dependency edges against lightweight architecture rules
+- Extend scans and reports with config-driven plugins and hooks
 - Diff dependency graph snapshots or compare a git base ref against the working tree
 - Export machine-readable JSON for scripts and AI workflows
 - Export Mermaid and DOT dependency graphs for docs and PRs
@@ -292,6 +293,11 @@ module.exports = {
       message: 'UI cannot import DB modules directly',
     },
   ],
+  plugins: [
+    '@depxray/plugin-complexity',
+    '@depxray/plugin-mcp',
+    './depxray-plugin.mjs',
+  ],
 };
 ```
 
@@ -306,6 +312,26 @@ Supported fields:
 - `port`: preferred browser UI port
 - `depth`: initial visible depth, using an integer `>= 1` or `all`
 - `rules`: architecture rules for `scan --validate`; matching imports are reported and `error` violations exit with code 1
+- `plugins`: plugin module specifiers or inline plugin objects with `afterBuildGraph`, `afterScan`, or `onReport` hooks
+
+Example plugin module:
+
+```js
+export function afterScan(result) {
+  return {
+    ...result,
+    pluginData: {
+      ...result.pluginData,
+      customSummary: { files: result.totalFiles },
+    },
+  };
+}
+```
+
+Built-in plugin aliases:
+
+- `@depxray/plugin-complexity`: adds scan-level complexity summary metadata
+- `@depxray/plugin-mcp`: adds MCP tool and scan summary metadata for agent workflows
 
 ## For AI Agents
 
@@ -375,6 +401,7 @@ It supports:
 - unused and unlisted npm dependency detection
 - monorepo workspace metadata and cross-package dependency detection
 - architecture rule validation with browser-highlighted violating edges
+- plugin hooks for extending graph metadata, scan metadata, and report data
 - dependency graph diffing for files, edges, and circular dependency changes
 - per-file LOC, cyclomatic complexity, export count, and instability metrics
 - interactive force-directed dependency and structure graph visualization

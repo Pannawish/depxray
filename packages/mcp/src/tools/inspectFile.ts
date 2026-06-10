@@ -42,6 +42,7 @@ export async function inspectFileTool(input: InspectFileInput) {
     isOrphan: result.orphanFiles.includes(node.relativePath),
     workspace: node.workspace,
     metrics: node.metrics,
+    pluginData: node.pluginData,
     imports: imports.map((edge) => ({
       file: path.relative(rootDir, edge.target),
       absolutePath: edge.target,
@@ -51,6 +52,7 @@ export async function inspectFileTool(input: InspectFileInput) {
       isDynamic: edge.isDynamic,
       isCrossPackage: edge.isCrossPackage,
       ruleViolations: edge.ruleViolations,
+      pluginData: edge.pluginData,
     })),
     dependents: dependents.map((edge) => ({
       file: path.relative(rootDir, edge.source),
@@ -61,6 +63,7 @@ export async function inspectFileTool(input: InspectFileInput) {
       isDynamic: edge.isDynamic,
       isCrossPackage: edge.isCrossPackage,
       ruleViolations: edge.ruleViolations,
+      pluginData: edge.pluginData,
     })),
   };
 }

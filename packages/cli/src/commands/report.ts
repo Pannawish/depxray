@@ -5,10 +5,13 @@
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import { Command } from 'commander';
+import { loadPlugins } from '../plugins.js';
 import {
   loadConfig,
+  runReportHooks,
   scanProject,
   type DepxrayConfig,
+  type DepxrayPlugin,
   type GraphNode,
   type ScanResult,
 } from '@depxray/core';
@@ -20,6 +23,13 @@ interface ReportCommandOptions {
   aliases?: boolean;
   extensions?: string[];
   entryPoints?: string[];
+  plugins?: DepxrayPlugin[];
+}
+
+interface ReportHookData {
+  result: ScanResult;
+  sections: string[];
+  pluginData: Record<string, unknown>;
 }
 
 type OptionSourceReader = (name: string) => string | undefined;
@@ -50,6 +60,7 @@ function mergeReportOptionsWithConfig(
     entryPoints: cliOptionWasProvided(getOptionSource, 'entryPoints')
       ? rawOptions.entryPoints
       : config.entryPoints ?? rawOptions.entryPoints,
+    plugins: rawOptions.plugins,
   };
 }
 
@@ -158,7 +169,10 @@ function addBulletList(lines: string[], items: string[]): void {
   lines.push('');
 }
 
-export function generateMarkdownReport(result: ScanResult): string {
+export function generateMarkdownReport(
+  result: ScanResult,
+  reportData?: ReportHookData,
+): string {
   const nodes = result.graph.nodes;
   const mostImported = topByDegree(nodes, 'inDegree');
   const mostImporting = topByDegree(nodes, 'outDegree');
@@ -201,6 +215,12 @@ export function generateMarkdownReport(result: ScanResult): string {
   lines.push('## Circular Dependency Chains');
   lines.push('');
   addBulletList(lines, circularChains);
+  if (reportData?.sections.length) {
+    for (const section of reportData.sections) {
+      lines.push(section.trimEnd());
+      lines.push('');
+    }
+  }
 
   return lines.join('\n').trimEnd() + '\n';
 }
@@ -226,6 +246,7 @@ export function createReportCommand(): Command {
           config,
           (name) => command.getOptionValueSource(name),
         );
+        options.plugins = await loadPlugins(config.plugins, rootDir);
 
         process.stderr.write(`Generating report for ${rootDir}...\n`);
         const result = await scanProject({
@@ -235,8 +256,18 @@ export function createReportCommand(): Command {
           resolveAliases: options.aliases,
           extensions: options.extensions,
           entryPointPatterns: options.entryPoints,
+          plugins: options.plugins,
         });
-        const report = generateMarkdownReport(result);
+        const reportData = await runReportHooks(
+          {
+            result,
+            sections: [],
+            pluginData: {},
+          } satisfies ReportHookData,
+          options.plugins,
+          { rootDir },
+        ) as ReportHookData;
+        const report = generateMarkdownReport(result, reportData);
 
         if (options.output) {
           const outputPath = path.resolve(options.output);

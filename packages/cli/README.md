@@ -17,6 +17,7 @@ For MCP-compatible AI clients, use the companion package `@depxray/mcp`.
 - Detect unused and unlisted npm dependencies
 - Detect workspace ownership and cross-package imports in monorepos
 - Validate dependency edges against lightweight architecture rules
+- Extend scans and reports with config-driven plugins and hooks
 - Diff dependency graph snapshots or compare a git base ref against the working tree
 - Export JSON for scripts, automation, and AI coding agents
 - Export Mermaid and DOT dependency graphs for docs and PRs
@@ -356,10 +357,34 @@ module.exports = {
       message: 'UI cannot import DB modules directly',
     },
   ],
+  plugins: [
+    '@depxray/plugin-complexity',
+    '@depxray/plugin-mcp',
+    './depxray-plugin.mjs',
+  ],
 };
 ```
 
-Supported fields: `ignore`, `extensions`, `entryPoints`, `mode`, `circular`, `aliases`, `port`, `depth`, and `rules`.
+Supported fields: `ignore`, `extensions`, `entryPoints`, `mode`, `circular`, `aliases`, `port`, `depth`, `rules`, and `plugins`.
+
+Example plugin module:
+
+```js
+export function afterScan(result) {
+  return {
+    ...result,
+    pluginData: {
+      ...result.pluginData,
+      customSummary: { files: result.totalFiles },
+    },
+  };
+}
+```
+
+Built-in plugin aliases:
+
+- `@depxray/plugin-complexity`: adds scan-level complexity summary metadata
+- `@depxray/plugin-mcp`: adds MCP tool and scan summary metadata for agent workflows
 
 ## Supported Analysis
 
@@ -382,6 +407,7 @@ It supports:
 - unused and unlisted npm dependency detection
 - monorepo workspace metadata and cross-package dependency detection
 - architecture rule validation with browser-highlighted violating edges
+- plugin hooks for extending graph metadata, scan metadata, and report data
 - dependency graph diffing for files, edges, and circular dependency changes
 - per-file LOC, cyclomatic complexity, export count, and instability metrics
 - Markdown health reports with hub files, heavy importers, orphans, circular chains, and complexity hotspots

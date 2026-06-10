@@ -145,6 +145,9 @@ export interface GraphNode {
 
   /** Detected component or export name (from default export, if any) */
   componentName?: string;
+
+  /** Namespaced metadata added by plugins */
+  pluginData?: Record<string, unknown>;
 }
 
 /**
@@ -194,6 +197,9 @@ export interface GraphEdge {
 
   /** Architecture rule violations attached to this import edge */
   ruleViolations?: RuleViolation[];
+
+  /** Namespaced metadata added by plugins */
+  pluginData?: Record<string, unknown>;
 }
 
 /**
@@ -228,6 +234,9 @@ export interface DependencyGraph {
 
   /** Metadata about the scan */
   metadata: ScanMetadata;
+
+  /** Namespaced graph-level metadata added by plugins */
+  pluginData?: Record<string, unknown>;
 }
 
 /**
@@ -363,6 +372,9 @@ export interface ScanOptions {
 
   /** Architecture rules to validate against dependency edges */
   rules?: ArchitectureRule[];
+
+  /** Resolved plugins that can extend graph and scan results */
+  plugins?: DepxrayPlugin[];
 }
 
 /**
@@ -429,7 +441,42 @@ export interface DepxrayConfig {
 
   /** Architecture rules for dependency validation */
   rules?: ArchitectureRule[];
+
+  /** Plugin modules or inline plugin objects */
+  plugins?: DepxrayPluginReference[];
 }
+
+export type MaybePromise<T> = T | Promise<T>;
+
+export interface DepxrayPluginContext {
+  /** Absolute path of the scanned project root */
+  rootDir: string;
+}
+
+export interface DepxrayPlugin {
+  /** Plugin display name used in errors and metadata */
+  name?: string;
+
+  /** Called after the dependency graph is built and annotated */
+  afterBuildGraph?: (
+    graph: DependencyGraph,
+    context: DepxrayPluginContext,
+  ) => MaybePromise<DependencyGraph | void>;
+
+  /** Called before scanProject returns */
+  afterScan?: (
+    result: ScanResult,
+    context: DepxrayPluginContext,
+  ) => MaybePromise<ScanResult | void>;
+
+  /** Called by report-producing integrations with their report data */
+  onReport?: (
+    data: unknown,
+    context: DepxrayPluginContext,
+  ) => MaybePromise<unknown | void>;
+}
+
+export type DepxrayPluginReference = string | DepxrayPlugin;
 
 // ─── Scan Result ───────────────────────────────────────────────────────────
 
@@ -460,6 +507,9 @@ export interface ScanResult {
 
   /** Optional architecture rule validation result */
   ruleValidation?: RuleValidationResult;
+
+  /** Namespaced scan-level metadata added by plugins */
+  pluginData?: Record<string, unknown>;
 
   /** Files that could not be parsed, with error details */
   errors: ScanError[];

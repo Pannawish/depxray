@@ -8,6 +8,7 @@ import { WebSocketServer, type WebSocket } from 'ws';
 import cliPackageJson from '../../package.json';
 import { formatAsDot } from '../formatters/dot.js';
 import { formatAsMermaid } from '../formatters/mermaid.js';
+import { loadPlugins } from '../plugins.js';
 import {
   buildStructureGraph,
   DEFAULT_IGNORE_PATTERNS,
@@ -16,6 +17,7 @@ import {
   scanFileTree,
   scanProject,
   type DepxrayConfig,
+  type DepxrayPlugin,
   type FileTreeNode,
   type RuleValidationResult,
   type ScanError,
@@ -36,6 +38,7 @@ interface ExplorerGraphNode extends StructureGraphNode {
   componentName?: string;
   workspace?: string;
   metrics?: ScanResult['graph']['nodes'][number]['metrics'];
+  pluginData?: Record<string, unknown>;
 }
 
 interface ExplorerGraphEdge extends StructureGraphEdge {
@@ -46,6 +49,7 @@ interface ExplorerGraphEdge extends StructureGraphEdge {
   isDynamic?: boolean;
   isCrossPackage?: boolean;
   ruleViolations?: ScanResult['graph']['edges'][number]['ruleViolations'];
+  pluginData?: Record<string, unknown>;
 }
 
 interface ExplorerGraphData {
@@ -61,6 +65,7 @@ interface ExplorerGraphData {
   orphanFiles: string[];
   dependencyIssues?: ScanResult['dependencyIssues'];
   ruleValidation?: ScanResult['ruleValidation'];
+  pluginData?: Record<string, unknown>;
   generatedBy: string;
   errors: ScanError[];
   nodes: ExplorerGraphNode[];
@@ -93,6 +98,7 @@ interface ScanCommandOptions {
   deps?: boolean;
   validate?: boolean;
   rules?: DepxrayConfig['rules'];
+  plugins?: DepxrayPlugin[];
   entryPoints?: string[];
   open?: boolean;
   watch?: boolean;
@@ -190,6 +196,7 @@ export function mergeScanOptionsWithConfig(
         ? rawOptions.port
         : String(config.port),
     rules: config.rules ?? rawOptions.rules,
+    plugins: rawOptions.plugins,
   };
 }
 
@@ -315,6 +322,7 @@ function toDependencyGraphData(result: ScanResult): ExplorerGraphData {
     ...(node.workspace ? { workspace: node.workspace } : {}),
     ...(node.metrics ? { metrics: node.metrics } : {}),
     ...(node.componentName ? { componentName: node.componentName } : {}),
+    ...(node.pluginData ? { pluginData: node.pluginData } : {}),
   }));
 
   const edges: ExplorerGraphEdge[] = result.graph.edges.map((edge, index) => ({
@@ -328,6 +336,7 @@ function toDependencyGraphData(result: ScanResult): ExplorerGraphData {
     isDynamic: edge.isDynamic,
     ...(edge.isCrossPackage ? { isCrossPackage: edge.isCrossPackage } : {}),
     ...(edge.ruleViolations ? { ruleViolations: edge.ruleViolations } : {}),
+    ...(edge.pluginData ? { pluginData: edge.pluginData } : {}),
   }));
 
   return {
@@ -343,6 +352,7 @@ function toDependencyGraphData(result: ScanResult): ExplorerGraphData {
     orphanFiles: result.orphanFiles,
     ...(result.dependencyIssues ? { dependencyIssues: result.dependencyIssues } : {}),
     ...(result.ruleValidation ? { ruleValidation: result.ruleValidation } : {}),
+    ...(result.pluginData ? { pluginData: result.pluginData } : {}),
     generatedBy: getGeneratedBy(),
     errors: result.errors,
     nodes,
@@ -828,6 +838,7 @@ async function buildSelectedGraphData(
     entryPointPatterns: options.entryPoints,
     detectUnusedDeps: options.deps,
     rules: options.rules,
+    plugins: options.plugins,
   });
 
   return toDependencyGraphData(result);
@@ -846,6 +857,7 @@ async function buildDependencyScanResult(
     entryPointPatterns: options.entryPoints,
     detectUnusedDeps: options.deps,
     rules: options.rules,
+    plugins: options.plugins,
   });
 }
 
@@ -866,6 +878,7 @@ async function buildGraphSet(
     entryPointPatterns: options.entryPoints,
     detectUnusedDeps: options.deps,
     rules: options.rules,
+    plugins: options.plugins,
   });
 
   const structureData = toStructureGraphData(structureGraph);
@@ -929,6 +942,7 @@ export function createScanCommand(): Command {
           config,
           (name) => cmd.getOptionValueSource(name),
         );
+        options.plugins = await loadPlugins(config.plugins, rootDir);
         const initialDepth = parseDepth(options.depth);
         const port = parsePort(options.port);
         const outputFormat = parseOutputFormat(options.format);

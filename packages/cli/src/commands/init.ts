@@ -51,6 +51,13 @@ module.exports = {
     //   message: 'UI cannot import DB modules directly',
     // },
   ],
+
+  // Optional plugins. Use built-in aliases or relative module paths.
+  plugins: [
+    // '@depxray/plugin-complexity',
+    // '@depxray/plugin-mcp',
+    // './depxray-plugin.mjs',
+  ],
 };
 `;
 

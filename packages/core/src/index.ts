@@ -31,6 +31,14 @@ export { discoverFiles } from './fileDiscovery.js';
 export { loadAliases } from './configLoader.js';
 export { loadConfig } from './loadConfig.js';
 export { computeFileMetrics } from './computeMetrics.js';
+export {
+  BUILT_IN_PLUGINS,
+  complexityPlugin,
+  mcpPlugin,
+  runAfterBuildGraphHooks,
+  runAfterScanHooks,
+  runReportHooks,
+} from './plugins.js';
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 export type {
@@ -41,6 +49,9 @@ export type {
   UnusedDepsResult,
   WorkspaceInfo,
   ArchitectureRule,
+  DepxrayPlugin,
+  DepxrayPluginContext,
+  DepxrayPluginReference,
   RuleValidationResult,
   RuleViolation,
   StructureGraphNode,
@@ -48,6 +59,7 @@ export type {
   StructureGraph,
   CircularChain,
   DependencyGraph,
+  MaybePromise,
   ScanOptions,
   DepxrayConfig,
   OrphanDetectionOptions,

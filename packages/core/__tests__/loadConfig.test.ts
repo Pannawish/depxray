@@ -93,6 +93,24 @@ describe('loadConfig', () => {
     ]);
   });
 
+  it('loads plugin references', async () => {
+    await writeFile(
+      '.depxrayrc.json',
+      JSON.stringify({
+        plugins: [
+          '@depxray/plugin-complexity',
+          './depxray-plugin.mjs',
+        ],
+      }),
+    );
+
+    const config = await loadConfig(tempDir);
+    expect(config.plugins).toEqual([
+      '@depxray/plugin-complexity',
+      './depxray-plugin.mjs',
+    ]);
+  });
+
   it('loads the depxray key from package.json', async () => {
     await writeFile(
       'package.json',

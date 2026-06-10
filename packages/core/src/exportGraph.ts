@@ -35,6 +35,7 @@ export function exportGraphJSON(
       ...(node.workspace ? { workspace: node.workspace } : {}),
       ...(node.metrics ? { metrics: node.metrics } : {}),
       ...(node.componentName ? { componentName: node.componentName } : {}),
+      ...(node.pluginData ? { pluginData: node.pluginData } : {}),
     })),
     edges: graph.edges.map((edge) => ({
       source: edge.source.includes(graph.rootDir)
@@ -49,8 +50,10 @@ export function exportGraphJSON(
       isDynamic: edge.isDynamic,
       ...(edge.isCrossPackage ? { isCrossPackage: edge.isCrossPackage } : {}),
       ...(edge.ruleViolations ? { ruleViolations: edge.ruleViolations } : {}),
+      ...(edge.pluginData ? { pluginData: edge.pluginData } : {}),
     })),
     circularDependencies: graph.circularDependencies,
+    ...(graph.pluginData ? { pluginData: graph.pluginData } : {}),
   };
 
   return JSON.stringify(exportData, null, pretty ? 2 : undefined);

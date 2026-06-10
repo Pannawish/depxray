@@ -22,6 +22,7 @@ export interface ExplorerGraphNode extends StructureGraphNode {
   componentName?: string;
   workspace?: string;
   metrics?: ScanResult['graph']['nodes'][number]['metrics'];
+  pluginData?: Record<string, unknown>;
 }
 
 export interface ExplorerGraphEdge extends StructureGraphEdge {
@@ -32,6 +33,7 @@ export interface ExplorerGraphEdge extends StructureGraphEdge {
   isDynamic?: boolean;
   isCrossPackage?: boolean;
   ruleViolations?: ScanResult['graph']['edges'][number]['ruleViolations'];
+  pluginData?: Record<string, unknown>;
 }
 
 export interface ExplorerGraphData {
@@ -46,6 +48,7 @@ export interface ExplorerGraphData {
   circularDependencies: ScanResult['graph']['circularDependencies'];
   orphanFiles: string[];
   ruleValidation?: ScanResult['ruleValidation'];
+  pluginData?: Record<string, unknown>;
   generatedBy: string;
   errors: ScanError[];
   nodes: ExplorerGraphNode[];
@@ -133,6 +136,7 @@ export function toDependencyGraphData(result: ScanResult): ExplorerGraphData {
     ...(node.workspace ? { workspace: node.workspace } : {}),
     ...(node.metrics ? { metrics: node.metrics } : {}),
     ...(node.componentName ? { componentName: node.componentName } : {}),
+    ...(node.pluginData ? { pluginData: node.pluginData } : {}),
   }));
 
   const edges: ExplorerGraphEdge[] = result.graph.edges.map((edge, index) => ({
@@ -146,6 +150,7 @@ export function toDependencyGraphData(result: ScanResult): ExplorerGraphData {
     isDynamic: edge.isDynamic,
     ...(edge.isCrossPackage ? { isCrossPackage: edge.isCrossPackage } : {}),
     ...(edge.ruleViolations ? { ruleViolations: edge.ruleViolations } : {}),
+    ...(edge.pluginData ? { pluginData: edge.pluginData } : {}),
   }));
 
   return {
@@ -160,6 +165,7 @@ export function toDependencyGraphData(result: ScanResult): ExplorerGraphData {
     circularDependencies: result.graph.circularDependencies,
     orphanFiles: result.orphanFiles,
     ...(result.ruleValidation ? { ruleValidation: result.ruleValidation } : {}),
+    ...(result.pluginData ? { pluginData: result.pluginData } : {}),
     generatedBy: getGeneratedBy(),
     errors: result.errors,
     nodes,

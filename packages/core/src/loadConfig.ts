@@ -147,6 +147,43 @@ function readRules(record: ConfigRecord, source: string): DepxrayConfig['rules']
   });
 }
 
+function readPlugins(record: ConfigRecord, source: string): DepxrayConfig['plugins'] {
+  const value = record.plugins;
+  if (value === undefined) {
+    return undefined;
+  }
+
+  if (!Array.isArray(value)) {
+    throw new Error(`Invalid depxray config in ${source}: plugins must be an array.`);
+  }
+
+  return value.map((item, index) => {
+    if (typeof item === 'string') {
+      if (item.length === 0) {
+        throw new Error(`Invalid depxray config in ${source}: plugins[${index}] must be a non-empty string or plugin object.`);
+      }
+      return item;
+    }
+
+    if (!item || typeof item !== 'object' || Array.isArray(item)) {
+      throw new Error(`Invalid depxray config in ${source}: plugins[${index}] must be a non-empty string or plugin object.`);
+    }
+
+    const plugin = item as ConfigRecord;
+    if (plugin.name !== undefined && typeof plugin.name !== 'string') {
+      throw new Error(`Invalid depxray config in ${source}: plugins[${index}].name must be a string.`);
+    }
+
+    for (const hookName of ['afterScan', 'afterBuildGraph', 'onReport'] as const) {
+      if (plugin[hookName] !== undefined && typeof plugin[hookName] !== 'function') {
+        throw new Error(`Invalid depxray config in ${source}: plugins[${index}].${hookName} must be a function.`);
+      }
+    }
+
+    return item as NonNullable<DepxrayConfig['plugins']>[number];
+  });
+}
+
 function normalizeConfig(value: unknown, source: string): DepxrayConfig {
   const record = assertPlainObject(value, source);
 
@@ -160,6 +197,7 @@ function normalizeConfig(value: unknown, source: string): DepxrayConfig {
     port: readPort(record, source),
     depth: readDepth(record, source),
     rules: readRules(record, source),
+    plugins: readPlugins(record, source),
   };
 }
 

@@ -23,6 +23,7 @@ export interface ExplorerGraphNode extends StructureGraphNode {
   componentName?: string;
   workspace?: DependencyGraphNode['workspace'];
   metrics?: DependencyGraphNode['metrics'];
+  pluginData?: DependencyGraphNode['pluginData'];
 }
 
 export interface ExplorerGraphEdge extends StructureGraphEdge {
@@ -33,6 +34,7 @@ export interface ExplorerGraphEdge extends StructureGraphEdge {
   isDynamic?: boolean;
   isCrossPackage?: DependencyGraphEdge['isCrossPackage'];
   ruleViolations?: DependencyGraphEdge['ruleViolations'];
+  pluginData?: DependencyGraphEdge['pluginData'];
 }
 
 export interface ExplorerGraphData {
@@ -46,6 +48,7 @@ export interface ExplorerGraphData {
   circularCount: number;
   circularDependencies: Array<{ chain: string[]; description: string }>;
   orphanFiles: string[];
+  pluginData?: Record<string, unknown>;
   generatedBy: string;
   errors: Array<{ filePath: string; error: string }>;
   nodes: ExplorerGraphNode[];
