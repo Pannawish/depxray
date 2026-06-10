@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+### Added
+
+- Added `depxray scan --watch` to update the browser UI when project files change.
+- Added a live WebSocket update channel for browser graph refreshes.
+
 ## 1.3.1 - 2026-06-10
 
 ### Added

@@ -1,7 +1,12 @@
 import { EventEmitter } from 'node:events';
 import * as http from 'node:http';
-import { describe, expect, it } from 'vitest';
-import { listenOnAvailablePort, mergeScanOptionsWithConfig, parsePort } from '../src/commands/scan';
+import { describe, expect, it, vi } from 'vitest';
+import {
+  createWatchScheduler,
+  listenOnAvailablePort,
+  mergeScanOptionsWithConfig,
+  parsePort,
+} from '../src/commands/scan';
 
 class FakeServer extends EventEmitter {
   private readonly occupiedPorts: Set<number>;
@@ -107,5 +112,24 @@ describe('scan config merging', () => {
       port: '7000',
       circular: false,
     });
+  });
+});
+
+describe('watch scheduling', () => {
+  it('debounces rebuilds and uses the latest event', async () => {
+    vi.useFakeTimers();
+    const rebuild = vi.fn().mockResolvedValue(undefined);
+    const schedule = createWatchScheduler(rebuild, 50);
+
+    schedule('change', '/tmp/first.ts');
+    schedule('change', '/tmp/second.ts');
+
+    await vi.advanceTimersByTimeAsync(49);
+    expect(rebuild).not.toHaveBeenCalled();
+
+    await vi.advanceTimersByTimeAsync(1);
+    expect(rebuild).toHaveBeenCalledTimes(1);
+    expect(rebuild).toHaveBeenCalledWith('change', '/tmp/second.ts');
+    vi.useRealTimers();
   });
 });

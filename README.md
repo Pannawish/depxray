@@ -107,6 +107,7 @@ Common options:
 - `--extensions <exts...>`: choose scanned extensions in dependency mode
 - `--depth <depth>`: initial visible depth: any integer `>= 1` or `all`
 - `--port <port>`: preferred local dashboard port; falls back to the next free port if needed
+- `--watch`: update the browser UI when project files change
 - `--no-open`: start the local server without opening a browser
 
 Examples:
@@ -129,6 +130,9 @@ npx depxray scan /path/to/project --mode dependencies --orphans --entry-points "
 
 # Generate a static HTML report bundle
 npx depxray scan /path/to/project --html
+
+# Keep the browser UI updated while editing files
+npx depxray scan /path/to/project --watch
 ```
 
 ### `inspect`
@@ -265,6 +269,7 @@ It supports:
 - circular dependency detection
 - orphan file detection with configurable entry point exclusions
 - interactive force-directed dependency and structure graph visualization
+- watch mode with live browser UI updates
 
 ## Monorepo Layout
 

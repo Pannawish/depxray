@@ -21,6 +21,7 @@ import type {
 const SOURCE_LABELS = {
   window: 'embedded data',
   http: 'live server',
+  live: 'live server',
   sample: 'sample preview',
 } as const;
 

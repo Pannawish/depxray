@@ -4,10 +4,13 @@ import * as fs from 'node:fs/promises';
 import * as http from 'node:http';
 import * as path from 'node:path';
 import { Command } from 'commander';
+import { WebSocketServer, type WebSocket } from 'ws';
 import cliPackageJson from '../../package.json';
 import {
   buildStructureGraph,
+  DEFAULT_IGNORE_PATTERNS,
   loadConfig,
+  matchesAnyPattern,
   scanFileTree,
   scanProject,
   type DepxrayConfig,
@@ -77,12 +80,30 @@ interface ScanCommandOptions {
   orphans?: boolean;
   entryPoints?: string[];
   open?: boolean;
+  watch?: boolean;
 }
 
 type OptionSourceReader = (name: string) => string | undefined;
 
 const EXPORT_SCHEMA_VERSION = '1.0.0';
 const MAX_PORT_SEARCH_ATTEMPTS = 10;
+const WATCH_DEBOUNCE_MS = 150;
+
+interface GraphServerHandle {
+  port: number;
+  updateData(nextData: { tree: FileTreeNode; graphSet: ExplorerGraphSet }): void;
+  close(): Promise<void>;
+}
+
+interface LiveGraphSetMessage {
+  type: 'graph-set';
+  graphSet: ExplorerGraphSet;
+}
+
+interface FileWatcher {
+  close(): Promise<void>;
+  on(eventName: string, listener: (...args: any[]) => void): FileWatcher;
+}
 
 function parseDepth(value: string | undefined): number | 'all' {
   if (!value) {
@@ -467,11 +488,33 @@ async function startGraphServer(
   graphSet: ExplorerGraphSet,
   requestedPort: number,
   initialDepth: number | 'all',
-): Promise<number> {
+): Promise<GraphServerHandle> {
   const distDir = await requireWebUiDist();
-  const treeJson = JSON.stringify(tree, null, 2);
-  const graphSetJson = serializeGraphSet(graphSet);
+  let currentTree = tree;
+  let currentGraphSet = graphSet;
+  let treeJson = JSON.stringify(currentTree, null, 2);
+  let graphSetJson = serializeGraphSet(currentGraphSet);
   const initialDepthValue = normalizeInitialDepth(initialDepth);
+  const liveServer = new WebSocketServer({ noServer: true });
+
+  function createLiveMessage(): string {
+    return JSON.stringify({
+      type: 'graph-set',
+      graphSet: currentGraphSet,
+    } satisfies LiveGraphSetMessage);
+  }
+
+  function sendLiveMessage(client: WebSocket): void {
+    if (client.readyState === client.OPEN) {
+      client.send(createLiveMessage());
+    }
+  }
+
+  function broadcastLiveUpdate(): void {
+    for (const client of liveServer.clients) {
+      sendLiveMessage(client);
+    }
+  }
 
   const server = http.createServer(async (req, res) => {
     const requestUrl = new URL(req.url ?? '/', `http://127.0.0.1:${port}`);
@@ -561,6 +604,22 @@ async function startGraphServer(
     }
   });
 
+  server.on('upgrade', (req, socket, head) => {
+    const requestUrl = new URL(req.url ?? '/', `http://127.0.0.1:${port}`);
+    if (requestUrl.pathname !== '/api/live') {
+      socket.destroy();
+      return;
+    }
+
+    liveServer.handleUpgrade(req, socket, head, (client) => {
+      liveServer.emit('connection', client, req);
+    });
+  });
+
+  liveServer.on('connection', (client) => {
+    sendLiveMessage(client);
+  });
+
   const port = await listenOnAvailablePort(server, requestedPort);
   const url = `http://127.0.0.1:${port}?depth=${encodeURIComponent(initialDepthValue)}&mode=${encodeURIComponent(graphSet.defaultMode)}`;
   process.stderr.write(`Serving ${rootDir}\n`);
@@ -571,17 +630,125 @@ async function startGraphServer(
   }
   process.stderr.write(`Opening ${url}\n`);
 
-  const shutdown = () => {
-    void new Promise<void>((resolve) => {
-      server.close(() => resolve());
-    }).finally(() => {
-      process.exit(0);
-    });
+  return {
+    port,
+    updateData(nextData) {
+      currentTree = nextData.tree;
+      currentGraphSet = nextData.graphSet;
+      treeJson = JSON.stringify(currentTree, null, 2);
+      graphSetJson = serializeGraphSet(currentGraphSet);
+      broadcastLiveUpdate();
+    },
+    async close() {
+      for (const client of liveServer.clients) {
+        client.close();
+      }
+      await new Promise<void>((resolve) => liveServer.close(() => resolve()));
+      await new Promise<void>((resolve) => server.close(() => resolve()));
+    },
   };
+}
 
-  process.once('SIGINT', shutdown);
-  process.once('SIGTERM', shutdown);
-  return port;
+function shouldIgnoreWatchPath(rootDir: string, targetPath: string, userIgnorePatterns: string[] = []): boolean {
+  const relativePath = path.relative(rootDir, targetPath);
+  if (!relativePath) {
+    return false;
+  }
+
+  const normalizedPath = relativePath.replaceAll('\\', '/');
+  const segments = normalizedPath.split('/');
+  const ignorePatterns = [...DEFAULT_IGNORE_PATTERNS, ...userIgnorePatterns];
+
+  return ignorePatterns.some((pattern) => (
+    segments.some((segment) => segment === pattern || segment.startsWith(pattern)) ||
+    matchesAnyPattern(normalizedPath, [pattern])
+  ));
+}
+
+export function createWatchScheduler(
+  rebuild: (eventName: string, filePath: string) => Promise<void>,
+  debounceMs = WATCH_DEBOUNCE_MS,
+): (eventName: string, filePath: string) => void {
+  let timer: NodeJS.Timeout | null = null;
+  let latestEventName = '';
+  let latestFilePath = '';
+  let rebuilding = false;
+  let pending = false;
+
+  async function runRebuild(): Promise<void> {
+    if (rebuilding) {
+      pending = true;
+      return;
+    }
+
+    rebuilding = true;
+    const eventName = latestEventName;
+    const filePath = latestFilePath;
+
+    try {
+      await rebuild(eventName, filePath);
+    } finally {
+      rebuilding = false;
+      if (pending) {
+        pending = false;
+        runRebuild().catch(() => undefined);
+      }
+    }
+  }
+
+  return (eventName, filePath) => {
+    latestEventName = eventName;
+    latestFilePath = filePath;
+
+    if (timer) {
+      clearTimeout(timer);
+    }
+
+    timer = setTimeout(() => {
+      timer = null;
+      runRebuild().catch(() => undefined);
+    }, debounceMs);
+  };
+}
+
+async function startWatchMode(
+  rootDir: string,
+  options: ScanCommandOptions,
+  serverHandle: GraphServerHandle,
+): Promise<FileWatcher> {
+  const { watch: watchFiles } = await import('chokidar');
+  const scheduleRebuild = createWatchScheduler(async (eventName, filePath) => {
+    const relativePath = path.relative(rootDir, filePath);
+    try {
+      const nextData = await buildGraphSet(rootDir, options);
+      serverHandle.updateData(nextData);
+      process.stderr.write(`Updated graph after ${eventName}: ${relativePath}\n`);
+    } catch (error) {
+      process.stderr.write(`Watch update failed after ${eventName}: ${(error as Error).message}\n`);
+    }
+  });
+
+  const watcher = watchFiles(rootDir, {
+    ignoreInitial: true,
+    ignored: (targetPath) => shouldIgnoreWatchPath(rootDir, targetPath, options.ignore),
+    awaitWriteFinish: {
+      stabilityThreshold: 100,
+      pollInterval: 20,
+    },
+  }) as FileWatcher;
+
+  watcher
+    .on('add', (filePath) => scheduleRebuild('add', filePath))
+    .on('change', (filePath) => scheduleRebuild('change', filePath))
+    .on('unlink', (filePath) => scheduleRebuild('unlink', filePath))
+    .on('addDir', (filePath) => scheduleRebuild('addDir', filePath))
+    .on('unlinkDir', (filePath) => scheduleRebuild('unlinkDir', filePath))
+    .on('error', (error) => {
+      process.stderr.write(`Watch error: ${(error as Error).message}\n`);
+    });
+
+  process.stderr.write('Watching for file changes...\n');
+  return watcher;
 }
 
 async function buildSelectedGraphData(
@@ -674,6 +841,7 @@ export function createScanCommand(): Command {
     )
     .option('--depth <depth>', 'Initial visible depth: integer >= 1 or all', '2')
     .option('--port <port>', 'Port for the local browser server', '5178')
+    .option('--watch', 'Watch for file changes and update the browser UI live')
     .option('--no-open', 'Do not open the browser automatically')
     .action(async (dir: string, rawOptions: ScanCommandOptions) => {
       try {
@@ -693,6 +861,10 @@ export function createScanCommand(): Command {
 
         if (options.output && !options.json) {
           throw new Error('--output is only supported together with --json.');
+        }
+
+        if (options.watch && (options.json || options.html)) {
+          throw new Error('--watch is only supported with the local browser UI.');
         }
 
         await verifyDirectory(rootDir);
@@ -727,12 +899,27 @@ export function createScanCommand(): Command {
         if (options.orphans) {
           printOrphanFiles(graphSet.graphs.dependencies?.orphanFiles ?? []);
         }
-        const resolvedPort = await startGraphServer(rootDir, tree, graphSet, port, initialDepth);
+        const serverHandle = await startGraphServer(rootDir, tree, graphSet, port, initialDepth);
+        const watcher = options.watch
+          ? await startWatchMode(rootDir, options, serverHandle)
+          : null;
+        const resolvedPort = serverHandle.port;
         if (options.open !== false) {
           const url = `http://127.0.0.1:${resolvedPort}?depth=${encodeURIComponent(normalizeInitialDepth(initialDepth))}&mode=${encodeURIComponent(graphSet.defaultMode)}`;
           await openBrowser(url);
         }
 
+        const shutdown = () => {
+          void Promise.resolve()
+            .then(() => watcher?.close())
+            .then(() => serverHandle.close())
+            .finally(() => {
+              process.exit(0);
+            });
+        };
+
+        process.once('SIGINT', shutdown);
+        process.once('SIGTERM', shutdown);
         await new Promise<void>(() => undefined);
       } catch (err) {
         console.error(`Scan failed: ${(err as Error).message}`);

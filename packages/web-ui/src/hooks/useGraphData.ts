@@ -6,7 +6,12 @@ interface GraphDataState {
   dataSet: ExplorerGraphSet | null;
   loading: boolean;
   error: string | null;
-  source: 'window' | 'http' | 'sample';
+  source: 'window' | 'http' | 'live' | 'sample';
+}
+
+interface LiveGraphSetMessage {
+  type: 'graph-set';
+  graphSet: ExplorerGraphSet;
 }
 
 function toGraphSet(data: ExplorerGraphData): ExplorerGraphSet {
@@ -33,6 +38,43 @@ export function useGraphData(): GraphDataState {
 
   useEffect(() => {
     let cancelled = false;
+    let socket: WebSocket | null = null;
+
+    function connectLiveUpdates() {
+      if (window.__GRAPH_DATA_SET__ || window.__GRAPH_DATA__) {
+        return;
+      }
+
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      socket = new WebSocket(`${protocol}//${window.location.host}/api/live`);
+
+      socket.addEventListener('message', (event) => {
+        try {
+          const message = JSON.parse(event.data as string) as LiveGraphSetMessage;
+          if (message.type !== 'graph-set' || cancelled) {
+            return;
+          }
+
+          setState({
+            dataSet: message.graphSet,
+            loading: false,
+            error: null,
+            source: 'live',
+          });
+        } catch {
+          // Ignore malformed live messages; the last valid graph remains visible.
+        }
+      });
+
+      socket.addEventListener('error', () => {
+        if (!cancelled) {
+          setState((current) => ({
+            ...current,
+            error: current.error ?? 'Live updates are unavailable.',
+          }));
+        }
+      });
+    }
 
     async function loadGraphData() {
       if (window.__GRAPH_DATA_SET__) {
@@ -75,6 +117,7 @@ export function useGraphData(): GraphDataState {
               error: null,
               source: 'http',
             });
+            connectLiveUpdates();
           }
           return;
         }
@@ -87,6 +130,7 @@ export function useGraphData(): GraphDataState {
             error: null,
             source: 'http',
           });
+          connectLiveUpdates();
         }
       } catch (err) {
         if (!cancelled) {
@@ -104,6 +148,7 @@ export function useGraphData(): GraphDataState {
 
     return () => {
       cancelled = true;
+      socket?.close();
     };
   }, []);
 

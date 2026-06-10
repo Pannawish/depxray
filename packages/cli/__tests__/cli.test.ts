@@ -325,6 +325,23 @@ describe('CLI Integration Tests', () => {
 
       expect(exitCode).toBe(0);
       expect(stdout).toContain('integer >= 1 or all');
+      expect(stdout).toContain('--watch');
+    });
+
+    it('should reject watch mode with JSON output', async () => {
+      try {
+        await execa('node', [
+          CLI_PATH,
+          'scan',
+          SIMPLE_PROJECT,
+          '--json',
+          '--watch',
+        ]);
+        expect.fail('Should have thrown an error');
+      } catch (err: any) {
+        expect(err.exitCode).toBe(1);
+        expect(err.stderr).toContain('--watch is only supported with the local browser UI');
+      }
     });
 
     it('should accept depth values greater than 4', async () => {

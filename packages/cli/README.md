@@ -66,6 +66,12 @@ Generate a standalone HTML report:
 npx depxray scan /path/to/project --html
 ```
 
+Keep the browser UI updated while editing files:
+
+```bash
+npx depxray scan /path/to/project --watch
+```
+
 Create a reusable project config:
 
 ```bash
@@ -187,6 +193,7 @@ Common options:
 - `--extensions <exts...>`: choose scanned extensions in dependency mode
 - `--depth <depth>`: initial directory expansion depth; accepts any integer `>= 1` or `all`
 - `--port <port>`: preferred local dashboard port; falls back to the next free port if needed
+- `--watch`: watch project files and update the browser UI live
 - `--no-open`: do not open the browser automatically
 
 Examples:
@@ -198,6 +205,7 @@ depxray scan /path/to/project --mode dependencies --json --output dep-graph.json
 depxray scan /path/to/project --mode dependencies --orphans
 depxray scan /path/to/project --mode dependencies --orphans --entry-points "src/routes/**" "src/bootstrap.ts"
 depxray scan /path/to/project --html
+depxray scan /path/to/project --watch
 ```
 
 ### `inspect`
@@ -280,6 +288,7 @@ It supports:
 - circular dependency detection
 - orphan file detection with configurable entry point exclusions
 - interactive force-directed dependency and structure graph visualization
+- watch mode with live browser UI updates
 
 ## Repository
 

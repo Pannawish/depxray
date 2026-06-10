@@ -18,7 +18,7 @@ await build({
   banner: {
     js: '#!/usr/bin/env node',
   },
-  external: ['node:*'],
+  external: ['node:*', 'chokidar', 'ws'],
 });
 
 await chmod(path.join(cliDir, 'dist/index.js'), 0o755);
