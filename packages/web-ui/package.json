@@ -3,7 +3,7 @@
   "version": "1.5.0",
   "private": true,
   "type": "module",
-  "description": "Interactive browser UI for exploring JavaScript and TypeScript dependency graphs and codebase structure.",
+  "description": "Interactive browser UI for depxray dependency graphs, codebase structure, architecture violations, metrics, monorepo edges, and live scans.",
   "scripts": {
     "dev": "vite",
     "build": "vite build",

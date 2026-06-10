@@ -381,10 +381,10 @@ export function afterScan(result) {
 }
 ```
 
-Built-in plugin aliases:
+Built-in plugin aliases are resolved by `depxray` itself and do not require installing separate npm packages:
 
 - `@depxray/plugin-complexity`: adds scan-level complexity summary metadata
-- `@depxray/plugin-mcp`: adds MCP tool and scan summary metadata for agent workflows
+- `@depxray/plugin-mcp`: adds MCP-oriented tool and scan summary metadata for agent workflows; use `@depxray/mcp` when you need the actual MCP server
 
 ## Supported Analysis
 

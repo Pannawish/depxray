@@ -2,7 +2,7 @@
   "name": "depxray-root",
   "private": true,
   "version": "1.5.0",
-  "description": "Interactive dependency explorer for JavaScript and TypeScript codebases, built for developers and AI coding agents.",
+  "description": "Dependency intelligence for JavaScript and TypeScript codebases, with browser graphs, architecture rules, graph diffs, reports, MCP, and AI-agent context.",
   "workspaces": [
     "packages/core",
     "packages/cli",

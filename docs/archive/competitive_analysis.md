@@ -8,6 +8,16 @@
 
 ---
 
+## Implementation Status
+
+This document is a planning and competitive-analysis record. The checked implementation state for release preparation is:
+
+- Implemented through v2.0.0: Features 1-12 and 14.
+- Not implemented here: Feature 13, the VS Code extension.
+- Some code snippets and unchecked acceptance boxes below are the original implementation specs, not the latest source-of-truth API. Use `README.md`, package READMEs, and the current `packages/*/src` files for release-facing behavior.
+
+---
+
 ## Codebase Architecture Context
 
 > **An AI agent MUST read this section before implementing any feature.**

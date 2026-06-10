@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 2.0.0 - 11/06/2026
 
 ### Added
 
@@ -10,6 +10,10 @@
 - Added machine-readable `depxray diff --json` output for added and removed files, edges, and circular dependencies.
 - Added a config-driven plugin system with `afterBuildGraph`, `afterScan`, and `onReport` hooks.
 - Added built-in plugin aliases for `@depxray/plugin-complexity` and `@depxray/plugin-mcp`.
+
+### Changed
+
+- Updated package descriptions and README content to reflect the current dependency intelligence, AI-agent, MCP, graph diffing, architecture rule, and plugin workflows.
 
 ## 1.5.0 - 10/06/2026
 

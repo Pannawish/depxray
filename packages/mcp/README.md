@@ -2,7 +2,7 @@
 
 Give AI coding agents dependency-aware context before they edit your code.
 
-`@depxray/mcp` is the Model Context Protocol server for depxray. It lets MCP-compatible clients such as Claude Desktop, Cursor, and other coding agents inspect JavaScript and TypeScript projects through static dependency analysis.
+`@depxray/mcp` is the Model Context Protocol server for depxray. It lets MCP-compatible clients such as Claude Desktop, Cursor, Codex, and other coding agents inspect JavaScript and TypeScript projects through static dependency analysis.
 
 Use it when an agent needs to answer questions like:
 
@@ -10,6 +10,8 @@ Use it when an agent needs to answer questions like:
 - What files depend on this file?
 - Are there circular dependencies?
 - Which files appear to be orphaned?
+- Which files are complex or highly connected?
+- Which workspace owns this file in a monorepo?
 - What is inside this folder?
 - What does the project dependency graph look like?
 
@@ -29,6 +31,8 @@ Most users do not run this command directly. Add it to your MCP client configura
 - Inspect imports and dependents for a target file
 - Find circular dependencies before refactors
 - Find orphan files that may be safe cleanup candidates
+- Review per-file metrics such as LOC, complexity, exports, and instability
+- Understand monorepo workspace ownership and cross-package imports
 - Summarize folder-level dependency relationships
 - Produce machine-readable project structure and dependency graph context
 
@@ -70,7 +74,7 @@ A coding agent can use the tools in this order before editing:
 4. Call `find_circular` or `find_orphans` when planning a refactor.
 5. Call `scan_project` when it needs full graph context.
 
-This gives the agent a clearer view of dependency impact before it changes code.
+This gives the agent a clearer view of dependency impact, ownership, and file health before it changes code.
 
 ## Tools
 
@@ -83,7 +87,7 @@ This gives the agent a clearer view of dependency impact before it changes code.
 | `get_file_tree` | The agent needs a compact project tree. | `{ "rootDir": "/path/to/project", "maxDepth": 3 }` |
 | `get_folder_summary` | The agent needs folder-level dependency metrics. | `{ "rootDir": "/path/to/project", "folderPath": "src/components" }` |
 
-`scan_project` supports `mode: "dependencies"` and `mode: "structure"`. Dependency mode returns imports, circular counts, orphan files, and graph edges. Structure mode returns directory and file parent-child graph data.
+`scan_project` supports `mode: "dependencies"` and `mode: "structure"`. Dependency mode returns imports, circular counts, orphan files, graph edges, per-file metrics, workspace metadata, and cross-package edge metadata. Structure mode returns directory and file parent-child graph data.
 
 ## Supported Projects
 
@@ -96,6 +100,9 @@ This gives the agent a clearer view of dependency impact before it changes code.
 - CommonJS `require`
 - re-exports and barrel files
 - `tsconfig.json` and `jsconfig.json` path aliases
+- monorepo workspaces
+- per-file metrics
+- circular and orphan-file analysis
 
 ## Privacy
 
@@ -108,4 +115,5 @@ Your MCP client may still send tool results to its own model provider. Review yo
 This package is the MCP interface for depxray.
 
 - Use `npx depxray scan` for the browser UI, CLI JSON output, and static HTML reports.
+- Use `npx depxray report`, `npx depxray diff`, and `npx depxray scan --validate` for developer and CI workflows.
 - Use `npx --package @depxray/mcp depxray-mcp` when an MCP-compatible AI coding agent needs depxray tools.

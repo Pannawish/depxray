@@ -1,7 +1,7 @@
 {
   "name": "depxray",
   "version": "1.5.0",
-  "description": "Interactive dependency explorer for JavaScript and TypeScript codebases, with browser graphs, JSON output, and AI-agent context.",
+  "description": "Interactive dependency intelligence CLI for JavaScript and TypeScript, with browser graphs, architecture rules, graph diffs, reports, JSON, and AI-agent context.",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "bin": {
@@ -44,6 +44,14 @@
     "visualization",
     "graph",
     "browser-ui",
+    "architecture-rules",
+    "graph-diff",
+    "monorepo",
+    "mcp",
+    "reports",
+    "orphan-files",
+    "circular-dependencies",
+    "codebase-context",
     "ai-agent",
     "ai-coding",
     "coding-agent",

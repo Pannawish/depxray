@@ -1,7 +1,7 @@
 {
   "name": "@depxray/core",
   "version": "1.5.0",
-  "description": "Static analysis engine for JavaScript and TypeScript dependency graphs, codebase context, and AI-agent tooling.",
+  "description": "Static analysis engine for JavaScript and TypeScript dependency graphs, architecture rules, graph diffs, metrics, plugins, and AI-agent context.",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "files": [
@@ -35,10 +35,27 @@
     "codebase",
     "codebase-explorer",
     "architecture",
+    "architecture-rules",
+    "graph-diff",
+    "monorepo",
+    "plugins",
+    "metrics",
+    "orphan-files",
+    "circular-dependencies",
+    "mcp",
     "ai-agent",
     "coding-agent",
     "agentic-ai",
     "llm"
   ],
+  "author": "Pannawish Kriengyakul",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Pannawish/depxray.git"
+  },
+  "homepage": "https://github.com/Pannawish/depxray#readme",
+  "bugs": {
+    "url": "https://github.com/Pannawish/depxray/issues"
+  },
   "license": "MIT"
 }
