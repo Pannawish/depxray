@@ -2,7 +2,7 @@
 
 Static dependency analysis engine for depxray.
 
-`@depxray/core` scans JavaScript and TypeScript projects and returns structured dependency data for CLIs, browser tools, reports, automation, and AI coding agents. It powers the `depxray` CLI, browser UI, and `@depxray/mcp` server.
+`@depxray/core` scans JavaScript and TypeScript projects and returns structured dependency, health, impact, cleanup, and graph-diff data for CLIs, browser tools, reports, automation, and AI coding agents. It powers the `depxray` CLI, browser UI, and `@depxray/mcp` server.
 
 ## What It Provides
 
@@ -14,6 +14,8 @@ Static dependency analysis engine for depxray.
 - Unused export detection, including default exports, re-exports, barrel files, and type-only exports
 - Unresolved local import detection
 - Dependency impact analysis for direct and transitive dependents
+- Project health scoring with A-F grade, issue counts, complexity hotspots, and dependency hubs
+- Dependency-chain explanations for "why does file A depend on file B?"
 - Unused and unlisted npm dependency analysis
 - DevDependencies-in-production detection from configured production entry points
 - Monorepo workspace detection and cross-package edge metadata
@@ -24,6 +26,7 @@ Static dependency analysis engine for depxray.
 - Import convention detection and suggestions
 - Graph diff helpers for snapshots and branch comparisons
 - Plugin hooks for graph, scan, and report extensions
+- Built-in plugin aliases for complexity metadata, MCP metadata, and GitHub PR dependency-diff comments
 
 ## Install
 
@@ -34,7 +37,7 @@ npm install @depxray/core
 ## Basic Usage
 
 ```ts
-import { analyzeImpact, scanProject } from '@depxray/core';
+import { analyzeImpact, computeHealthScore, findDependencyChain, scanProject } from '@depxray/core';
 
 const result = await scanProject({
   rootDir: '/path/to/project',
@@ -73,6 +76,30 @@ console.log(result.ruleValidation);
 const impact = analyzeImpact(result.graph, 'src/App.tsx');
 console.log(impact.affectedFiles);
 console.log(impact.highImpactComplexFiles);
+
+const health = computeHealthScore(result);
+console.log(health.grade);
+console.log(health.hotspots);
+
+const chain = findDependencyChain(result.graph, 'src/App.tsx', 'src/utils/format.ts');
+console.log(chain.chains);
+```
+
+## Health Scoring
+
+`computeHealthScore(result)` returns a compact project scorecard for dashboards, reports, and AI-agent preflight checks.
+
+```ts
+import { computeHealthScore, scanProject } from '@depxray/core';
+
+const result = await scanProject({ rootDir: '/path/to/project' });
+const health = computeHealthScore(result);
+
+console.log(health.score);
+console.log(health.grade);
+console.log(health.issues);
+console.log(health.hotspots);
+console.log(health.hubs);
 ```
 
 ## Impact Analysis
@@ -92,6 +119,21 @@ const impact = analyzeImpact(result.graph, 'src/utils/format.ts', {
 console.log(impact.risk);
 console.log(impact.directDependents);
 console.log(impact.affectedFiles);
+```
+
+## Dependency Chains
+
+`findDependencyChain(graph, from, to)` explains the shortest import paths from one file to another.
+
+```ts
+import { findDependencyChain, scanProject } from '@depxray/core';
+
+const result = await scanProject({ rootDir: '/path/to/project' });
+const chain = findDependencyChain(result.graph, 'src/App.tsx', 'src/utils/format.ts');
+
+console.log(chain.connected);
+console.log(chain.shortestDistance);
+console.log(chain.chains);
 ```
 
 ## Graph Diffing
@@ -126,6 +168,12 @@ export const plugin: DepxrayPlugin = {
   },
 };
 ```
+
+Built-in plugin aliases:
+
+- `@depxray/plugin-complexity`: scan-level complexity metadata
+- `@depxray/plugin-mcp`: MCP-oriented tool and scan summary metadata
+- `@depxray/plugin-github-pr`: Markdown dependency-diff comments for GitHub PR review
 
 ## Related Packages
 

@@ -1,7 +1,7 @@
 {
   "name": "depxray",
-  "version": "3.0.0",
-  "description": "Interactive dependency intelligence CLI for JavaScript and TypeScript with browser graphs, impact analysis, autofix, CI checks, SARIF, reports, MCP-ready JSON, and AI-agent context.",
+  "version": "3.1.0",
+  "description": "Interactive codebase intelligence CLI for JavaScript and TypeScript with browser dependency graphs, health dashboard, impact analysis, safe cleanup, CI checks, SARIF, reports, and AI-agent context.",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "bin": {
@@ -23,7 +23,7 @@
     "prepublishOnly": "node ../../scripts/sync-versions.mjs && npm run build"
   },
   "devDependencies": {
-    "@depxray/core": "3.0.0",
+    "@depxray/core": "3.1.0",
     "@types/node": "^20.0.0",
     "@types/ws": "^8.18.1",
     "commander": "^12.1.0",
@@ -46,6 +46,12 @@
     "browser-ui",
     "architecture-rules",
     "graph-diff",
+    "health-score",
+    "health-dashboard",
+    "cleanup",
+    "dependency-chain",
+    "github-pr",
+    "pr-review",
     "impact-analysis",
     "blast-radius",
     "monorepo",

@@ -1,5 +1,26 @@
 # Changelog
 
+## 3.1.0 - 11/06/2026
+
+### Added
+
+- Added core `computeHealthScore` for A-F project health scoring with issue counts, complexity hotspots, and dependency hubs.
+- Added core `findDependencyChain` for shortest dependency-chain explanations between files.
+- Added MCP `check_health`, `find_unused_exports`, `explain_dependency_chain`, `find_related_files`, `suggest_cleanup`, and `diff_graphs` tools for AI-agent preflight analysis, cleanup planning, and PR review workflows.
+- Added browser Health Dashboard with project score, issue summary, complexity hotspots, and dependency hubs.
+- Added browser graph heatmap color modes for extension, complexity, file size, and instability.
+- Added built-in `@depxray/plugin-github-pr` to format dependency graph diffs as Markdown for GitHub PR comments.
+
+### Changed
+
+- Extended CLI and MCP graph data with `healthScore` for browser and agent workflows.
+- Updated README files and package descriptions for v3.1.0 health, cleanup, dependency-chain, heatmap, MCP, and GitHub PR plugin workflows.
+- Updated version sync tooling to derive synced packages from the root workspace list and update internal workspace dependency versions generically.
+
+### Fixed
+
+- `findDependencyChain` now returns a valid zero-length chain when the source and target are the same scanned file.
+
 ## 3.0.0 - 11/06/2026
 
 ### Added

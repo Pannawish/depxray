@@ -1,8 +1,8 @@
 # depxray (Dependency X-Ray)
 
-Understand a JavaScript or TypeScript codebase through an interactive graph view, file tree, imports, dependents, circular dependencies, JSON output, and static HTML reports.
+Understand a JavaScript or TypeScript codebase through an interactive graph view, health dashboard, file tree, imports, dependents, circular dependencies, JSON output, and static HTML reports.
 
-`depxray` is a browser-first CLI for developers and AI coding agents that need repository context before editing code. It scans a project, builds structure and dependency data, and exposes that data through a local browser UI, machine-readable JSON, or a shareable static HTML export.
+`depxray` is a browser-first CLI for developers and AI coding agents that need repository context before editing code. It scans a project, builds structure, dependency, health, and cleanup data, and exposes that context through a local browser UI, machine-readable JSON, or a shareable static HTML export.
 
 For MCP-compatible AI clients, use the companion package `@depxray/mcp`.
 
@@ -10,6 +10,8 @@ For MCP-compatible AI clients, use the companion package `@depxray/mcp`.
 
 - Explore a repo as a compact file tree instead of a noisy full-project graph
 - Navigate an interactive force-directed graph for dependency and structure data
+- Review a health dashboard with score, grade, issue counts, complexity hotspots, and dependency hubs
+- Color graph nodes by extension, complexity, file size, or instability
 - See what a file imports and what depends on it
 - Analyze a file's direct and transitive dependency impact before refactors
 - Review file health metrics such as LOC, complexity, exports, and instability
@@ -30,6 +32,7 @@ For MCP-compatible AI clients, use the companion package `@depxray/mcp`.
 - Explore entry points, reverse reachability, and transitive import trees
 - Extend scans and reports with config-driven plugins and hooks
 - Diff dependency graph snapshots or compare a git base ref against the working tree
+- Format dependency graph diffs for GitHub PR comments through the built-in PR plugin
 - Export JSON for scripts, automation, and AI coding agents
 - Export Mermaid and DOT dependency graphs for docs and PRs
 - Generate Markdown project health reports
@@ -45,7 +48,7 @@ npx depxray scan
 
 The default `scan` command starts a local browser UI. If port `5178` is busy, `depxray` automatically tries the next free port.
 
-The browser UI opens with the graph view in the center panel. Use the toolbar to switch between **Graph** and **Miller** views. In graph view, you can zoom, pan, drag nodes, click nodes to select files, see selected-file blast radius highlighting, switch label visibility between **Smart**, **All**, and **None**, filter files with unused exports, and inspect unresolved import warnings directly in file details.
+The browser UI opens with the graph view in the center panel. Use the toolbar to switch between **Graph**, **Dashboard**, and **Miller** views. In graph view, you can zoom, pan, drag nodes, click nodes to select files, see selected-file blast radius highlighting, switch label visibility between **Smart**, **All**, and **None**, color nodes by extension or health metrics, filter files with unused exports, and inspect unresolved import warnings directly in file details.
 
 ## Quick Examples
 
@@ -205,7 +208,7 @@ For clients that support MCP, configure the dedicated server package instead:
 }
 ```
 
-The MCP server exposes project scanning, file inspection, impact analysis, circular dependency detection, orphan detection, file-tree retrieval, and folder summaries as callable tools, with scan, inspect, and impact results including unused export, unresolved import, and refactor-risk metadata.
+The MCP server exposes project scanning, file inspection, impact analysis, health scoring, unused export lookup, dependency-chain explanations, related-file lookup, cleanup suggestions, graph diffs, circular dependency detection, orphan detection, file-tree retrieval, and folder summaries as callable tools, with results including unused export, unresolved import, cleanup, health, and refactor-risk metadata.
 
 ## JSON Output Examples
 
@@ -504,6 +507,7 @@ module.exports = {
   plugins: [
     '@depxray/plugin-complexity',
     '@depxray/plugin-mcp',
+    '@depxray/plugin-github-pr',
     './depxray-plugin.mjs',
   ],
 };
@@ -529,6 +533,7 @@ Built-in plugin aliases are resolved by `depxray` itself and do not require inst
 
 - `@depxray/plugin-complexity`: adds scan-level complexity summary metadata
 - `@depxray/plugin-mcp`: adds MCP-oriented tool and scan summary metadata for agent workflows; use `@depxray/mcp` when you need the actual MCP server
+- `@depxray/plugin-github-pr`: formats dependency graph diffs as Markdown suitable for GitHub PR comments
 
 ## Supported Analysis
 
@@ -565,8 +570,9 @@ It supports:
 - entry-point, trace, and transitive tree analysis commands
 - dependency impact and refactor blast-radius analysis
 - per-file LOC, cyclomatic complexity, export count, and instability metrics
-- Markdown health reports with hub files, heavy importers, orphans, circular chains, and complexity hotspots
+- project health scoring and Markdown health reports with hub files, heavy importers, orphans, circular chains, and complexity hotspots
 - interactive force-directed dependency and structure graph visualization
+- browser Health Dashboard and graph heatmap overlays
 - watch mode with live browser UI updates
 
 ## Repository

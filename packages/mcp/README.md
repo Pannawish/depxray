@@ -40,6 +40,11 @@ Most users do not run this command directly. Add it to your MCP client configura
 - Help coding agents understand a repository before making edits
 - Inspect imports and dependents for a target file
 - Analyze direct and transitive change impact before refactors
+- Check project health score, issue counts, complexity hotspots, and dependency hubs before editing
+- Explain dependency chains between two files
+- Find related files that should be reviewed with a target change
+- Suggest prioritized cleanup actions with safe, review, and risky impact labels
+- Compare dependency graph changes against a git base ref before a PR
 - Find circular dependencies before refactors
 - Find orphan files that may be safe cleanup candidates
 - Find unused exports and unresolved imports before cleanup work
@@ -48,9 +53,9 @@ Most users do not run this command directly. Add it to your MCP client configura
 - Review per-file metrics such as LOC, complexity, exports, and instability
 - Understand monorepo workspace ownership and cross-package imports
 - Summarize folder-level dependency relationships
-- Produce machine-readable project structure and dependency graph context
+- Produce machine-readable project structure, dependency graph, health, cleanup, and graph-diff context
 
-`@depxray/mcp` is especially useful for agentic coding workflows where the agent should inspect dependency impact, cleanup findings, and refactor risk before changing source files.
+`@depxray/mcp` is especially useful for agentic coding workflows where the agent should inspect dependency impact, cleanup findings, health signals, and refactor risk before changing source files.
 
 ## Claude Desktop Setup
 
@@ -156,7 +161,7 @@ Optional dependency-mode inputs:
 - monorepo workspaces
 - package.json `exports` and `imports` maps for workspaces
 - per-file metrics
-- circular, orphan-file, unused-export, unresolved-import, impact, devDependency, import-convention, and scoped architecture-rule analysis
+- circular, orphan-file, unused-export, unresolved-import, impact, health-score, dependency-chain, related-file, cleanup, graph-diff, devDependency, import-convention, and scoped architecture-rule analysis
 
 ## Privacy
 
