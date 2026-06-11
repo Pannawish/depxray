@@ -53,6 +53,16 @@ export function findDependencyChain(
 ): DependencyChainResult {
   const fromNode = resolveNode(graph, fromPath);
   const toNode = resolveNode(graph, toPath);
+  if (fromNode.id === toNode.id) {
+    return {
+      connected: true,
+      from: fromNode.relativePath,
+      to: toNode.relativePath,
+      chains: [[fromNode.relativePath]],
+      shortestDistance: 0,
+    };
+  }
+
   const adjacency = new Map<string, string[]>();
   const nodesById = new Map(graph.nodes.map((node) => [node.id, node]));
 

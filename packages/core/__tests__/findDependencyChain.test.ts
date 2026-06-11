@@ -78,4 +78,31 @@ describe('findDependencyChain', () => {
       shortestDistance: -1,
     });
   });
+
+  it('returns a zero-length chain when source and target are the same file', () => {
+    const app = node('src/App.ts');
+    const graph: DependencyGraph = {
+      rootDir,
+      nodes: [app],
+      edges: [],
+      circularDependencies: [],
+      metadata: {
+        scannedAt: '2026-06-11T00:00:00.000Z',
+        scanDurationMs: 1,
+        projectRoot: rootDir,
+        totalFiles: 1,
+        totalEdges: 0,
+        circularCount: 0,
+        depxrayVersion: 'test',
+      },
+    };
+
+    expect(findDependencyChain(graph, 'src/App.ts', 'src/App.ts')).toEqual({
+      connected: true,
+      from: 'src/App.ts',
+      to: 'src/App.ts',
+      chains: [['src/App.ts']],
+      shortestDistance: 0,
+    });
+  });
 });
