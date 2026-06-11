@@ -331,6 +331,33 @@ describe('relationship index', () => {
     expect(index.nodeById.get(external)?.workspace).toBe('@repo/tools');
   });
 
+  it('preserves dependency health data for the dashboard view', () => {
+    const dataSet = makeDataSet();
+    dataSet.graphs.dependencies!.healthScore = {
+      grade: 'B',
+      score: 84,
+      issues: {
+        circularChains: 1,
+        orphanFiles: 1,
+        unusedExports: 2,
+        unresolvedImports: 0,
+        ruleViolations: 0,
+      },
+      hotspots: [{ file: 'src/App.tsx', complexity: 8, loc: 42 }],
+      hubs: [{ file: 'src/Header.tsx', inDegree: 4, outDegree: 1 }],
+    };
+
+    const index = buildRelationshipIndex(dataSet);
+
+    expect(index.dependencyGraph?.healthScore?.grade).toBe('B');
+    expect(index.dependencyGraph?.healthScore?.hotspots[0]).toEqual({
+      file: 'src/App.tsx',
+      complexity: 8,
+      loc: 42,
+    });
+    expect(index.nodeById.get(app)?.relativePath).toBe('src/App.tsx');
+  });
+
   it('filters type-only and dynamic edges', () => {
     const index = buildRelationshipIndex(makeDataSet());
     const filtered = filterDependencyEdges(index.importsBySourceId.get(app) ?? [], {

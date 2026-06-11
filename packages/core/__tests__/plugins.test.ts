@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   BUILT_IN_PLUGINS,
   runAfterBuildGraphHooks,
+  runReportHooks,
   runAfterScanHooks,
 } from '../src/plugins.js';
 import type { DependencyGraph, ScanResult } from '../src/types.js';
@@ -46,6 +47,7 @@ function createResult(): ScanResult {
     totalImports: 0,
     circularCount: 0,
     orphanFiles: ['src/index.ts'],
+    unresolvedImports: [],
     errors: [],
     durationMs: 1,
   };
@@ -101,5 +103,25 @@ describe('plugin hooks', () => {
       maxComplexity: 2,
     });
     expect(result.pluginData?.marker).toEqual({ files: 1 });
+  });
+
+  it('formats dependency diffs with the built-in GitHub PR plugin', async () => {
+    const result = await runReportHooks(
+      {
+        addedFiles: ['src/new.ts'],
+        removedFiles: [],
+        addedEdges: [{ source: 'src/index.ts', target: 'src/new.ts' }],
+        removedEdges: [],
+        addedCircularDependencies: ['src/a.ts -> src/b.ts -> src/a.ts'],
+        removedCircularDependencies: [],
+      },
+      [BUILT_IN_PLUGINS['@depxray/plugin-github-pr']],
+      { rootDir: '/project' },
+    ) as { markdownComment?: string };
+
+    expect(result.markdownComment).toContain('depxray Dependency Report');
+    expect(result.markdownComment).toContain('Added files');
+    expect(result.markdownComment).toContain('src/new.ts');
+    expect(result.markdownComment).toContain('New circular dependencies');
   });
 });

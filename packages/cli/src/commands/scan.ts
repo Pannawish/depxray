@@ -13,6 +13,7 @@ import { formatAsMermaid } from '../formatters/mermaid.js';
 import { loadPlugins } from '../plugins.js';
 import {
   buildStructureGraph,
+  computeHealthScore,
   DEFAULT_IGNORE_PATTERNS,
   loadConfig,
   matchesAnyPattern,
@@ -21,6 +22,7 @@ import {
   type DepxrayConfig,
   type DepxrayPlugin,
   type FileTreeNode,
+  type HealthScoreResult,
   type RuleValidationResult,
   type ScanError,
   type ScanResult,
@@ -72,6 +74,7 @@ interface ExplorerGraphData {
   ruleValidation?: ScanResult['ruleValidation'];
   devDepsInProd?: ScanResult['devDepsInProd'];
   importConventionViolations?: ScanResult['importConventionViolations'];
+  healthScore?: HealthScoreResult;
   pluginData?: Record<string, unknown>;
   generatedBy: string;
   errors: ScanError[];
@@ -386,6 +389,7 @@ function toDependencyGraphData(result: ScanResult): ExplorerGraphData {
     ...(result.ruleValidation ? { ruleValidation: result.ruleValidation } : {}),
     ...(result.devDepsInProd ? { devDepsInProd: result.devDepsInProd } : {}),
     ...(result.importConventionViolations ? { importConventionViolations: result.importConventionViolations } : {}),
+    healthScore: computeHealthScore(result),
     ...(result.pluginData ? { pluginData: result.pluginData } : {}),
     generatedBy: getGeneratedBy(),
     errors: result.errors,

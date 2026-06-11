@@ -1,5 +1,7 @@
 import React from 'react';
 
+type CenterViewMode = 'miller' | 'graph' | 'dashboard';
+
 interface ExplorerToolbarProps {
   sourceLabel: string;
   searchTerm: string;
@@ -13,12 +15,12 @@ interface ExplorerToolbarProps {
   circularOnly: boolean;
   orphanOnly: boolean;
   unusedExportsOnly: boolean;
-  centerViewMode: 'miller' | 'graph';
+  centerViewMode: CenterViewMode;
   onSearchChange: (searchTerm: string) => void;
   onCircularOnlyChange: (circularOnly: boolean) => void;
   onOrphanOnlyChange: (orphanOnly: boolean) => void;
   onUnusedExportsOnlyChange: (unusedExportsOnly: boolean) => void;
-  onCenterViewModeChange: (viewMode: 'miller' | 'graph') => void;
+  onCenterViewModeChange: (viewMode: CenterViewMode) => void;
 }
 
 export function ExplorerToolbar({
@@ -91,6 +93,14 @@ export function ExplorerToolbar({
             type="button"
           >
             Graph
+          </button>
+          <button
+            className={centerViewMode === 'dashboard' ? 'active' : ''}
+            onClick={() => onCenterViewModeChange('dashboard')}
+            title="Show codebase health dashboard"
+            type="button"
+          >
+            Dashboard
           </button>
         </div>
 

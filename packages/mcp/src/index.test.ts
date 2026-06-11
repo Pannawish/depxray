@@ -22,12 +22,18 @@ describe('Depxray MCP server', () => {
 
       expect(result.tools.map((tool) => tool.name).sort()).toEqual([
         'analyze_impact',
+        'check_health',
+        'diff_graphs',
+        'explain_dependency_chain',
         'find_circular',
         'find_orphans',
+        'find_related_files',
+        'find_unused_exports',
         'get_file_tree',
         'get_folder_summary',
         'inspect_file',
         'scan_project',
+        'suggest_cleanup',
       ]);
     } finally {
       await client.close();

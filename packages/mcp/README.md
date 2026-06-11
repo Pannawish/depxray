@@ -19,6 +19,11 @@ Use it when an agent needs to answer questions like:
 - Which workspace owns this file in a monorepo?
 - What is inside this folder?
 - What does the project dependency graph look like?
+- What is the project health score before an agent starts editing?
+- Why does file A depend on file B?
+- What related files should be checked with this change?
+- What cleanup actions are safest to do first?
+- What dependency graph changed compared with a git base ref?
 
 The server runs locally over stdio and uses `@depxray/core`, the same scanner that powers the `depxray` CLI and browser UI.
 
@@ -81,8 +86,11 @@ A coding agent can use the tools in this order before editing:
 2. Call `inspect_file` for the file it plans to modify.
 3. Call `analyze_impact` for blast radius and refactor-risk paths.
 4. Call `get_folder_summary` for the surrounding folder.
-5. Call `find_circular` or `find_orphans` when planning a refactor.
-6. Call `scan_project` when it needs full graph context, unused export data, unresolved import data, or production dependency checks.
+5. Call `check_health` to get the current project score, hotspots, and hubs.
+6. Call `explain_dependency_chain` or `find_related_files` when it needs surrounding dependency context.
+7. Call `suggest_cleanup`, `find_unused_exports`, `find_circular`, or `find_orphans` when planning cleanup.
+8. Call `diff_graphs` before opening a PR to review graph changes against a git base ref.
+9. Call `scan_project` when it needs full graph context, unused export data, unresolved import data, or production dependency checks.
 
 This gives the agent a clearer view of dependency impact, ownership, and file health before it changes code.
 
@@ -93,6 +101,12 @@ This gives the agent a clearer view of dependency impact, ownership, and file he
 | `scan_project` | The agent needs full structure or dependency graph data, cleanup findings, or production dependency checks. | `{ "rootDir": "/path/to/project", "mode": "dependencies", "prodEntryPoints": ["src/main.ts"] }` |
 | `inspect_file` | The agent needs imports, dependents, and metrics for one file. | `{ "rootDir": "/path/to/project", "filePath": "src/App.tsx" }` |
 | `analyze_impact` | The agent needs the direct and transitive dependents of a file before editing it. | `{ "rootDir": "/path/to/project", "filePath": "src/utils/format.ts" }` |
+| `check_health` | The agent needs a quick project health assessment before starting work. | `{ "rootDir": "/path/to/project" }` |
+| `find_unused_exports` | The agent needs to find dead exports for cleanup. | `{ "rootDir": "/path/to/project", "filePath": "src/util.ts" }` |
+| `explain_dependency_chain` | The agent needs to explain why one file depends on another file. | `{ "rootDir": "/path/to/project", "from": "src/App.tsx", "to": "src/utils/format.ts" }` |
+| `find_related_files` | The agent needs imports, dependents, siblings, and co-located files around a target file. | `{ "rootDir": "/path/to/project", "filePath": "src/components/Button.tsx" }` |
+| `suggest_cleanup` | The agent needs prioritized cleanup actions with safe, review, and risky impact labels. | `{ "rootDir": "/path/to/project", "maxSuggestions": 10 }` |
+| `diff_graphs` | The agent needs to compare the current dependency graph with a git base ref before a PR. | `{ "rootDir": "/path/to/project", "baseRef": "main" }` |
 | `find_circular` | The agent should detect dependency cycles before a refactor. | `{ "rootDir": "/path/to/project" }` |
 | `find_orphans` | The agent should find files with no incoming references. | `{ "rootDir": "/path/to/project" }` |
 | `get_file_tree` | The agent needs a compact project tree. | `{ "rootDir": "/path/to/project", "maxDepth": 3 }` |
@@ -116,6 +130,17 @@ Optional dependency-mode inputs:
 - complexity metrics when available
 - high-impact/high-complexity files
 - an overall risk level for the change
+
+`check_health` returns:
+
+- an A-F project health grade and 0-100 score
+- issue counts for circular chains, orphan files, unused exports, unresolved imports, and rule violations
+- complexity hotspots for files that may need review before editing
+- dependency hubs with high incoming import counts
+
+`suggest_cleanup` returns safe, review, and risky cleanup candidates in priority order, including orphan files, unused exports, unresolved imports, unused dependencies, and circular chains.
+
+`diff_graphs` scans the current working tree and a git base ref, then returns added and removed files, dependency edges, and circular dependency changes for PR review workflows.
 
 ## Supported Projects
 

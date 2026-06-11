@@ -10,6 +10,7 @@ import type {
   ExplorerGraphNode,
   GraphMode,
 } from '../types.js';
+import { interpolateHeatColor, type GraphColorMode } from '../graphColors.js';
 
 interface ForceGraphViewProps {
   nodes: ExplorerGraphNode[];
@@ -23,6 +24,8 @@ interface ForceGraphViewProps {
   graphMode: GraphMode;
   labelMode: 'smart' | 'all' | 'none';
   onLabelModeChange: (labelMode: 'smart' | 'all' | 'none') => void;
+  colorMode: GraphColorMode;
+  onColorModeChange: (mode: GraphColorMode) => void;
   onSelectNode: (nodeId: string) => void;
 }
 
@@ -37,6 +40,9 @@ interface ForceGraphNode {
   isCircular?: boolean;
   isOrphan?: boolean;
   workspace?: string;
+  complexity?: number;
+  sizeBytes?: number;
+  instability?: number;
   unusedExportsCount?: number;
   unresolvedImportsCount?: number;
   isImpacted?: boolean;
@@ -127,6 +133,32 @@ function getNodeColor(node: ForceGraphNode, selectedNodeId: string | null): stri
   return EXTENSION_COLORS.get(node.extension ?? '') ?? '#334155';
 }
 
+function getNodeColorByMode(
+  node: ForceGraphNode,
+  selectedNodeId: string | null,
+  colorMode: GraphColorMode,
+  maxComplexity: number,
+  maxSize: number,
+): string {
+  if (node.id === selectedNodeId) {
+    return '#0f6b59';
+  }
+
+  if (colorMode === 'complexity') {
+    return interpolateHeatColor(node.complexity ?? 0, maxComplexity);
+  }
+
+  if (colorMode === 'size') {
+    return interpolateHeatColor(node.sizeBytes ?? 0, maxSize);
+  }
+
+  if (colorMode === 'instability') {
+    return interpolateHeatColor(node.instability ?? 0, 1);
+  }
+
+  return getNodeColor(node, selectedNodeId);
+}
+
 function getNodeRadius(node: ForceGraphNode, selectedNodeId: string | null): number {
   if (node.id === selectedNodeId) {
     return 7;
@@ -146,12 +178,15 @@ function drawNode(
   selectedNodeId: string | null,
   occupiedLabelBounds: LabelBounds[],
   labelMode: 'smart' | 'all' | 'none',
+  colorMode: GraphColorMode,
+  maxComplexity: number,
+  maxSize: number,
 ) {
   const graphNode = node as NodeObject<ForceGraphNode> & ForceGraphNode;
   const x = graphNode.x ?? 0;
   const y = graphNode.y ?? 0;
   const radius = getNodeRadius(graphNode, selectedNodeId);
-  const color = getNodeColor(graphNode, selectedNodeId);
+  const color = getNodeColorByMode(graphNode, selectedNodeId, colorMode, maxComplexity, maxSize);
 
   context.beginPath();
   context.arc(x, y, radius, 0, 2 * Math.PI, false);
@@ -223,6 +258,8 @@ export function ForceGraphView({
   graphMode,
   labelMode,
   onLabelModeChange,
+  colorMode,
+  onColorModeChange,
   onSelectNode,
 }: ForceGraphViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -264,6 +301,9 @@ export function ForceGraphView({
       isCircular: circularNodeIds.has(node.id),
       isOrphan: orphanNodeIds.has(node.id),
       workspace: node.workspace,
+      complexity: node.metrics?.cyclomaticComplexity ?? 0,
+      sizeBytes: node.sizeBytes ?? 0,
+      instability: node.metrics?.instability ?? 0,
       unusedExportsCount: node.unusedExports?.length ?? 0,
       unresolvedImportsCount: node.unresolvedImports?.length ?? 0,
       isImpacted: impactNodeIds.has(node.id) && node.id !== selectedNodeId,
@@ -294,6 +334,12 @@ export function ForceGraphView({
       links: graphLinks,
     };
   }, [circularNodeIds, edges, impactEdgeIds, impactNodeIds, nodes, orphanNodeIds, selectedNodeId]);
+  const maxComplexity = useMemo(() => (
+    Math.max(1, ...graphData.nodes.map((node) => node.complexity ?? 0))
+  ), [graphData.nodes]);
+  const maxSize = useMemo(() => (
+    Math.max(1, ...graphData.nodes.map((node) => node.sizeBytes ?? 0))
+  ), [graphData.nodes]);
 
   function fitGraph(durationMs = 350) {
     graphRef.current?.zoomToFit(durationMs, 36);
@@ -354,6 +400,20 @@ export function ForceGraphView({
               <option value="smart">Smart</option>
               <option value="all">All</option>
               <option value="none">None</option>
+            </select>
+          </label>
+          <label className="graph-label-select" title="Color graph nodes by metric">
+            <span>Color</span>
+            <select
+              value={colorMode}
+              onChange={(event) => {
+                onColorModeChange(event.target.value as GraphColorMode);
+              }}
+            >
+              <option value="extension">Extension</option>
+              <option value="complexity">Complexity</option>
+              <option value="size">File Size</option>
+              <option value="instability">Instability</option>
             </select>
           </label>
           <div className="graph-summary">
@@ -420,7 +480,17 @@ export function ForceGraphView({
               : 1
           )}
           nodeCanvasObject={(node, context, globalScale) => {
-            drawNode(node, context, globalScale, selectedNodeId, occupiedLabelBoundsRef.current, labelMode);
+            drawNode(
+              node,
+              context,
+              globalScale,
+              selectedNodeId,
+              occupiedLabelBoundsRef.current,
+              labelMode,
+              colorMode,
+              maxComplexity,
+              maxSize,
+            );
           }}
           nodeLabel={(node: NodeObject<ForceGraphNode>) => {
             const graphNode = node as ForceGraphNode;

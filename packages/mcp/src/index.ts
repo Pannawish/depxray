@@ -6,12 +6,18 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
 import { analyzeImpactTool } from './tools/analyzeImpact.js';
+import { checkHealthTool } from './tools/checkHealth.js';
+import { diffGraphsTool } from './tools/diffGraphs.js';
+import { explainDependencyChainTool } from './tools/explainDependencyChain.js';
 import { findCircularTool } from './tools/findCircular.js';
 import { findOrphansTool } from './tools/findOrphans.js';
+import { findRelatedFilesTool } from './tools/findRelatedFiles.js';
+import { findUnusedExportsTool } from './tools/findUnusedExports.js';
 import { getFileTreeTool } from './tools/getFileTree.js';
 import { getFolderSummaryTool } from './tools/getFolderSummary.js';
 import { inspectFileTool } from './tools/inspectFile.js';
 import { scanProjectTool } from './tools/scanProject.js';
+import { suggestCleanupTool } from './tools/suggestCleanup.js';
 import { jsonContent } from './tools/shared.js';
 
 const require = createRequire(import.meta.url);
@@ -23,6 +29,84 @@ export function createDepxrayMcpServer(): McpServer {
     name: 'depxray',
     version: packageJson.version,
   });
+
+  server.registerTool(
+    'check_health',
+    {
+      title: 'Check project health',
+      description: 'Return a health scorecard with grade, issue counts, complexity hotspots, and dependency hubs.',
+      inputSchema: {
+        rootDir: rootDirSchema,
+      },
+    },
+    async (input) => jsonContent(await checkHealthTool(input)),
+  );
+
+  server.registerTool(
+    'find_unused_exports',
+    {
+      title: 'Find unused exports',
+      description: 'Find exports that are never imported by any other file in the project. Optionally filter to a single file.',
+      inputSchema: {
+        rootDir: rootDirSchema,
+        filePath: z.string().min(1).optional().describe('Optional file path to limit results to a single file.'),
+      },
+    },
+    async (input) => jsonContent(await findUnusedExportsTool(input)),
+  );
+
+  server.registerTool(
+    'explain_dependency_chain',
+    {
+      title: 'Explain dependency chain',
+      description: 'Find and explain the import chain between two files. Shows all shortest dependency paths from one file to another.',
+      inputSchema: {
+        from: z.string().min(1).describe('Source file path. The file that imports directly or transitively.'),
+        to: z.string().min(1).describe('Target file path. The file being imported.'),
+        rootDir: rootDirSchema.optional().describe('Project root directory. Defaults to the MCP process working directory.'),
+      },
+    },
+    async (input) => jsonContent(await explainDependencyChainTool(input)),
+  );
+
+  server.registerTool(
+    'find_related_files',
+    {
+      title: 'Find related files',
+      description: 'Find files related to a given file: direct imports, dependents, directory siblings, and co-located files sharing the same name stem.',
+      inputSchema: {
+        filePath: z.string().min(1).describe('File path to find related files for. Relative paths resolve from rootDir.'),
+        rootDir: rootDirSchema.optional().describe('Project root directory. Defaults to the MCP process working directory.'),
+      },
+    },
+    async (input) => jsonContent(await findRelatedFilesTool(input)),
+  );
+
+  server.registerTool(
+    'suggest_cleanup',
+    {
+      title: 'Suggest cleanup actions',
+      description: 'Return a prioritized list of cleanup suggestions: orphan files, unused exports, unresolved imports, unused dependencies, and circular dependencies.',
+      inputSchema: {
+        rootDir: rootDirSchema,
+        maxSuggestions: z.number().int().positive().optional().describe('Maximum number of suggestions to return. Default 10.'),
+      },
+    },
+    async (input) => jsonContent(await suggestCleanupTool(input)),
+  );
+
+  server.registerTool(
+    'diff_graphs',
+    {
+      title: 'Diff dependency graphs',
+      description: 'Compare the current dependency graph against a git base ref. Shows added/removed files, edges, and circular dependency changes.',
+      inputSchema: {
+        rootDir: rootDirSchema,
+        baseRef: z.string().min(1).describe('Git ref to compare against, for example main or HEAD~1.'),
+      },
+    },
+    async (input) => jsonContent(await diffGraphsTool(input)),
+  );
 
   server.registerTool(
     'analyze_impact',

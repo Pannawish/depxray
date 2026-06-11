@@ -5,6 +5,7 @@ import type {
   StructureGraphNode,
   UnresolvedImport,
   RuleValidationResult,
+  HealthScoreResult,
 } from '@depxray/core';
 
 export type {
@@ -74,6 +75,7 @@ export interface ExplorerGraphData {
     expected: 'relative' | 'absolute';
     line: number;
   }>;
+  healthScore?: HealthScoreResult;
   pluginData?: Record<string, unknown>;
   generatedBy: string;
   errors: Array<{ filePath: string; error: string }>;

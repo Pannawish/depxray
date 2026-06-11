@@ -1,7 +1,9 @@
 import * as path from 'node:path';
 import { createRequire } from 'node:module';
+import { computeHealthScore } from '@depxray/core';
 import type {
   FileTreeNode,
+  HealthScoreResult,
   ScanError,
   ScanResult,
   StructureGraph,
@@ -53,6 +55,7 @@ export interface ExplorerGraphData {
   ruleValidation?: ScanResult['ruleValidation'];
   devDepsInProd?: ScanResult['devDepsInProd'];
   importConventionViolations?: ScanResult['importConventionViolations'];
+  healthScore?: HealthScoreResult;
   pluginData?: Record<string, unknown>;
   generatedBy: string;
   errors: ScanError[];
@@ -113,6 +116,7 @@ export function toStructureGraphData(graph: StructureGraph): ExplorerGraphData {
     unresolvedImports: [],
     devDepsInProd: undefined,
     importConventionViolations: undefined,
+    healthScore: undefined,
     generatedBy: getGeneratedBy(),
     errors: [],
     nodes: graph.nodes,
@@ -178,6 +182,7 @@ export function toDependencyGraphData(result: ScanResult): ExplorerGraphData {
     ...(result.ruleValidation ? { ruleValidation: result.ruleValidation } : {}),
     ...(result.devDepsInProd ? { devDepsInProd: result.devDepsInProd } : {}),
     ...(result.importConventionViolations ? { importConventionViolations: result.importConventionViolations } : {}),
+    healthScore: computeHealthScore(result),
     ...(result.pluginData ? { pluginData: result.pluginData } : {}),
     generatedBy: getGeneratedBy(),
     errors: result.errors,

@@ -13,6 +13,10 @@ export { filterTreeByDepth } from './filterTreeByDepth.js';
 export { buildStructureGraph } from './buildStructureGraph.js';
 export { parseExports } from './parseExports.js';
 export { analyzeImpact } from './analyzeImpact.js';
+export { computeHealthScore } from './computeHealthScore.js';
+export { findDependencyChain } from './findDependencyChain.js';
+export type { HealthScoreResult } from './computeHealthScore.js';
+export type { DependencyChainResult } from './findDependencyChain.js';
 
 // ─── Individual modules (for advanced usage) ──────────────────────────────
 export { parseImports } from './parseImports.js';
@@ -37,6 +41,7 @@ export { computeFileMetrics } from './computeMetrics.js';
 export {
   BUILT_IN_PLUGINS,
   complexityPlugin,
+  githubPrPlugin,
   mcpPlugin,
   runAfterBuildGraphHooks,
   runAfterScanHooks,

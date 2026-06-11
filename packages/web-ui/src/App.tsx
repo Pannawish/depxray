@@ -5,8 +5,10 @@ import { MillerColumnsPanel } from './components/MillerColumnsPanel.js';
 import { ForceGraphView } from './components/ForceGraphView.js';
 import { FileCodeViewer } from './components/FileCodeViewer.js';
 import { SelectionPanel } from './components/SelectionPanel.js';
+import { DashboardView } from './components/DashboardView.js';
 import { useGraphData } from './hooks/useGraphData.js';
 import { useRelationshipIndex } from './hooks/useRelationshipIndex.js';
+import type { GraphColorMode } from './graphColors.js';
 import {
   getAncestorIds,
   getFolderSummary,
@@ -27,6 +29,8 @@ const SOURCE_LABELS = {
 } as const;
 
 const EMPTY_ID_SET = new Set<string>();
+
+type CenterViewMode = 'miller' | 'graph' | 'dashboard';
 
 function hasUnusedExports(node: ExplorerGraphNode): boolean {
   return (node.unusedExports?.length ?? 0) > 0;
@@ -257,7 +261,8 @@ export default function App() {
   const [circularOnly, setCircularOnly] = useState<boolean>(false);
   const [orphanOnly, setOrphanOnly] = useState<boolean>(false);
   const [unusedExportsOnly, setUnusedExportsOnly] = useState<boolean>(false);
-  const [centerViewMode, setCenterViewMode] = useState<'miller' | 'graph'>('graph');
+  const [centerViewMode, setCenterViewMode] = useState<CenterViewMode>('graph');
+  const [graphColorMode, setGraphColorMode] = useState<GraphColorMode>('extension');
   const [graphLabelMode, setGraphLabelMode] = useState<'smart' | 'all' | 'none'>('smart');
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
@@ -644,7 +649,13 @@ export default function App() {
 
         {/* Column 2 (Center) - Anchored Miller Columns */}
         <div className="center-column">
-          {centerViewMode === 'miller' ? (
+          {centerViewMode === 'dashboard' ? (
+            <DashboardView
+              index={index}
+              healthScore={dataSet?.graphs.dependencies?.healthScore}
+              onSelectNode={selectAndExpandNode}
+            />
+          ) : centerViewMode === 'miller' ? (
             <MillerColumnsPanel
               node={selectedNode}
               index={index}
@@ -665,6 +676,8 @@ export default function App() {
               graphMode={graphMode}
               labelMode={graphLabelMode}
               onLabelModeChange={setGraphLabelMode}
+              colorMode={graphColorMode}
+              onColorModeChange={setGraphColorMode}
               onSelectNode={selectAndExpandNode}
             />
           )}
