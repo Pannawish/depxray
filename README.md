@@ -13,6 +13,7 @@
 - Browse a repo as a compact collapsible file tree
 - Explore dependencies in an interactive force-directed graph
 - Inspect outgoing imports and incoming dependents for a file
+- Analyze a file's dependency impact and refactor blast radius
 - View file details, folder summaries, and inline source code
 - See file health metrics such as LOC, complexity, exports, and instability
 - Detect circular dependencies
@@ -64,6 +65,12 @@ Inspect one file:
 npx depxray inspect src/components/Button.tsx --dir /path/to/project
 ```
 
+Analyze the files that would be affected by changing one file:
+
+```bash
+npx depxray impact src/components/Button.tsx /path/to/project
+```
+
 Create a reusable project config:
 
 ```bash
@@ -97,6 +104,7 @@ Current UI and graph-data capabilities include:
 - compact rows for large repos
 - force-directed graph view for dependency and structure data
 - graph zoom, pan, node dragging, click-to-select, and selected-node centering
+- selected-file impact highlighting, showing dependents and dependency paths in the force graph
 - graph node labels with Smart, All, and None label visibility modes
 - graph node coloring by file extension, circular status, orphan status, unused exports, and unresolved imports
 - graph node coloring by workspace in monorepos, with dashed cross-package dependency edges
@@ -104,6 +112,7 @@ Current UI and graph-data capabilities include:
 - architecture rule violations highlighted on dependency edges
 - file details such as relative path, absolute path, extension, depth, size, incoming count, outgoing count, circular status, and orphan status
 - file metrics such as lines of code, cyclomatic complexity, export count, and instability
+- file impact details such as direct dependents, transitive dependents, max impact depth, and high-impact/high-complexity risk
 - unused export lists with line numbers and type-only markers
 - unresolved import warnings with import specifiers and line numbers
 - folder summaries such as total files, direct children, descendants, internal imports, incoming external references, outgoing external references, circular files, and orphan files inside the folder
@@ -138,7 +147,7 @@ Common options:
 - `--unresolved`: print unresolved local imports to `stderr` after dependency scanning
 - `--deps`: include unused and unlisted npm dependency analysis in dependency JSON
 - `--validate`: validate dependency edges against architecture rules from config
-- `--fix`: apply safe autofixes for unused exports, orphan files, and configured import conventions
+- `--fix`: apply safe autofixes for unused exports, orphan files, configured import conventions, and unused npm dependencies when combined with `--deps`
 - `--dry-run`: show autofix actions without modifying files
 - `--yes`: apply autofixes without prompting
 - `--prod-entry-points <patterns...>`: production entry points for devDependency checks
@@ -184,6 +193,9 @@ npx depxray scan /path/to/project --mode dependencies --unresolved
 # Preview safe autofixes
 npx depxray scan /path/to/project --fix --dry-run
 
+# Preview unused npm dependency removals
+npx depxray scan /path/to/project --fix --deps --dry-run
+
 # Apply safe autofixes without a prompt
 npx depxray scan /path/to/project --fix --yes
 
@@ -227,6 +239,33 @@ Examples:
 ```bash
 npx depxray inspect src/App.tsx --dir /path/to/project
 npx depxray inspect src/App.tsx --dir /path/to/project --format json
+```
+
+### `impact`
+
+Analyze which files directly or transitively depend on a target file. This helps developers and AI coding agents estimate change risk before refactors.
+
+```bash
+depxray impact <file> [dir] [options]
+```
+
+Options:
+
+- `--json`: print machine-readable JSON
+- `--format <format>`: `text` or `json`, default `text`
+- `--complexity-threshold <number>`: complexity score considered high
+- `--impact-threshold <number>`: transitive dependent count considered high-impact
+- `--inbound-threshold <number>`: incoming import count considered high-impact
+- `--ignore <patterns...>`: exclude additional paths
+- `--no-circular`: skip circular dependency detection
+- `--no-aliases`: skip `tsconfig.json` / `jsconfig.json` path alias resolution
+- `--extensions <exts...>`: choose scanned extensions
+
+Examples:
+
+```bash
+npx depxray impact src/utils/format.ts /path/to/project
+npx depxray impact src/utils/format.ts /path/to/project --json
 ```
 
 ### `report`
@@ -444,6 +483,7 @@ Use cases:
 - find broken local references with `scan --mode dependencies --unresolved --json`
 - check npm dependency drift with `scan --mode dependencies --deps --json`
 - check devDependency runtime risk with `prodEntryPoints` and `scan --mode dependencies --json`
+- analyze refactor blast radius with `impact --json`
 - validate architecture boundaries with `scan --mode dependencies --validate`
 - run all configured CI gates with `check --json`
 - export SARIF with `scan --mode dependencies --json --format sarif`
@@ -463,6 +503,7 @@ npx depxray scan /path/to/project --mode dependencies --deps --json > .depxray-d
 npx depxray scan /path/to/project --mode dependencies --validate
 npx depxray check /path/to/project --json > .depxray-check.json
 npx depxray scan /path/to/project --mode dependencies --json --format sarif > depxray.sarif
+npx depxray impact src/App.tsx /path/to/project --json > .depxray-impact.json
 npx depxray diff --base main --json > .depxray-diff.json
 npx depxray inspect src/App.tsx --dir /path/to/project --format json
 npx depxray report /path/to/project --output depxray-report.md
@@ -487,7 +528,7 @@ Claude Desktop configuration example:
 }
 ```
 
-The MCP server exposes `scan_project`, `inspect_file`, `find_circular`, `find_orphans`, `get_file_tree`, and `get_folder_summary`, with scan and inspect results including unused export and unresolved import metadata.
+The MCP server exposes `scan_project`, `inspect_file`, `analyze_impact`, `find_circular`, `find_orphans`, `get_file_tree`, and `get_folder_summary`, with scan, inspect, and impact results including dependency risk, unused export, and unresolved import metadata.
 
 ## How It Works
 
@@ -509,6 +550,7 @@ It supports:
 - orphan file detection with configurable entry point exclusions
 - unused export detection with barrel and re-export support
 - unresolved local import detection
+- dependency impact analysis for direct and transitive dependents
 - autofix dry-runs and safe source rewrites
 - unused and unlisted npm dependency detection
 - devDependency usage detection from production entry point trees
@@ -522,13 +564,14 @@ It supports:
 - SARIF export for CI/code scanning
 - CI check command with non-zero exit codes
 - entry-point, trace, and transitive tree analysis commands
+- dependency impact and refactor blast-radius analysis
 - per-file LOC, cyclomatic complexity, export count, and instability metrics
 - interactive force-directed dependency and structure graph visualization
 - watch mode with live browser UI updates
 
 ## Monorepo Layout
 
-This repository is organized into four main workspaces:
+This repository is organized into four npm workspaces plus a VS Code extension scaffold:
 
 ```mermaid
 graph TD

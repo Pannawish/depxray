@@ -1,7 +1,7 @@
 {
   "name": "depxray",
   "version": "3.0.0",
-  "description": "Interactive dependency intelligence CLI for JavaScript and TypeScript, with browser graphs, architecture rules, graph diffs, reports, JSON, and AI-agent context.",
+  "description": "Interactive dependency intelligence CLI for JavaScript and TypeScript with browser graphs, impact analysis, autofix, CI checks, SARIF, reports, MCP-ready JSON, and AI-agent context.",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "bin": {
@@ -46,6 +46,8 @@
     "browser-ui",
     "architecture-rules",
     "graph-diff",
+    "impact-analysis",
+    "blast-radius",
     "monorepo",
     "mcp",
     "reports",

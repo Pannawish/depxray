@@ -17,6 +17,9 @@ interface ForceGraphViewProps {
   selectedNodeId: string | null;
   circularNodeIds: Set<string>;
   orphanNodeIds: Set<string>;
+  impactNodeIds: Set<string>;
+  impactEdgeIds: Set<string>;
+  impactAffectedCount: number;
   graphMode: GraphMode;
   labelMode: 'smart' | 'all' | 'none';
   onLabelModeChange: (labelMode: 'smart' | 'all' | 'none') => void;
@@ -36,6 +39,8 @@ interface ForceGraphNode {
   workspace?: string;
   unusedExportsCount?: number;
   unresolvedImportsCount?: number;
+  isImpacted?: boolean;
+  isImpactTarget?: boolean;
 }
 
 interface ForceGraphLink {
@@ -48,6 +53,7 @@ interface ForceGraphLink {
   dynamic?: boolean;
   crossPackage?: boolean;
   ruleSeverity?: 'error' | 'warning';
+  isImpactPath?: boolean;
 }
 
 interface LabelBounds {
@@ -152,6 +158,14 @@ function drawNode(
   context.fillStyle = color;
   context.fill();
 
+  if (graphNode.isImpacted || graphNode.isImpactTarget) {
+    context.lineWidth = (graphNode.isImpactTarget ? 2.5 : 2) / globalScale;
+    context.strokeStyle = graphNode.isImpactTarget ? '#0f6b59' : '#0891b2';
+    context.beginPath();
+    context.arc(x, y, radius + 4 / globalScale, 0, 2 * Math.PI, false);
+    context.stroke();
+  }
+
   if (graphNode.id === selectedNodeId) {
     context.lineWidth = 2 / globalScale;
     context.strokeStyle = '#063f35';
@@ -203,6 +217,9 @@ export function ForceGraphView({
   selectedNodeId,
   circularNodeIds,
   orphanNodeIds,
+  impactNodeIds,
+  impactEdgeIds,
+  impactAffectedCount,
   graphMode,
   labelMode,
   onLabelModeChange,
@@ -249,6 +266,8 @@ export function ForceGraphView({
       workspace: node.workspace,
       unusedExportsCount: node.unusedExports?.length ?? 0,
       unresolvedImportsCount: node.unresolvedImports?.length ?? 0,
+      isImpacted: impactNodeIds.has(node.id) && node.id !== selectedNodeId,
+      isImpactTarget: impactNodeIds.has(node.id) && node.id === selectedNodeId,
     }));
 
     const graphLinks: ForceGraphLink[] = edges
@@ -262,6 +281,7 @@ export function ForceGraphView({
         typeOnly: edge.isTypeOnly,
         dynamic: edge.isDynamic,
         crossPackage: edge.isCrossPackage,
+        isImpactPath: impactEdgeIds.has(edge.id),
         ruleSeverity: edge.ruleViolations?.some((violation) => violation.severity === 'error')
           ? 'error'
           : edge.ruleViolations?.length
@@ -273,7 +293,7 @@ export function ForceGraphView({
       nodes: graphNodes,
       links: graphLinks,
     };
-  }, [circularNodeIds, edges, nodes, orphanNodeIds]);
+  }, [circularNodeIds, edges, impactEdgeIds, impactNodeIds, nodes, orphanNodeIds, selectedNodeId]);
 
   function fitGraph(durationMs = 350) {
     graphRef.current?.zoomToFit(durationMs, 36);
@@ -338,6 +358,7 @@ export function ForceGraphView({
           </label>
           <div className="graph-summary">
             <span>{graphData.links.length.toLocaleString()} edges</span>
+            {impactAffectedCount > 0 ? <span>{impactAffectedCount.toLocaleString()} impact</span> : null}
             <span>{graphData.nodes.filter((node) => (node.unusedExportsCount ?? 0) > 0).length} unused</span>
             <span>{graphData.nodes.filter((node) => (node.unresolvedImportsCount ?? 0) > 0).length} unresolved</span>
             <span>{graphMode}</span>
@@ -362,6 +383,8 @@ export function ForceGraphView({
               ? '#dc2626'
               : (link as ForceGraphLink).ruleSeverity === 'warning'
                 ? '#d97706'
+                : (link as ForceGraphLink).isImpactPath
+                  ? '#0891b2'
                 : (link as ForceGraphLink).circular
               ? '#b33a32'
               : (link as ForceGraphLink).crossPackage
@@ -373,6 +396,8 @@ export function ForceGraphView({
               ? '#dc2626'
               : (link as ForceGraphLink).ruleSeverity === 'warning'
                 ? '#d97706'
+                : (link as ForceGraphLink).isImpactPath
+                  ? '#0891b2'
                 : (link as ForceGraphLink).circular
                   ? '#b33a32'
                   : '#94a3b8'
@@ -388,6 +413,7 @@ export function ForceGraphView({
           )}
           linkWidth={(link: LinkObject<ForceGraphNode, ForceGraphLink>) => (
             (link as ForceGraphLink).ruleSeverity ||
+            (link as ForceGraphLink).isImpactPath ||
             (link as ForceGraphLink).circular ||
             (link as ForceGraphLink).crossPackage
               ? 2
@@ -408,6 +434,9 @@ export function ForceGraphView({
             }
             if ((graphNode.unresolvedImportsCount ?? 0) > 0) {
               issues.push(`${graphNode.unresolvedImportsCount} unresolved import(s)`);
+            }
+            if (graphNode.isImpacted) {
+              issues.push('impacted by selected file');
             }
             return `${graphNode.relativePath}${workspace} - ${details}${issues.length > 0 ? ` - ${issues.join(', ')}` : ''}`;
           }}

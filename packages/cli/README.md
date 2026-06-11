@@ -11,6 +11,7 @@ For MCP-compatible AI clients, use the companion package `@depxray/mcp`.
 - Explore a repo as a compact file tree instead of a noisy full-project graph
 - Navigate an interactive force-directed graph for dependency and structure data
 - See what a file imports and what depends on it
+- Analyze a file's direct and transitive dependency impact before refactors
 - Review file health metrics such as LOC, complexity, exports, and instability
 - Detect circular dependencies quickly
 - Detect orphan files with no incoming imports
@@ -44,7 +45,7 @@ npx depxray scan
 
 The default `scan` command starts a local browser UI. If port `5178` is busy, `depxray` automatically tries the next free port.
 
-The browser UI opens with the graph view in the center panel. Use the toolbar to switch between **Graph** and **Miller** views. In graph view, you can zoom, pan, drag nodes, click nodes to select files, switch label visibility between **Smart**, **All**, and **None**, filter files with unused exports, and inspect unresolved import warnings directly in file details.
+The browser UI opens with the graph view in the center panel. Use the toolbar to switch between **Graph** and **Miller** views. In graph view, you can zoom, pan, drag nodes, click nodes to select files, see selected-file blast radius highlighting, switch label visibility between **Smart**, **All**, and **None**, filter files with unused exports, and inspect unresolved import warnings directly in file details.
 
 ## Quick Examples
 
@@ -110,6 +111,13 @@ npx depxray trace src/utils/math.ts /path/to/project
 npx depxray tree src/main.ts /path/to/project --json
 ```
 
+Analyze refactor impact:
+
+```bash
+npx depxray impact src/utils/math.ts /path/to/project
+npx depxray impact src/utils/math.ts /path/to/project --json
+```
+
 Find unused and unlisted npm dependencies:
 
 ```bash
@@ -162,7 +170,8 @@ Typical workflow:
 2. Run `scan --mode dependencies --unused-exports --json` to find removable exports.
 3. Run `scan --mode dependencies --unresolved --json` to find broken local references.
 4. Run `inspect --format json` on the file the agent plans to edit.
-5. Use incoming dependents and outgoing imports to avoid breaking connected files.
+5. Run `impact --json` on files the agent plans to modify.
+6. Use incoming dependents, outgoing imports, and impact paths to avoid breaking connected files.
 
 Agent-oriented commands:
 
@@ -175,12 +184,13 @@ npx depxray scan /path/to/project --mode dependencies --validate
 npx depxray scan /path/to/project --mode dependencies --json --format sarif --output depxray.sarif
 npx depxray check /path/to/project --json
 npx depxray tree src/main.ts /path/to/project --json
+npx depxray impact src/components/Button.tsx /path/to/project --json
 npx depxray diff --base main --json --dir /path/to/project
 npx depxray inspect src/components/Button.tsx --dir /path/to/project --format json
 npx depxray report /path/to/project --output depxray-report.md
 ```
 
-Use `scan --json` when an agent needs project-wide context. Use `scan --unused-exports --json` when an agent should identify dead exports before refactoring. Use `scan --unresolved --json` when an agent should repair broken local imports. Use `scan --deps --json` when an agent should check package.json drift before installing or removing dependencies. Use `scan --validate` when an agent should respect architecture boundaries before editing. Use `diff --base main --json` when an agent should summarize dependency changes in a branch. Use `inspect --format json` when an agent needs focused context for one file. Use `report` when an agent or reviewer needs a compact Markdown health summary.
+Use `scan --json` when an agent needs project-wide context. Use `scan --unused-exports --json` when an agent should identify dead exports before refactoring. Use `scan --unresolved --json` when an agent should repair broken local imports. Use `impact --json` when an agent should estimate blast radius and refactor risk for a specific file. Use `scan --deps --json` when an agent should check package.json drift before installing or removing dependencies. Use `scan --validate` when an agent should respect architecture boundaries before editing. Use `diff --base main --json` when an agent should summarize dependency changes in a branch. Use `inspect --format json` when an agent needs focused context for one file. Use `report` when an agent or reviewer needs a compact Markdown health summary.
 
 For clients that support MCP, configure the dedicated server package instead:
 
@@ -195,7 +205,7 @@ For clients that support MCP, configure the dedicated server package instead:
 }
 ```
 
-The MCP server exposes project scanning, file inspection, circular dependency detection, orphan detection, file-tree retrieval, and folder summaries as callable tools, with scan and inspect results including unused export and unresolved import metadata.
+The MCP server exposes project scanning, file inspection, impact analysis, circular dependency detection, orphan detection, file-tree retrieval, and folder summaries as callable tools, with scan, inspect, and impact results including unused export, unresolved import, and refactor-risk metadata.
 
 ## JSON Output Examples
 
@@ -280,7 +290,7 @@ Common options:
 - `--unresolved`: print unresolved local imports to `stderr` after dependency scanning
 - `--deps`: include unused and unlisted npm dependency analysis in dependency JSON
 - `--validate`: validate dependency edges against architecture rules from config
-- `--fix`: apply safe autofixes for unused exports, orphan files, and configured import conventions
+- `--fix`: apply safe autofixes for unused exports, orphan files, configured import conventions, and unused npm dependencies when combined with `--deps`
 - `--dry-run`: show autofix actions without modifying files
 - `--yes`: apply autofixes without prompting
 - `--prod-entry-points <patterns...>`: production entry points for devDependency checks
@@ -306,6 +316,7 @@ depxray scan /path/to/project --mode dependencies --orphans
 depxray scan /path/to/project --mode dependencies --unused-exports
 depxray scan /path/to/project --mode dependencies --unresolved
 depxray scan /path/to/project --fix --dry-run
+depxray scan /path/to/project --fix --deps --dry-run
 depxray scan /path/to/project --mode dependencies --deps --json
 depxray scan /path/to/project --mode dependencies --validate
 depxray scan /path/to/project --mode dependencies --orphans --entry-points "src/routes/**" "src/bootstrap.ts"
@@ -331,6 +342,33 @@ Examples:
 ```bash
 depxray inspect src/App.tsx --dir /path/to/project
 depxray inspect src/App.tsx --dir /path/to/project --format json
+```
+
+### `impact`
+
+Analyze which files directly or transitively depend on a target file, including sample paths, complexity metrics, and high-impact/high-complexity risk signals.
+
+```bash
+depxray impact <file> [dir] [options]
+```
+
+Options:
+
+- `--json`: print machine-readable JSON
+- `--format <format>`: `text` or `json`, default `text`
+- `--complexity-threshold <number>`: complexity score considered high
+- `--impact-threshold <number>`: transitive dependent count considered high-impact
+- `--inbound-threshold <number>`: incoming import count considered high-impact
+- `--ignore <patterns...>`: exclude paths from scanning
+- `--no-circular`: skip circular dependency detection
+- `--no-aliases`: skip `tsconfig.json` / `jsconfig.json` path alias resolution
+- `--extensions <exts...>`: choose scanned extensions
+
+Examples:
+
+```bash
+depxray impact src/App.tsx /path/to/project
+depxray impact src/App.tsx /path/to/project --json
 ```
 
 ### `report`
@@ -512,6 +550,7 @@ It supports:
 - orphan file detection with configurable entry point exclusions
 - unused export detection with barrel and re-export support
 - unresolved local import detection
+- dependency impact analysis for direct and transitive dependents
 - autofix dry-runs and safe source rewrites
 - unused and unlisted npm dependency detection
 - devDependency usage detection from production entry point trees
@@ -524,6 +563,7 @@ It supports:
 - dependency graph diffing for files, edges, and circular dependency changes
 - CI check command and SARIF output
 - entry-point, trace, and transitive tree analysis commands
+- dependency impact and refactor blast-radius analysis
 - per-file LOC, cyclomatic complexity, export count, and instability metrics
 - Markdown health reports with hub files, heavy importers, orphans, circular chains, and complexity hotspots
 - interactive force-directed dependency and structure graph visualization

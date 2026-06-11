@@ -4,8 +4,10 @@
 
 ### Added
 
+- Added unused export detection for dependency scans, including named exports, default exports, re-exports, barrel files, and type-only exports.
 - Added `depxray scan --fix`, `--dry-run`, and `--yes` for safe autofixes.
-- Added autofix planning and application for unused export line removal, orphan file deletion, and configured import convention rewrites.
+- Added autofix planning and application for unused export line removal, orphan file deletion, configured import convention rewrites, and unused npm dependency removal with `--fix --deps`.
+- Added unresolved local import detection while ignoring external packages and common asset imports.
 - Added devDependencies-in-production detection with `prodEntryPoints`, `devEntryPoints`, and `ignoreTypeImports` config support.
 - Added `depxray entry-points`, `depxray trace`, and `depxray tree` for entry-point discovery, reverse reachability, and transitive import tree analysis.
 - Added import convention detection through `importConventions` config.
@@ -13,14 +15,15 @@
 - Added `depxray check` for CI/CD health checks with exit code 1 on circular dependencies, orphan files, unused exports, unresolved imports, architecture errors, devDependency production usage, or import convention violations.
 - Added SARIF output through `depxray scan --mode dependencies --json --format sarif`.
 - Added entry-point-scoped restricted import rules using `rules[].entryPoints` with `deny.files` and `deny.modules`.
-- Added a VS Code extension scaffold with CodeLens, diagnostics, an "Open Current File" command, and a dependency tree view.
+- Added a VS Code extension scaffold with import/dependent-count CodeLens, diagnostics for unused exports, unresolved imports, and circular files, an "Open Current File" command, and a dependency tree view.
 - Added MCP `scan_project` inputs for production entry points, development entry points, type-only import handling, and import convention checks.
+- Added dependency impact analysis through core `analyzeImpact`, `depxray impact <file>`, browser graph blast-radius highlighting, and MCP `analyze_impact`.
 
 ### Changed
 
-- Extended scan, report, browser, CLI JSON, and MCP outputs with devDependency production findings and import convention findings.
+- Extended scan, report, browser, CLI JSON, and MCP outputs with unused export, unresolved import, devDependency production, import convention, and impact findings.
 - Updated `depxray init` defaults with v3 configuration examples.
-- Updated README files for v3.0.0 workflows, CI checks, SARIF, autofix, entry-point analysis, modern package resolution, and AI-agent usage.
+- Updated README files and package descriptions for v3.0.0 workflows, CI checks, SARIF, autofix, entry-point analysis, modern package resolution, impact analysis, MCP, and AI-agent usage.
 
 ## 2.1.0 - 11/06/2026
 

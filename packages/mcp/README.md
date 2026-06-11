@@ -8,6 +8,7 @@ Use it when an agent needs to answer questions like:
 
 - What does this file import?
 - What files depend on this file?
+- What is the refactor blast radius if this file changes?
 - Are there circular dependencies?
 - Which files appear to be orphaned?
 - Which exports are unused?
@@ -33,6 +34,7 @@ Most users do not run this command directly. Add it to your MCP client configura
 
 - Help coding agents understand a repository before making edits
 - Inspect imports and dependents for a target file
+- Analyze direct and transitive change impact before refactors
 - Find circular dependencies before refactors
 - Find orphan files that may be safe cleanup candidates
 - Find unused exports and unresolved imports before cleanup work
@@ -43,7 +45,7 @@ Most users do not run this command directly. Add it to your MCP client configura
 - Summarize folder-level dependency relationships
 - Produce machine-readable project structure and dependency graph context
 
-`@depxray/mcp` is especially useful for agentic coding workflows where the agent should inspect dependency impact before changing source files.
+`@depxray/mcp` is especially useful for agentic coding workflows where the agent should inspect dependency impact, cleanup findings, and refactor risk before changing source files.
 
 ## Claude Desktop Setup
 
@@ -77,9 +79,10 @@ A coding agent can use the tools in this order before editing:
 
 1. Call `get_file_tree` to understand the project layout.
 2. Call `inspect_file` for the file it plans to modify.
-3. Call `get_folder_summary` for the surrounding folder.
-4. Call `find_circular` or `find_orphans` when planning a refactor.
-5. Call `scan_project` when it needs full graph context, unused export data, unresolved import data, or production dependency checks.
+3. Call `analyze_impact` for blast radius and refactor-risk paths.
+4. Call `get_folder_summary` for the surrounding folder.
+5. Call `find_circular` or `find_orphans` when planning a refactor.
+6. Call `scan_project` when it needs full graph context, unused export data, unresolved import data, or production dependency checks.
 
 This gives the agent a clearer view of dependency impact, ownership, and file health before it changes code.
 
@@ -89,6 +92,7 @@ This gives the agent a clearer view of dependency impact, ownership, and file he
 | --- | --- | --- |
 | `scan_project` | The agent needs full structure or dependency graph data, cleanup findings, or production dependency checks. | `{ "rootDir": "/path/to/project", "mode": "dependencies", "prodEntryPoints": ["src/main.ts"] }` |
 | `inspect_file` | The agent needs imports, dependents, and metrics for one file. | `{ "rootDir": "/path/to/project", "filePath": "src/App.tsx" }` |
+| `analyze_impact` | The agent needs the direct and transitive dependents of a file before editing it. | `{ "rootDir": "/path/to/project", "filePath": "src/utils/format.ts" }` |
 | `find_circular` | The agent should detect dependency cycles before a refactor. | `{ "rootDir": "/path/to/project" }` |
 | `find_orphans` | The agent should find files with no incoming references. | `{ "rootDir": "/path/to/project" }` |
 | `get_file_tree` | The agent needs a compact project tree. | `{ "rootDir": "/path/to/project", "maxDepth": 3 }` |
@@ -102,6 +106,16 @@ Optional dependency-mode inputs:
 - `devEntryPoints`: development-only entry point patterns excluded from production checks
 - `ignoreTypeImports`: ignore type-only imports for devDependency checks
 - `importConventions`: internal import convention settings, such as `{ "prefer": "absolute", "aliasPrefix": "@/", "root": "src" }`
+
+`analyze_impact` returns:
+
+- the target file
+- direct dependents
+- all transitive dependent files
+- shortest paths from each affected file to the target
+- complexity metrics when available
+- high-impact/high-complexity files
+- an overall risk level for the change
 
 ## Supported Projects
 
@@ -117,7 +131,7 @@ Optional dependency-mode inputs:
 - monorepo workspaces
 - package.json `exports` and `imports` maps for workspaces
 - per-file metrics
-- circular, orphan-file, unused-export, unresolved-import, devDependency, import-convention, and scoped architecture-rule analysis
+- circular, orphan-file, unused-export, unresolved-import, impact, devDependency, import-convention, and scoped architecture-rule analysis
 
 ## Privacy
 

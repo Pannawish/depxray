@@ -17,6 +17,7 @@
 //   npx depxray scan --mode dependencies     # Import graph mode
 //   npx depxray scan --port 5180             # Custom server port
 //   npx depxray inspect src/App.tsx          # Inspect one file
+//   npx depxray impact src/App.tsx           # Analyze blast radius
 //   npx depxray report --output report.md    # Write Markdown report
 //   npx depxray diff before.json after.json  # Compare snapshots
 //
@@ -34,6 +35,7 @@ import { createInitCommand } from './commands/init.js';
 import { createReportCommand } from './commands/report.js';
 import { createDiffCommand } from './commands/diff.js';
 import { createCheckCommand } from './commands/check.js';
+import { createImpactCommand } from './commands/impact.js';
 import {
   createEntryPointsCommand,
   createTraceCommand,
@@ -58,6 +60,7 @@ program.addCommand(createInitCommand());
 program.addCommand(createReportCommand());
 program.addCommand(createDiffCommand());
 program.addCommand(createCheckCommand());
+program.addCommand(createImpactCommand());
 program.addCommand(createEntryPointsCommand());
 program.addCommand(createTraceCommand());
 program.addCommand(createTreeCommand());

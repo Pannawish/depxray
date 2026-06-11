@@ -411,11 +411,13 @@ describe('scanProject — integration', () => {
     }
   });
 
-  it('should resolve workspace package exports maps', async () => {
+  it('should resolve workspace package exports and imports maps', async () => {
     const projectDir = path.join(__dirname, 'tmp-workspace-exports-project');
     await fs.rm(projectDir, { recursive: true, force: true });
     await fs.mkdir(path.join(projectDir, 'packages/app/src'), { recursive: true });
     await fs.mkdir(path.join(projectDir, 'packages/lib/src'), { recursive: true });
+    await fs.mkdir(path.join(projectDir, 'packages/lib/src/features'), { recursive: true });
+    await fs.mkdir(path.join(projectDir, 'packages/lib/src/internal'), { recursive: true });
     await fs.writeFile(
       path.join(projectDir, 'package.json'),
       JSON.stringify({ private: true, workspaces: ['packages/*'] }),
@@ -432,18 +434,35 @@ describe('scanProject — integration', () => {
         name: '@repo/lib',
         exports: {
           './button': './src/Button.ts',
+          './feature/*': {
+            import: './src/features/*.ts',
+            default: './src/features/*.ts',
+          },
+        },
+        imports: {
+          '#internal/*': './src/internal/*.ts',
         },
       }),
       'utf-8',
     );
     await fs.writeFile(
       path.join(projectDir, 'packages/lib/src/Button.ts'),
-      'export const Button = "button";\n',
+      'import { internalValue } from "#internal/value";\nexport const Button = internalValue;\n',
+      'utf-8',
+    );
+    await fs.writeFile(
+      path.join(projectDir, 'packages/lib/src/features/card.ts'),
+      'export const Card = "card";\n',
+      'utf-8',
+    );
+    await fs.writeFile(
+      path.join(projectDir, 'packages/lib/src/internal/value.ts'),
+      'export const internalValue = "button";\n',
       'utf-8',
     );
     await fs.writeFile(
       path.join(projectDir, 'packages/app/src/index.ts'),
-      'import { Button } from "@repo/lib/button";\nexport const value = Button;\n',
+      'import { Button } from "@repo/lib/button";\nimport { Card } from "@repo/lib/feature/card";\nexport const value = Button + Card;\n',
       'utf-8',
     );
 
@@ -452,6 +471,14 @@ describe('scanProject — integration', () => {
       expect(result.graph.edges.some((edge) => (
         edge.importSpecifier === '@repo/lib/button' &&
         edge.target.endsWith('packages/lib/src/Button.ts')
+      ))).toBe(true);
+      expect(result.graph.edges.some((edge) => (
+        edge.importSpecifier === '@repo/lib/feature/card' &&
+        edge.target.endsWith('packages/lib/src/features/card.ts')
+      ))).toBe(true);
+      expect(result.graph.edges.some((edge) => (
+        edge.importSpecifier === '#internal/value' &&
+        edge.target.endsWith('packages/lib/src/internal/value.ts')
       ))).toBe(true);
     } finally {
       await fs.rm(projectDir, { recursive: true, force: true });

@@ -368,6 +368,57 @@ describe('CLI Integration Tests', () => {
       });
     });
 
+    it('should remove unused npm dependencies when --fix is combined with --deps', async () => {
+      await fs.mkdir(path.join(TEMP_DIR, 'src'), { recursive: true });
+      const packagePath = path.join(TEMP_DIR, 'package.json');
+      await fs.writeFile(
+        packagePath,
+        JSON.stringify({
+          dependencies: {
+            react: '^18.0.0',
+            lodash: '^4.17.21',
+          },
+          devDependencies: {
+            vitest: '^1.0.0',
+          },
+        }, null, 2),
+        'utf-8',
+      );
+      await fs.writeFile(
+        path.join(TEMP_DIR, 'src/index.ts'),
+        [
+          "import React from 'react';",
+          'export const value = React.createElement("div");',
+        ].join('\n'),
+        'utf-8',
+      );
+
+      const dryRun = await execa('node', [
+        CLI_PATH,
+        'scan',
+        TEMP_DIR,
+        '--fix',
+        '--deps',
+        '--dry-run',
+      ]);
+      expect(dryRun.stderr).toContain('remove unused dependency: lodash');
+      expect(dryRun.stderr).toContain('remove unused dependency: vitest');
+      expect(await fs.readFile(packagePath, 'utf-8')).toContain('lodash');
+
+      const applied = await execa('node', [
+        CLI_PATH,
+        'scan',
+        TEMP_DIR,
+        '--fix',
+        '--deps',
+        '--yes',
+      ]);
+      expect(applied.stderr).toContain('Autofix applied');
+      const packageJson = JSON.parse(await fs.readFile(packagePath, 'utf-8'));
+      expect(packageJson.dependencies).toEqual({ react: '^18.0.0' });
+      expect(packageJson.devDependencies).toBeUndefined();
+    });
+
     it('should include workspace and cross-package metadata in dependency JSON', async () => {
       await fs.mkdir(path.join(TEMP_DIR, 'packages/app/src'), { recursive: true });
       await fs.mkdir(path.join(TEMP_DIR, 'packages/lib/src'), { recursive: true });
@@ -908,6 +959,18 @@ describe('CLI Integration Tests', () => {
         '--json',
       ]);
       expect(JSON.parse(trace.stdout).entryPoints).toEqual(['src/index.ts']);
+
+      const impact = await execa('node', [
+        CLI_PATH,
+        'impact',
+        'src/helper.ts',
+        TEMP_DIR,
+        '--json',
+      ]);
+      const impactJson = JSON.parse(impact.stdout);
+      expect(impactJson.target.file).toBe('src/helper.ts');
+      expect(impactJson.affectedFiles.map((item: any) => item.file)).toEqual(['src/index.ts']);
+      expect(impactJson.directDependentCount).toBe(1);
 
       try {
         await execa('node', [

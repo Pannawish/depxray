@@ -5,6 +5,7 @@ import { pathToFileURL } from 'node:url';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import { z } from 'zod';
+import { analyzeImpactTool } from './tools/analyzeImpact.js';
 import { findCircularTool } from './tools/findCircular.js';
 import { findOrphansTool } from './tools/findOrphans.js';
 import { getFileTreeTool } from './tools/getFileTree.js';
@@ -22,6 +23,22 @@ export function createDepxrayMcpServer(): McpServer {
     name: 'depxray',
     version: packageJson.version,
   });
+
+  server.registerTool(
+    'analyze_impact',
+    {
+      title: 'Analyze dependency impact',
+      description: 'Analyze the blast radius of changing a file by returning direct and transitive dependents, paths, complexity metrics, and risk signals.',
+      inputSchema: {
+        filePath: z.string().min(1).describe('File path to analyze. Relative paths resolve from rootDir.'),
+        rootDir: rootDirSchema.optional().describe('Project root directory. Defaults to the MCP process working directory.'),
+        complexityThreshold: z.number().int().positive().optional().describe('Complexity score considered high.'),
+        impactThreshold: z.number().int().positive().optional().describe('Transitive dependent count considered high-impact.'),
+        inboundThreshold: z.number().int().positive().optional().describe('Incoming import count considered high-impact.'),
+      },
+    },
+    async (input) => jsonContent(await analyzeImpactTool(input)),
+  );
 
   server.registerTool(
     'scan_project',

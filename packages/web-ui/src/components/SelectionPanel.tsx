@@ -1,10 +1,15 @@
-import type { FileRelationshipIndex, FolderSummary } from '../relationshipIndex.js';
+import type {
+  FileRelationshipIndex,
+  FolderSummary,
+  ImpactSummary,
+} from '../relationshipIndex.js';
 import type { ExplorerGraphNode } from '../types.js';
 
 interface SelectionPanelProps {
   node: ExplorerGraphNode | null;
   index: FileRelationshipIndex;
   folderSummary: FolderSummary | null;
+  impactSummary: ImpactSummary | null;
   projectRoot: string;
   error: string | null;
   onDragStart: () => void;
@@ -50,10 +55,15 @@ function formatExportLabel(kind: 'named' | 'default' | 'reexport', name: string)
   return name;
 }
 
+function formatRiskFactors(factors: string[]): string {
+  return factors.length > 0 ? factors.join(', ') : 'no elevated factors';
+}
+
 export function SelectionPanel({
   node,
   index,
   folderSummary,
+  impactSummary,
   projectRoot,
   error,
   onDragStart,
@@ -114,6 +124,7 @@ export function SelectionPanel({
     : node.isOrphan;
   const unusedExports = !isDirectory ? (node.unusedExports ?? []) : [];
   const unresolvedImports = !isDirectory ? (node.unresolvedImports ?? []) : [];
+  const impact = !isDirectory && impactSummary?.targetNodeId === node.id ? impactSummary : null;
 
   return (
     <section className="details-panel">
@@ -187,6 +198,11 @@ export function SelectionPanel({
               Warning {unresolvedImports.length}
             </span>
           )}
+          {impact && impact.affectedCount > 0 ? (
+            <span className="issue-chip impact">
+              Impact {impact.affectedCount}
+            </span>
+          ) : null}
           <button 
             className="swap-layout-btn"
             onClick={onSwapVertical}
@@ -212,6 +228,7 @@ export function SelectionPanel({
         {node.extension ? <span>{node.extension}</span> : null}
         {node.isCircular ? <span className="danger">circular</span> : null}
         {node.isOrphan ? <span className="warning">orphan</span> : null}
+        {impact ? <span className={impact.risk === 'high' ? 'danger' : 'info'}>impact {impact.risk}</span> : null}
         {unusedExports.length > 0 ? <span className="info">unused exports {unusedExports.length}</span> : null}
         {unresolvedImports.length > 0 ? <span className="warning">unresolved imports {unresolvedImports.length}</span> : null}
       </div>
@@ -249,6 +266,15 @@ export function SelectionPanel({
             ) : null}
             <DetailRow label="Unused exports" value={unusedExports.length} />
             <DetailRow label="Unresolved imports" value={unresolvedImports.length} />
+            {impact ? (
+              <>
+                <DetailRow label="Impact risk" value={impact.risk} />
+                <DetailRow label="Affected dependents" value={impact.affectedCount} />
+                <DetailRow label="Direct dependents" value={impact.directDependentCount} />
+                <DetailRow label="Max impact depth" value={impact.maxDistance} />
+                <DetailRow label="High impact complex" value={impact.highImpactComplexFiles.length} />
+              </>
+            ) : null}
             {node.componentName ? <DetailRow label="Component" value={node.componentName} /> : null}
           </>
         )}
@@ -295,6 +321,47 @@ export function SelectionPanel({
                 </span>
               </div>
             ))}
+          </div>
+        </div>
+      ) : null}
+
+      {!isDirectory && impact ? (
+        <div className="issue-section">
+          <div className="relationship-heading">
+            <h3>Impact analysis</h3>
+            <span>{impact.affectedCount}</span>
+          </div>
+          <div className="issue-list">
+            {impact.highImpactComplexFiles.length > 0 ? (
+              impact.highImpactComplexFiles.slice(0, 3).map((file) => (
+                <div className="issue-item impact" key={`impact-hot-${file.node.id}`}>
+                  <strong>{file.node.relativePath}</strong>
+                  <span>{formatRiskFactors(file.riskFactors)}</span>
+                </div>
+              ))
+            ) : null}
+            {impact.affectedFiles.slice(0, 6).map((file) => (
+              <div className="issue-item impact" key={`impact-${file.node.id}`}>
+                <strong>{file.node.relativePath}</strong>
+                <span>
+                  distance {file.distance}
+                  {' '}
+                  · risk {file.risk}
+                </span>
+              </div>
+            ))}
+            {impact.affectedFiles.length > 6 ? (
+              <div className="issue-item impact">
+                <strong>{impact.affectedFiles.length - 6} more affected files</strong>
+                <span>additional dependents not shown</span>
+              </div>
+            ) : null}
+            {impact.affectedFiles.length === 0 ? (
+              <div className="issue-item impact">
+                <strong>No dependent files</strong>
+                <span>risk {impact.risk}</span>
+              </div>
+            ) : null}
           </div>
         </div>
       ) : null}

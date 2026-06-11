@@ -3,6 +3,7 @@ import {
   buildRelationshipIndex,
   filterDependencyEdges,
   getFolderSummary,
+  getImpactSummary,
 } from './relationshipIndex.js';
 import type { ExplorerGraphSet } from './types.js';
 
@@ -366,5 +367,22 @@ describe('relationship index', () => {
     const summary = getFolderSummary(root, index);
 
     expect(summary.orphanFiles.map((node) => node.id)).toEqual([external]);
+  });
+
+  it('summarizes transitive dependency impact for a selected file', () => {
+    const index = buildRelationshipIndex(makeDataSet());
+    const summary = getImpactSummary(types, index);
+
+    expect(summary?.targetNodeId).toBe(types);
+    expect(summary?.directDependentCount).toBe(1);
+    expect(summary?.affectedFiles.map((item) => item.node.id)).toEqual([app, header, external]);
+    expect(summary?.impactNodeIds.has(types)).toBe(true);
+    expect(summary?.impactEdgeIds.has('app-types')).toBe(true);
+    expect(summary?.affectedFiles.find((item) => item.node.id === external)?.path.map((node) => node.id)).toEqual([
+      external,
+      header,
+      app,
+      types,
+    ]);
   });
 });

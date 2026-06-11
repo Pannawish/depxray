@@ -245,6 +245,77 @@ export interface DependencyGraph {
   pluginData?: Record<string, unknown>;
 }
 
+export type ImpactRiskLevel = 'low' | 'medium' | 'high';
+
+export interface ImpactAnalysisOptions {
+  /** Complexity score where a file becomes high-complexity */
+  complexityThreshold?: number;
+
+  /** Number of transitive dependents where a target file becomes high-impact */
+  impactThreshold?: number;
+
+  /** Number of incoming imports where an affected file becomes high-impact */
+  inboundThreshold?: number;
+}
+
+export interface ImpactFileSummary {
+  /** Path relative to the project root */
+  file: string;
+
+  /** Absolute file path */
+  absolutePath: string;
+
+  /** Shortest dependency distance from this file to the target */
+  distance: number;
+
+  /** Shortest path from this file to the target, using relative paths */
+  path: string[];
+
+  /** Number of files that import this file */
+  inDegree: number;
+
+  /** Number of files this file imports */
+  outDegree: number;
+
+  /** Complexity and health metrics for this file */
+  metrics?: FileMetrics;
+
+  /** Human-readable risk factors attached to this file */
+  riskFactors: string[];
+
+  /** Per-file impact risk */
+  risk: ImpactRiskLevel;
+}
+
+export interface ImpactAnalysisResult {
+  /** The file being analyzed */
+  target: ImpactFileSummary;
+
+  /** Files that directly import the target */
+  directDependents: ImpactFileSummary[];
+
+  /** Files that directly or transitively depend on the target */
+  affectedFiles: ImpactFileSummary[];
+
+  /** Number of direct dependents */
+  directDependentCount: number;
+
+  /** Number of direct and transitive dependents */
+  affectedCount: number;
+
+  /** Maximum shortest-path distance from an affected file to the target */
+  maxDistance: number;
+
+  /** Files that are both highly connected/impactful and complex */
+  highImpactComplexFiles: ImpactFileSummary[];
+
+  /** Overall change risk for the target file */
+  risk: ImpactRiskLevel;
+
+  /** Thresholds used by this analysis */
+  thresholds: Required<ImpactAnalysisOptions>;
+}
+
 /**
  * A detected workspace package inside a monorepo.
  */

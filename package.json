@@ -2,7 +2,7 @@
   "name": "depxray-root",
   "private": true,
   "version": "3.0.0",
-  "description": "Dependency intelligence for JavaScript and TypeScript codebases, with browser graphs, architecture rules, graph diffs, reports, MCP, and AI-agent context.",
+  "description": "Codebase intelligence for JavaScript and TypeScript with dependency graphs, impact analysis, CI checks, autofix, SARIF, MCP tools, and AI-agent context.",
   "workspaces": [
     "packages/core",
     "packages/cli",

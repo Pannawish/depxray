@@ -830,6 +830,12 @@ button {
   color: var(--danger);
 }
 
+.issue-chip.impact {
+  background: #e8f7fb;
+  border-color: rgba(8, 145, 178, 0.22);
+  color: #0e7490;
+}
+
 .issue-section {
   margin: 10px;
   padding-top: 10px;
@@ -862,6 +868,11 @@ button {
 .issue-item.unresolved {
   border-color: #e6aaa5;
   background: #fff8f7;
+}
+
+.issue-item.impact {
+  border-color: rgba(8, 145, 178, 0.24);
+  background: #f5fbfd;
 }
 
 /* Miller Columns Panel Layout */

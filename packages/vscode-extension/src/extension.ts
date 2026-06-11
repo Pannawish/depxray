@@ -9,6 +9,11 @@ interface DepxrayNode {
   imports?: DepxrayNode[];
 }
 
+interface DepxrayInspectResult {
+  inDegree: number;
+  outDegree: number;
+}
+
 function workspaceRoot(): string | null {
   return vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? null;
 }
@@ -44,6 +49,15 @@ function currentRelativeFile(): string | null {
   return path.relative(root, editor.document.uri.fsPath).replaceAll('\\', '/');
 }
 
+async function inspectFile(root: string, relativeFile: string): Promise<DepxrayInspectResult | null> {
+  try {
+    const stdout = await runDepxray(['inspect', relativeFile, '--dir', root, '--format', 'json'], root);
+    return JSON.parse(stdout) as DepxrayInspectResult;
+  } catch {
+    return null;
+  }
+}
+
 class DepxrayCodeLensProvider implements vscode.CodeLensProvider {
   async provideCodeLenses(document: vscode.TextDocument): Promise<vscode.CodeLens[]> {
     const root = workspaceRoot();
@@ -52,9 +66,14 @@ class DepxrayCodeLensProvider implements vscode.CodeLensProvider {
     }
 
     const relativeFile = path.relative(root, document.uri.fsPath).replaceAll('\\', '/');
+    const summary = await inspectFile(root, relativeFile);
+    const title = summary
+      ? `depxray: ${summary.outDegree} imports, ${summary.inDegree} dependents`
+      : 'depxray: inspect dependencies';
+
     return [
       new vscode.CodeLens(new vscode.Range(0, 0, 0, 0), {
-        title: 'depxray: inspect dependencies',
+        title,
         command: 'depxray.openCurrentFile',
         arguments: [relativeFile],
       }),
@@ -97,7 +116,11 @@ async function refreshDiagnostics(collection: vscode.DiagnosticCollection): Prom
 
   const stdout = await runDepxray(['scan', root, '--mode', 'dependencies', '--json', '--unused-exports', '--unresolved'], root);
   const data = JSON.parse(stdout) as {
-    nodes: Array<{ relativePath: string; unusedExports?: Array<{ name: string; line: number }> }>;
+    nodes: Array<{
+      relativePath: string;
+      isCircular?: boolean;
+      unusedExports?: Array<{ name: string; line: number }>;
+    }>;
     unresolvedImports?: Array<{ file: string; importSpecifier: string; line: number }>;
   };
   const diagnosticsByFile = new Map<string, vscode.Diagnostic[]>();
@@ -108,6 +131,16 @@ async function refreshDiagnostics(collection: vscode.DiagnosticCollection): Prom
       diagnostics.push(new vscode.Diagnostic(
         new vscode.Range(Math.max(0, unusedExport.line - 1), 0, Math.max(0, unusedExport.line - 1), 1),
         `Unused export: ${unusedExport.name}`,
+        vscode.DiagnosticSeverity.Warning,
+      ));
+      diagnosticsByFile.set(node.relativePath, diagnostics);
+    }
+
+    if (node.isCircular) {
+      const diagnostics = diagnosticsByFile.get(node.relativePath) ?? [];
+      diagnostics.push(new vscode.Diagnostic(
+        new vscode.Range(0, 0, 0, 1),
+        'File participates in a circular dependency',
         vscode.DiagnosticSeverity.Warning,
       ));
       diagnosticsByFile.set(node.relativePath, diagnostics);
@@ -136,7 +169,12 @@ export function activate(context: vscode.ExtensionContext): void {
   context.subscriptions.push(diagnostics);
   context.subscriptions.push(vscode.window.registerTreeDataProvider('depxray.dependencyChains', treeProvider));
   context.subscriptions.push(vscode.languages.registerCodeLensProvider(
-    [{ scheme: 'file', language: 'typescript' }, { scheme: 'file', language: 'javascript' }],
+    [
+      { scheme: 'file', language: 'typescript' },
+      { scheme: 'file', language: 'typescriptreact' },
+      { scheme: 'file', language: 'javascript' },
+      { scheme: 'file', language: 'javascriptreact' },
+    ],
     new DepxrayCodeLensProvider(),
   ));
 

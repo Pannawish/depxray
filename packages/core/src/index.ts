@@ -12,6 +12,7 @@ export { scanFileTree } from './scanFileTree.js';
 export { filterTreeByDepth } from './filterTreeByDepth.js';
 export { buildStructureGraph } from './buildStructureGraph.js';
 export { parseExports } from './parseExports.js';
+export { analyzeImpact } from './analyzeImpact.js';
 
 // ─── Individual modules (for advanced usage) ──────────────────────────────
 export { parseImports } from './parseImports.js';
@@ -55,6 +56,10 @@ export type {
   DevDependencyInProd,
   ImportConventionConfig,
   ImportConventionViolation,
+  ImpactAnalysisOptions,
+  ImpactAnalysisResult,
+  ImpactFileSummary,
+  ImpactRiskLevel,
   WorkspaceInfo,
   ArchitectureRule,
   DepxrayPlugin,

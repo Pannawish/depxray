@@ -570,13 +570,14 @@ function printUnresolvedImports(unresolvedImports: ScanResult['unresolvedImports
 }
 
 interface FixAction {
-  kind: 'remove-unused-export' | 'delete-orphan-file' | 'rewrite-import';
+  kind: 'remove-unused-export' | 'delete-orphan-file' | 'rewrite-import' | 'remove-unused-dependency';
   filePath: string;
   relativePath: string;
   line?: number;
   exportName?: string;
   importSpecifier?: string;
   suggestedSpecifier?: string;
+  dependencyName?: string;
 }
 
 interface FixSummary {
@@ -619,6 +620,15 @@ function planFixes(result: ScanResult): FixAction[] {
     });
   }
 
+  for (const dependencyName of result.dependencyIssues?.unused ?? []) {
+    actions.push({
+      kind: 'remove-unused-dependency',
+      filePath: path.join(result.graph.rootDir, 'package.json'),
+      relativePath: 'package.json',
+      dependencyName,
+    });
+  }
+
   return actions.sort((a, b) => a.relativePath.localeCompare(b.relativePath) || (a.line ?? 0) - (b.line ?? 0));
 }
 
@@ -632,6 +642,8 @@ function printFixPlan(actions: FixAction[], dryRun: boolean): void {
   for (const action of actions) {
     if (action.kind === 'delete-orphan-file') {
       process.stderr.write(`  delete orphan file: ${action.relativePath}\n`);
+    } else if (action.kind === 'remove-unused-dependency') {
+      process.stderr.write(`  remove unused dependency: ${action.dependencyName} from ${action.relativePath}\n`);
     } else if (action.kind === 'rewrite-import') {
       process.stderr.write(`  rewrite import: ${action.relativePath}:${action.line} ${action.importSpecifier} -> ${action.suggestedSpecifier}\n`);
     } else {
@@ -677,6 +689,7 @@ async function applyFixes(actions: FixAction[]): Promise<FixSummary> {
   const applied: FixAction[] = [];
   const skipped: FixSummary['skipped'] = [];
   const deleteActions = actions.filter((action) => action.kind === 'delete-orphan-file');
+  const dependencyActions = actions.filter((action) => action.kind === 'remove-unused-dependency');
   const rewriteActionsByFile = new Map<string, FixAction[]>();
   const exportActionsByFile = new Map<string, FixAction[]>();
 
@@ -744,6 +757,66 @@ async function applyFixes(actions: FixAction[]): Promise<FixSummary> {
       }
     }
     await fs.writeFile(filePath, source, 'utf-8');
+  }
+
+  if (dependencyActions.length > 0) {
+    const actionsByPackageJson = new Map<string, FixAction[]>();
+    for (const action of dependencyActions) {
+      const current = actionsByPackageJson.get(action.filePath);
+      if (current) {
+        current.push(action);
+      } else {
+        actionsByPackageJson.set(action.filePath, [action]);
+      }
+    }
+
+    const dependencySections = [
+      'dependencies',
+      'devDependencies',
+      'peerDependencies',
+      'optionalDependencies',
+    ] as const;
+
+    for (const [filePath, fileActions] of actionsByPackageJson) {
+      const original = await fs.readFile(filePath, 'utf-8');
+      const packageJson = JSON.parse(original) as Record<string, unknown>;
+      let changed = false;
+
+      for (const action of fileActions) {
+        if (!action.dependencyName) {
+          skipped.push({ action, reason: 'missing dependency name' });
+          continue;
+        }
+
+        let removed = false;
+        for (const section of dependencySections) {
+          const dependencies = packageJson[section];
+          if (
+            dependencies &&
+            typeof dependencies === 'object' &&
+            !Array.isArray(dependencies) &&
+            Object.prototype.hasOwnProperty.call(dependencies, action.dependencyName)
+          ) {
+            delete (dependencies as Record<string, unknown>)[action.dependencyName];
+            if (Object.keys(dependencies as Record<string, unknown>).length === 0) {
+              delete packageJson[section];
+            }
+            removed = true;
+            changed = true;
+          }
+        }
+
+        if (removed) {
+          applied.push(action);
+        } else {
+          skipped.push({ action, reason: 'dependency not found in package.json' });
+        }
+      }
+
+      if (changed) {
+        await fs.writeFile(filePath, JSON.stringify(packageJson, null, 2) + '\n', 'utf-8');
+      }
+    }
   }
 
   for (const action of deleteActions) {
@@ -1319,7 +1392,7 @@ export function createScanCommand(): Command {
     .option('--unresolved', 'Print unresolved imports to stderr after dependency scanning')
     .option('--deps', 'Include unused and unlisted npm dependency analysis in dependency JSON')
     .option('--validate', 'Validate dependency edges against architecture rules from depxray config')
-    .option('--fix', 'Apply safe autofixes for unused exports and orphan files')
+    .option('--fix', 'Apply safe autofixes for unused exports, orphan files, import conventions, and --deps findings')
     .option('--dry-run', 'Show autofix actions without modifying files')
     .option('--yes', 'Apply autofixes without prompting for confirmation')
     .option('--ignore-type-imports', 'Ignore type-only imports for devDependency production checks')

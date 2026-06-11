@@ -10,6 +10,7 @@ import { useRelationshipIndex } from './hooks/useRelationshipIndex.js';
 import {
   getAncestorIds,
   getFolderSummary,
+  getImpactSummary,
   type FileRelationshipIndex,
 } from './relationshipIndex.js';
 import type {
@@ -24,6 +25,8 @@ const SOURCE_LABELS = {
   live: 'live server',
   sample: 'sample preview',
 } as const;
+
+const EMPTY_ID_SET = new Set<string>();
 
 function hasUnusedExports(node: ExplorerGraphNode): boolean {
   return (node.unusedExports?.length ?? 0) > 0;
@@ -412,6 +415,16 @@ export default function App() {
       ? index.dependencyEdges
       : (index.structureGraph?.edges ?? [])
   ), [graphMode, index.dependencyEdges, index.structureGraph]);
+  const impactSummary = useMemo(() => (
+    selectedNodeId ? getImpactSummary(selectedNodeId, index) : null
+  ), [index, selectedNodeId]);
+  const activeImpactSummary = activeCodeNode?.id === impactSummary?.targetNodeId ? impactSummary : null;
+  const graphImpactNodeIds = graphMode === 'dependencies'
+    ? impactSummary?.impactNodeIds ?? EMPTY_ID_SET
+    : EMPTY_ID_SET;
+  const graphImpactEdgeIds = graphMode === 'dependencies'
+    ? impactSummary?.impactEdgeIds ?? EMPTY_ID_SET
+    : EMPTY_ID_SET;
 
   useEffect(() => {
     if (selectedNodeId) {
@@ -582,6 +595,7 @@ export default function App() {
                       node={activeCodeNode}
                       index={index}
                       folderSummary={folderSummary}
+                      impactSummary={activeImpactSummary}
                       projectRoot={index.projectRoot}
                       error={error}
                       onDragStart={() => setDraggedType('details')}
@@ -645,6 +659,9 @@ export default function App() {
               selectedNodeId={selectedNodeId}
               circularNodeIds={index.circularNodeIds}
               orphanNodeIds={index.orphanNodeIds}
+              impactNodeIds={graphImpactNodeIds}
+              impactEdgeIds={graphImpactEdgeIds}
+              impactAffectedCount={graphMode === 'dependencies' ? impactSummary?.affectedCount ?? 0 : 0}
               graphMode={graphMode}
               labelMode={graphLabelMode}
               onLabelModeChange={setGraphLabelMode}
@@ -680,6 +697,7 @@ export default function App() {
                       node={activeCodeNode}
                       index={index}
                       folderSummary={folderSummary}
+                      impactSummary={activeImpactSummary}
                       projectRoot={index.projectRoot}
                       error={error}
                       onDragStart={() => setDraggedType('details')}

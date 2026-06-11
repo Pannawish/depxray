@@ -39,12 +39,41 @@ export interface FolderSummary {
   orphanFiles: ExplorerGraphNode[];
 }
 
+export type ImpactRiskLevel = 'low' | 'medium' | 'high';
+
+export interface ImpactSummaryFile {
+  node: ExplorerGraphNode;
+  distance: number;
+  path: ExplorerGraphNode[];
+  risk: ImpactRiskLevel;
+  riskFactors: string[];
+}
+
+export interface ImpactSummary {
+  targetNodeId: string;
+  target: ExplorerGraphNode;
+  affectedNodeIds: Set<string>;
+  impactNodeIds: Set<string>;
+  impactEdgeIds: Set<string>;
+  affectedFiles: ImpactSummaryFile[];
+  directDependents: ImpactSummaryFile[];
+  highImpactComplexFiles: ImpactSummaryFile[];
+  affectedCount: number;
+  directDependentCount: number;
+  maxDistance: number;
+  risk: ImpactRiskLevel;
+}
+
 const EMPTY_FILTERS: DependencyFilters = {
   showTypeOnlyEdges: true,
   showDynamicEdges: true,
   circularOnly: false,
   orphanOnly: false,
 };
+
+const HIGH_COMPLEXITY_THRESHOLD = 10;
+const HIGH_IMPACT_DEPENDENT_THRESHOLD = 10;
+const HIGH_INBOUND_THRESHOLD = 5;
 
 function sortTreeNodes(nodes: ExplorerGraphNode[]): ExplorerGraphNode[] {
   return [...nodes].sort((a, b) => {
@@ -288,5 +317,186 @@ export function getFolderSummary(
     )),
     circularFiles,
     orphanFiles,
+  };
+}
+
+function nodeComplexity(node: ExplorerGraphNode): number {
+  return node.metrics?.cyclomaticComplexity ?? 0;
+}
+
+function riskFactorsForNode(
+  node: ExplorerGraphNode,
+  targetNodeId: string,
+  affectedCount: number,
+): string[] {
+  const factors: string[] = [];
+  const isTarget = node.id === targetNodeId;
+  const complexity = nodeComplexity(node);
+
+  if (isTarget && affectedCount >= HIGH_IMPACT_DEPENDENT_THRESHOLD) {
+    factors.push(`${affectedCount} transitive dependents`);
+  }
+
+  if (!isTarget && (node.inDegree ?? 0) >= HIGH_INBOUND_THRESHOLD) {
+    factors.push(`${node.inDegree ?? 0} incoming imports`);
+  }
+
+  if (complexity >= HIGH_COMPLEXITY_THRESHOLD) {
+    factors.push(`complexity ${complexity}`);
+  }
+
+  if (node.isCircular) {
+    factors.push('circular dependency');
+  }
+
+  return factors;
+}
+
+function riskFromFactors(factors: string[]): ImpactRiskLevel {
+  const hasComplexity = factors.some((factor) => factor.startsWith('complexity '));
+  const hasImpact = factors.some((factor) => (
+    factor.endsWith('transitive dependents') ||
+    factor.endsWith('incoming imports')
+  ));
+
+  if ((hasComplexity && hasImpact) || factors.includes('circular dependency')) {
+    return 'high';
+  }
+
+  if (factors.length > 0) {
+    return 'medium';
+  }
+
+  return 'low';
+}
+
+function isHighImpactComplexFile(
+  file: ImpactSummaryFile,
+  targetNodeId: string,
+  affectedCount: number,
+): boolean {
+  const isHighImpact = file.node.id === targetNodeId
+    ? affectedCount >= HIGH_IMPACT_DEPENDENT_THRESHOLD
+    : (file.node.inDegree ?? 0) >= HIGH_INBOUND_THRESHOLD;
+
+  return isHighImpact && nodeComplexity(file.node) >= HIGH_COMPLEXITY_THRESHOLD;
+}
+
+function overallImpactRisk(
+  targetFile: ImpactSummaryFile,
+  affectedCount: number,
+  directDependentCount: number,
+  highImpactComplexCount: number,
+): ImpactRiskLevel {
+  if (targetFile.risk === 'high' || highImpactComplexCount > 0 || affectedCount >= 20) {
+    return 'high';
+  }
+
+  if (targetFile.risk === 'medium' || affectedCount >= 5 || directDependentCount >= 3) {
+    return 'medium';
+  }
+
+  return 'low';
+}
+
+export function getImpactSummary(
+  nodeId: string,
+  index: FileRelationshipIndex,
+): ImpactSummary | null {
+  const target = index.dependencyNodeById.get(nodeId);
+  if (!target || target.kind !== 'file') {
+    return null;
+  }
+
+  const visited = new Set<string>([target.id]);
+  const queue: Array<{
+    nodeId: string;
+    distance: number;
+    pathIds: string[];
+    edgeIds: string[];
+  }> = [{ nodeId: target.id, distance: 0, pathIds: [target.id], edgeIds: [] }];
+  const affected: Array<{
+    node: ExplorerGraphNode;
+    distance: number;
+    pathIds: string[];
+    edgeIds: string[];
+  }> = [];
+
+  while (queue.length > 0) {
+    const current = queue.shift()!;
+
+    for (const edge of index.importedByTargetId.get(current.nodeId) ?? []) {
+      if (visited.has(edge.source)) {
+        continue;
+      }
+
+      const sourceNode = index.dependencyNodeById.get(edge.source);
+      if (!sourceNode) {
+        continue;
+      }
+
+      const next = {
+        node: sourceNode,
+        distance: current.distance + 1,
+        pathIds: [sourceNode.id, ...current.pathIds],
+        edgeIds: [edge.id, ...current.edgeIds],
+      };
+      visited.add(sourceNode.id);
+      affected.push(next);
+      queue.push({
+        nodeId: sourceNode.id,
+        distance: next.distance,
+        pathIds: next.pathIds,
+        edgeIds: next.edgeIds,
+      });
+    }
+  }
+
+  const affectedCount = affected.length;
+  const toFile = (
+    node: ExplorerGraphNode,
+    distance: number,
+    pathIds: string[],
+  ): ImpactSummaryFile => {
+    const factors = riskFactorsForNode(node, target.id, affectedCount);
+
+    return {
+      node,
+      distance,
+      path: pathIds
+        .map((pathId) => index.dependencyNodeById.get(pathId) ?? index.nodeById.get(pathId))
+        .filter((item): item is ExplorerGraphNode => Boolean(item)),
+      risk: riskFromFactors(factors),
+      riskFactors: factors,
+    };
+  };
+  const affectedFiles = affected
+    .map((item) => toFile(item.node, item.distance, item.pathIds))
+    .sort((a, b) => a.distance - b.distance || a.node.relativePath.localeCompare(b.node.relativePath));
+  const targetFile = toFile(target, 0, [target.id]);
+  const directDependents = affectedFiles.filter((item) => item.distance === 1);
+  const highImpactComplexFiles = [targetFile, ...affectedFiles].filter((item) => (
+    isHighImpactComplexFile(item, target.id, affectedCount)
+  ));
+  const impactEdgeIds = new Set<string>();
+  for (const item of affected) {
+    for (const edgeId of item.edgeIds) {
+      impactEdgeIds.add(edgeId);
+    }
+  }
+
+  return {
+    targetNodeId: target.id,
+    target,
+    affectedNodeIds: new Set(affectedFiles.map((item) => item.node.id)),
+    impactNodeIds: new Set([target.id, ...affectedFiles.map((item) => item.node.id)]),
+    impactEdgeIds,
+    affectedFiles,
+    directDependents,
+    highImpactComplexFiles,
+    affectedCount,
+    directDependentCount: directDependents.length,
+    maxDistance: affectedFiles.reduce((max, item) => Math.max(max, item.distance), 0),
+    risk: overallImpactRisk(targetFile, affectedCount, directDependents.length, highImpactComplexFiles.length),
   };
 }

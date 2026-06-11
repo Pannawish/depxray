@@ -1,5 +1,6 @@
 import * as path from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { analyzeImpactTool } from './analyzeImpact.js';
 import { findCircularTool } from './findCircular.js';
 import { findOrphansTool } from './findOrphans.js';
 import { getFileTreeTool } from './getFileTree.js';
@@ -49,6 +50,17 @@ describe('MCP tool handlers', () => {
     expect(result.imports.map((item) => item.file)).toContain('src/components/Footer.tsx');
     expect(result.isOrphan).toBe(false);
     expect(result.metrics?.loc).toBeGreaterThan(0);
+  });
+
+  it('analyzes change impact for one file', async () => {
+    const result = await analyzeImpactTool({
+      rootDir: SIMPLE_PROJECT,
+      filePath: 'src/utils/helpers.ts',
+    });
+
+    expect(result.target.file).toBe('src/utils/helpers.ts');
+    expect(result.affectedFiles.map((item) => item.file)).toContain('src/App.tsx');
+    expect(result.directDependentCount).toBeGreaterThan(0);
   });
 
   it('finds circular dependency chains', async () => {

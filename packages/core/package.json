@@ -1,7 +1,7 @@
 {
   "name": "@depxray/core",
   "version": "3.0.0",
-  "description": "Static analysis engine for JavaScript and TypeScript dependency graphs, architecture rules, graph diffs, metrics, plugins, and AI-agent context.",
+  "description": "Static analysis engine for JavaScript and TypeScript dependency graphs, unused exports, unresolved imports, impact analysis, architecture rules, CI checks, and AI-agent tooling.",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "files": [
@@ -37,6 +37,8 @@
     "architecture",
     "architecture-rules",
     "graph-diff",
+    "impact-analysis",
+    "blast-radius",
     "monorepo",
     "plugins",
     "metrics",

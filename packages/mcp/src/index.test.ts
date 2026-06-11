@@ -21,6 +21,7 @@ describe('Depxray MCP server', () => {
       const result = await client.listTools();
 
       expect(result.tools.map((tool) => tool.name).sort()).toEqual([
+        'analyze_impact',
         'find_circular',
         'find_orphans',
         'get_file_tree',

@@ -1,7 +1,7 @@
 {
   "name": "@depxray/mcp",
   "version": "3.0.0",
-  "description": "MCP server that gives AI coding agents depxray codebase context, import/dependent inspection, dependency graphs, metrics, circular checks, and orphan-file insights.",
+  "description": "MCP server that gives AI coding agents depxray codebase context, impact analysis, dependency graphs, unused export and unresolved import findings, metrics, and refactor risk.",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -39,6 +39,8 @@
     "codebase-intelligence",
     "imports",
     "refactoring",
+    "impact-analysis",
+    "blast-radius",
     "claude",
     "cursor",
     "codex",

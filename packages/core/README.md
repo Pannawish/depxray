@@ -13,6 +13,7 @@ Static dependency analysis engine for depxray.
 - Orphan file detection with configurable entry points
 - Unused export detection, including default exports, re-exports, barrel files, and type-only exports
 - Unresolved local import detection
+- Dependency impact analysis for direct and transitive dependents
 - Unused and unlisted npm dependency analysis
 - DevDependencies-in-production detection from configured production entry points
 - Monorepo workspace detection and cross-package edge metadata
@@ -33,7 +34,7 @@ npm install @depxray/core
 ## Basic Usage
 
 ```ts
-import { scanProject } from '@depxray/core';
+import { analyzeImpact, scanProject } from '@depxray/core';
 
 const result = await scanProject({
   rootDir: '/path/to/project',
@@ -68,6 +69,29 @@ console.log(result.unresolvedImports);
 console.log(result.devDepsInProd);
 console.log(result.importConventionViolations);
 console.log(result.ruleValidation);
+
+const impact = analyzeImpact(result.graph, 'src/App.tsx');
+console.log(impact.affectedFiles);
+console.log(impact.highImpactComplexFiles);
+```
+
+## Impact Analysis
+
+`analyzeImpact(graph, filePath)` returns the direct and transitive dependents of a file, shortest dependency paths back to the target, per-file metrics, and high-impact/high-complexity risk signals.
+
+```ts
+import { analyzeImpact, scanProject } from '@depxray/core';
+
+const result = await scanProject({ rootDir: '/path/to/project' });
+const impact = analyzeImpact(result.graph, 'src/utils/format.ts', {
+  complexityThreshold: 10,
+  impactThreshold: 10,
+  inboundThreshold: 5,
+});
+
+console.log(impact.risk);
+console.log(impact.directDependents);
+console.log(impact.affectedFiles);
 ```
 
 ## Graph Diffing

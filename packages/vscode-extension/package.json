@@ -3,7 +3,7 @@
   "displayName": "depxray",
   "version": "0.1.0",
   "private": true,
-  "description": "VS Code integration for depxray dependency intelligence.",
+  "description": "VS Code integration for depxray dependency intelligence, diagnostics, CodeLens, dependency trees, and AI-agent-friendly codebase context.",
   "publisher": "pannawish",
   "engines": {
     "vscode": "^1.90.0"
