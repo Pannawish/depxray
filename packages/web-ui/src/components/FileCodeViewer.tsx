@@ -106,7 +106,7 @@ export function FileCodeViewer({
               <h2>No file selected</h2>
             </div>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div className="panel-header-actions">
             <button
               className="swap-layout-btn"
               onClick={onSwapVertical}
@@ -185,7 +185,7 @@ export function FileCodeViewer({
           </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div className="panel-header-actions">
           <span className="code-viewer-stats">
             {node.kind === 'directory'
               ? `${index.childrenByParentId.get(node.id)?.length || 0} items`

@@ -112,7 +112,10 @@ export function useResizableLayout(): ResizableLayout {
           ? 'minmax(240px, 360px)'
           : 'minmax(300px, 1fr)'
         : `${rightWidth}px`;
-    return { gridTemplateColumns: `${left} 6px minmax(280px, 1fr) 6px ${right}`, gap: 0 };
+    return {
+      '--explorer-left-column': left,
+      '--explorer-right-column': right,
+    } as CSSProperties;
   }, [columnsOrder, leftWidth, rightWidth]);
   const rightColumnStyle = useMemo<CSSProperties>(() => {
     const detailsOnTop = rightColumnOrder[0] === 'details';
@@ -124,7 +127,7 @@ export function useResizableLayout(): ResizableLayout {
         : detailsOnTop
           ? `${detailsHeight}px 6px 1fr`
           : `1fr 6px ${detailsHeight}px`;
-    return { display: 'grid', gridTemplateRows: rows, gap: 0, height: '100%', minHeight: 0 };
+    return { '--right-panel-rows': rows } as CSSProperties;
   }, [detailsHeight, rightColumnOrder]);
 
   return {

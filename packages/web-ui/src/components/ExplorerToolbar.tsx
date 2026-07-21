@@ -75,70 +75,77 @@ export function ExplorerToolbar({
         </div>
       </div>
 
-      {/* Action Controls & Stats */}
       <div className="toolbar-actions">
-        <div className="center-view-toggle" aria-label="Center view mode">
+        <div className="toolbar-action-controls">
+          <div className="center-view-toggle" aria-label="Center view mode">
+            <button
+              aria-pressed={centerViewMode === 'miller'}
+              className={centerViewMode === 'miller' ? 'active' : ''}
+              onClick={() => onCenterViewModeChange('miller')}
+              title="Show dependency drill-down columns"
+              type="button"
+            >
+              Miller
+            </button>
+            <button
+              aria-pressed={centerViewMode === 'graph'}
+              className={centerViewMode === 'graph' ? 'active' : ''}
+              onClick={() => onCenterViewModeChange('graph')}
+              title="Show force-directed graph"
+              type="button"
+            >
+              Graph
+            </button>
+            <button
+              aria-pressed={centerViewMode === 'dashboard'}
+              className={centerViewMode === 'dashboard' ? 'active' : ''}
+              onClick={() => onCenterViewModeChange('dashboard')}
+              title="Show codebase health dashboard"
+              type="button"
+            >
+              Dashboard
+            </button>
+          </div>
+
           <button
-            className={centerViewMode === 'miller' ? 'active' : ''}
-            onClick={() => onCenterViewModeChange('miller')}
-            title="Show dependency drill-down columns"
+            aria-pressed={circularOnly}
+            className={`cycles-toggle-btn ${circularOnly ? 'active' : ''} ${circularCount > 0 ? 'has-cycles' : ''}`}
+            onClick={() => onCircularOnlyChange(!circularOnly)}
+            title="Filter project tree to show circular dependencies only"
             type="button"
           >
-            Miller
+            <span className="cycles-dot"></span>
+            Cycles
+            {circularCount > 0 && <span className="cycles-count-badge">{circularCount}</span>}
           </button>
+
           <button
-            className={centerViewMode === 'graph' ? 'active' : ''}
-            onClick={() => onCenterViewModeChange('graph')}
-            title="Show force-directed graph"
+            aria-pressed={orphanOnly}
+            className={`orphans-toggle-btn ${orphanOnly ? 'active' : ''} ${orphanCount > 0 ? 'has-orphans' : ''}`}
+            onClick={() => onOrphanOnlyChange(!orphanOnly)}
+            title="Filter project tree to show orphan files only"
             type="button"
           >
-            Graph
+            <span className="orphans-dot"></span>
+            Orphans
+            {orphanCount > 0 && <span className="orphans-count-badge">{orphanCount}</span>}
           </button>
+
           <button
-            className={centerViewMode === 'dashboard' ? 'active' : ''}
-            onClick={() => onCenterViewModeChange('dashboard')}
-            title="Show codebase health dashboard"
+            aria-pressed={unusedExportsOnly}
+            className={`unused-toggle-btn ${unusedExportsOnly ? 'active' : ''} ${unusedExportCount > 0 ? 'has-unused' : ''}`}
+            onClick={() => onUnusedExportsOnlyChange(!unusedExportsOnly)}
+            title="Filter project tree to show files with unused exports"
             type="button"
           >
-            Dashboard
+            <span className="unused-dot"></span>
+            Unused
+            {unusedExportCount > 0 && (
+              <span className="unused-count-badge">{unusedExportCount}</span>
+            )}
           </button>
         </div>
 
-        {/* Cycles Pill Toggle */}
-        <button
-          className={`cycles-toggle-btn ${circularOnly ? 'active' : ''} ${circularCount > 0 ? 'has-cycles' : ''}`}
-          onClick={() => onCircularOnlyChange(!circularOnly)}
-          type="button"
-          title="Filter project tree to show circular dependencies only"
-        >
-          <span className="cycles-dot"></span>
-          Cycles Only
-          {circularCount > 0 && <span className="cycles-count-badge">{circularCount}</span>}
-        </button>
-
-        <button
-          className={`orphans-toggle-btn ${orphanOnly ? 'active' : ''} ${orphanCount > 0 ? 'has-orphans' : ''}`}
-          onClick={() => onOrphanOnlyChange(!orphanOnly)}
-          type="button"
-          title="Filter project tree to show orphan files only"
-        >
-          <span className="orphans-dot"></span>
-          Orphans Only
-          {orphanCount > 0 && <span className="orphans-count-badge">{orphanCount}</span>}
-        </button>
-
-        <button
-          className={`unused-toggle-btn ${unusedExportsOnly ? 'active' : ''} ${unusedExportCount > 0 ? 'has-unused' : ''}`}
-          onClick={() => onUnusedExportsOnlyChange(!unusedExportsOnly)}
-          type="button"
-          title="Filter project tree to show files with unused exports"
-        >
-          <span className="unused-dot"></span>
-          Unused Exports
-          {unusedExportCount > 0 && <span className="unused-count-badge">{unusedExportCount}</span>}
-        </button>
-
-        {/* Low-profile Summary Stats */}
         <div className="toolbar-stats-summary" aria-label="Project stats">
           <div className="stat-pill" title="Total directories scanned">
             <span className="label">Dirs</span>

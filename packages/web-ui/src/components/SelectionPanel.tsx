@@ -85,7 +85,7 @@ export function SelectionPanel({
               <h2>No file selected</h2>
             </div>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div className="panel-header-actions">
             <button
               className="swap-layout-btn"
               onClick={onSwapVertical}
@@ -140,7 +140,7 @@ export function SelectionPanel({
           </div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+        <div className="panel-header-actions">
           {!isDirectory && (
             <span className="code-viewer-stats">
               {imports.length} imports • {importedBy.length} dependents

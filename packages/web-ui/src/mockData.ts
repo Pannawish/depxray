@@ -250,14 +250,88 @@ export const sampleGraphData: ExplorerGraphData = {
   ],
 };
 
+const sampleDependencyEdges: ExplorerGraphData['edges'] = [
+  {
+    id: 'app-to-graph',
+    source: '/example/depxray/src/App.tsx',
+    target: '/example/depxray/src/components/GraphView.tsx',
+    kind: 'dependencies',
+    importSpecifier: './components/GraphView.js',
+    importedNames: ['GraphView'],
+    isTypeOnly: false,
+    isDynamic: false,
+  },
+  {
+    id: 'app-to-toolbar',
+    source: '/example/depxray/src/App.tsx',
+    target: '/example/depxray/src/components/Toolbar.tsx',
+    kind: 'dependencies',
+    importSpecifier: './components/Toolbar.js',
+    importedNames: ['Toolbar'],
+    isTypeOnly: false,
+    isDynamic: false,
+  },
+  {
+    id: 'app-to-hook',
+    source: '/example/depxray/src/App.tsx',
+    target: '/example/depxray/src/hooks/useGraphData.ts',
+    kind: 'dependencies',
+    importSpecifier: './hooks/useGraphData.js',
+    importedNames: ['useGraphData'],
+    isTypeOnly: false,
+    isDynamic: false,
+  },
+];
+
+export const sampleDependencyGraphData: ExplorerGraphData = {
+  ...sampleGraphData,
+  mode: 'dependencies',
+  totalDirs: 0,
+  totalImports: sampleDependencyEdges.length,
+  healthScore: {
+    grade: 'B',
+    score: 84,
+    issues: {
+      circularChains: 0,
+      orphanFiles: 1,
+      unusedExports: 2,
+      unresolvedImports: 0,
+      ruleViolations: 0,
+    },
+    hotspots: [
+      { file: 'src/components/GraphView.tsx', complexity: 18, loc: 286 },
+      { file: 'src/hooks/useGraphData.ts', complexity: 12, loc: 154 },
+      { file: 'src/components/Toolbar.tsx', complexity: 8, loc: 118 },
+      { file: 'src/App.tsx', complexity: 6, loc: 92 },
+    ],
+    hubs: [
+      { file: 'src/components/GraphView.tsx', inDegree: 8, outDegree: 3 },
+      { file: 'src/components/Toolbar.tsx', inDegree: 5, outDegree: 1 },
+      { file: 'src/hooks/useGraphData.ts', inDegree: 4, outDegree: 2 },
+      { file: 'src/App.tsx', inDegree: 1, outDegree: 3 },
+    ],
+  },
+  nodes: sampleGraphData.nodes
+    .filter((node) => node.kind === 'file' && ['.ts', '.tsx'].includes(node.extension ?? ''))
+    .map((node) => ({
+      ...node,
+      inDegree: sampleDependencyEdges.filter((edge) => edge.target === node.id).length,
+      outDegree: sampleDependencyEdges.filter((edge) => edge.source === node.id).length,
+      isCircular: false,
+      isOrphan: node.id === '/example/depxray/src/App.tsx',
+    })),
+  edges: sampleDependencyEdges,
+};
+
 export const sampleGraphSet: ExplorerGraphSet = {
   schemaVersion: sampleGraphData.schemaVersion,
   generatedBy: sampleGraphData.generatedBy,
   projectRoot: sampleGraphData.projectRoot,
   scannedAt: sampleGraphData.scannedAt,
-  availableModes: ['structure'],
+  availableModes: ['structure', 'dependencies'],
   defaultMode: 'structure',
   graphs: {
     structure: sampleGraphData,
+    dependencies: sampleDependencyGraphData,
   },
 };

@@ -27,10 +27,16 @@ function ChartRow({
   onSelect: () => void;
 }) {
   const width = max > 0 ? Math.max(4, Math.round((value / max) * 100)) : 0;
+  const separatorIndex = label.lastIndexOf('/');
+  const fileName = separatorIndex >= 0 ? label.slice(separatorIndex + 1) : label;
+  const parentPath = separatorIndex >= 0 ? label.slice(0, separatorIndex) : '';
 
   return (
-    <button className="dashboard-chart-row" onClick={onSelect} type="button">
-      <span className="dashboard-chart-label">{label}</span>
+    <button className="dashboard-chart-row" onClick={onSelect} title={label} type="button">
+      <span className="dashboard-chart-label">
+        <strong>{fileName}</strong>
+        {parentPath ? <small>{parentPath}</small> : null}
+      </span>
       <svg
         className="dashboard-bar"
         viewBox="0 0 100 10"
