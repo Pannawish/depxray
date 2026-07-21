@@ -1,5 +1,10 @@
 import type { GraphBreadcrumb, DependencyPathResult } from '../graphScope.js';
-import type { FileNeighborhoodDepth, FolderBoundaryMode, GraphScopeMode } from '../types.js';
+import type {
+  FileNeighborhoodDepth,
+  FolderBoundaryMode,
+  GraphPreset,
+  GraphScopeMode,
+} from '../types.js';
 
 interface GraphContextBarProps {
   scopeMode: GraphScopeMode;
@@ -7,12 +12,18 @@ interface GraphContextBarProps {
   canUseFileScope: boolean;
   neighborhoodDepth: FileNeighborhoodDepth;
   folderBoundaryMode: FolderBoundaryMode;
+  preset: GraphPreset;
+  showTypeOnlyEdges: boolean;
+  showDynamicEdges: boolean;
   breadcrumbs: GraphBreadcrumb[];
   pathResult: DependencyPathResult | null;
   pathLabel: string | null;
   onScopeModeChange: (mode: GraphScopeMode) => void;
   onNeighborhoodDepthChange: (depth: FileNeighborhoodDepth) => void;
   onFolderBoundaryModeChange: (mode: FolderBoundaryMode) => void;
+  onPresetChange: (preset: GraphPreset) => void;
+  onShowTypeOnlyEdgesChange: (show: boolean) => void;
+  onShowDynamicEdgesChange: (show: boolean) => void;
   onBreadcrumbSelect: (nodeId: string) => void;
   onClearPath: () => void;
 }
@@ -23,17 +34,39 @@ export function GraphContextBar({
   canUseFileScope,
   neighborhoodDepth,
   folderBoundaryMode,
+  preset,
+  showTypeOnlyEdges,
+  showDynamicEdges,
   breadcrumbs,
   pathResult,
   pathLabel,
   onScopeModeChange,
   onNeighborhoodDepthChange,
   onFolderBoundaryModeChange,
+  onPresetChange,
+  onShowTypeOnlyEdgesChange,
+  onShowDynamicEdgesChange,
   onBreadcrumbSelect,
   onClearPath,
 }: GraphContextBarProps) {
   return (
     <div className="graph-context-bar">
+      <label className="graph-label-select graph-preset-select" title="Choose a focused graph view">
+        <span>View</span>
+        <select
+          aria-label="Graph view preset"
+          value={preset}
+          onChange={(event) => onPresetChange(event.target.value as GraphPreset)}
+        >
+          <option value="overview">Overview</option>
+          <option value="direct">Direct relationships</option>
+          <option value="full">Full neighborhood</option>
+          <option value="circular">Circular dependencies</option>
+          <option value="violations">Architecture violations</option>
+          <option value="impact">High-impact files</option>
+        </select>
+      </label>
+
       <div className="graph-scope-toggle" aria-label="Graph scope">
         <button
           className={scopeMode === 'project' ? 'active' : ''}
@@ -93,6 +126,25 @@ export function GraphContextBar({
           </select>
         </label>
       ) : null}
+
+      <div className="graph-edge-toggles" aria-label="Optional dependency edges">
+        <label title="Include imports used only for types">
+          <input
+            checked={showTypeOnlyEdges}
+            onChange={(event) => onShowTypeOnlyEdgesChange(event.target.checked)}
+            type="checkbox"
+          />
+          Type-only
+        </label>
+        <label title="Include dynamic imports">
+          <input
+            checked={showDynamicEdges}
+            onChange={(event) => onShowDynamicEdgesChange(event.target.checked)}
+            type="checkbox"
+          />
+          Dynamic
+        </label>
+      </div>
 
       <nav className="graph-breadcrumbs" aria-label="Graph location">
         {breadcrumbs.map((breadcrumb, index) => (

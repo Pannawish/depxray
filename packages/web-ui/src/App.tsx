@@ -15,14 +15,20 @@ import { buildGraphNodes } from './explorerViewModel.js';
 import {
   getFileNeighborhoodGraph,
   getFolderBoundaryGraph,
+  getArchitectureViolationsGraph,
+  getCircularDependenciesGraph,
   getGraphBreadcrumbs,
+  getHighImpactGraph,
+  getProjectOverviewGraph,
   getShortestDependencyPath,
+  limitGraphToBudget,
 } from './graphScope.js';
 import { getFolderSummary, getImpactSummary } from './relationshipIndex.js';
 import type {
   DependencyFilters,
   FileNeighborhoodDepth,
   FolderBoundaryMode,
+  GraphPreset,
   GraphMode,
 } from './types.js';
 
@@ -47,8 +53,11 @@ export default function App() {
   const [centerViewMode, setCenterViewMode] = useState<CenterViewMode>('graph');
   const [graphColorMode, setGraphColorMode] = useState<GraphColorMode>('extension');
   const [graphLabelMode, setGraphLabelMode] = useState<'smart' | 'all' | 'none'>('smart');
+  const [graphPreset, setGraphPreset] = useState<GraphPreset>('overview');
   const [fileNeighborhoodDepth, setFileNeighborhoodDepth] = useState<FileNeighborhoodDepth>(1);
-  const [folderBoundaryMode, setFolderBoundaryMode] = useState<FolderBoundaryMode>('all');
+  const [folderBoundaryMode, setFolderBoundaryMode] = useState<FolderBoundaryMode>('internal');
+  const [showTypeOnlyEdges, setShowTypeOnlyEdges] = useState(false);
+  const [showDynamicEdges, setShowDynamicEdges] = useState(false);
   const {
     columnsOrder,
     rightColumnOrder,
@@ -68,13 +77,13 @@ export default function App() {
   const deferredSearchTerm = useDeferredValue(searchTerm);
   const dependencyFilters = useMemo<DependencyFilters>(
     () => ({
-      showTypeOnlyEdges: true,
-      showDynamicEdges: true,
+      showTypeOnlyEdges,
+      showDynamicEdges,
       circularOnly,
       orphanOnly,
       unusedExportsOnly,
     }),
-    [circularOnly, orphanOnly, unusedExportsOnly],
+    [circularOnly, orphanOnly, showDynamicEdges, showTypeOnlyEdges, unusedExportsOnly],
   );
   const {
     visibleRows,
@@ -110,7 +119,9 @@ export default function App() {
   const canUseFolderScope = Boolean(folderScopeNode?.kind === 'directory' && index.dependencyGraph);
   const graphMode: GraphMode =
     index.dependencyGraph &&
-    (graphScopeMode !== 'project' || dataSet?.defaultMode === 'dependencies')
+    (graphScopeMode !== 'project' ||
+      graphPreset !== 'full' ||
+      dataSet?.defaultMode === 'dependencies')
       ? 'dependencies'
       : 'structure';
   const projectGraphNodes = useMemo(
@@ -141,17 +152,24 @@ export default function App() {
       );
     }
 
-    return {
-      nodes: projectGraphNodes,
-      edges: projectGraphEdges,
-      focusNodeId: selectedNodeId,
-    };
+    if (graphPreset === 'circular') return getCircularDependenciesGraph(index, dependencyFilters);
+    if (graphPreset === 'violations')
+      return getArchitectureViolationsGraph(index, dependencyFilters);
+    if (graphPreset === 'impact') return getHighImpactGraph(index, dependencyFilters);
+    if (graphPreset === 'overview' || graphPreset === 'direct') {
+      return getProjectOverviewGraph(index, dependencyFilters);
+    }
+    return limitGraphToBudget(
+      { nodes: projectGraphNodes, edges: projectGraphEdges, focusNodeId: selectedNodeId },
+      index,
+    );
   }, [
     dependencyFilters,
     fileNeighborhoodDepth,
     folderBoundaryMode,
     folderScopeNode,
     graphScopeMode,
+    graphPreset,
     index,
     projectGraphEdges,
     projectGraphNodes,
@@ -215,6 +233,31 @@ export default function App() {
   const graphImpactEdgeIds =
     graphMode === 'dependencies' ? (impactSummary?.impactEdgeIds ?? EMPTY_ID_SET) : EMPTY_ID_SET;
 
+  const handleNodeSelection = (nodeId: string) => {
+    setGraphPreset('direct');
+    selectAndExpandNode(nodeId);
+  };
+
+  const handlePresetChange = (preset: GraphPreset) => {
+    setGraphPreset(preset);
+    setDependencyPathTargetId(null);
+    if (preset === 'overview' || ['circular', 'violations', 'impact'].includes(preset)) {
+      setGraphScopeMode('project');
+      return;
+    }
+    if (selectedNode?.kind === 'file' && canUseFileScope) {
+      setGraphScopeMode('file');
+      setFileNeighborhoodDepth(preset === 'direct' ? 1 : 'all');
+      return;
+    }
+    if (folderScopeNode?.kind === 'directory' && canUseFolderScope) {
+      setGraphScopeMode('folder');
+      setFolderBoundaryMode(preset === 'direct' ? 'internal' : 'all');
+      return;
+    }
+    setGraphScopeMode('project');
+  };
+
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement | null;
@@ -275,7 +318,7 @@ export default function App() {
           <FileTreeView
             rows={visibleRows}
             selectedNodeId={selectedNodeId}
-            onSelectNode={selectAndExpandNode}
+            onSelectNode={handleNodeSelection}
             onToggleFolder={toggleFolder}
             onDragStart={() => startDragging('explorer')}
             onDrop={handleExplorerDrop}
@@ -310,7 +353,7 @@ export default function App() {
                     <FileCodeViewer
                       node={activeCodeNode}
                       index={index}
-                      onSelectNode={selectAndExpandNode}
+                      onSelectNode={handleNodeSelection}
                       eligibleTabs={millerChain}
                       activeTabId={activeCodeNodeId}
                       onTabSelect={setActiveCodeNodeId}
@@ -338,7 +381,7 @@ export default function App() {
             <DashboardView
               index={index}
               healthScore={dataSet?.graphs.dependencies?.healthScore}
-              onSelectNode={selectAndExpandNode}
+              onSelectNode={handleNodeSelection}
             />
           ) : centerViewMode === 'miller' ? (
             <MillerColumnsPanel
@@ -371,6 +414,12 @@ export default function App() {
               canUseFileScope={canUseFileScope}
               neighborhoodDepth={fileNeighborhoodDepth}
               folderBoundaryMode={folderBoundaryMode}
+              preset={graphPreset}
+              showTypeOnlyEdges={showTypeOnlyEdges}
+              showDynamicEdges={showDynamicEdges}
+              totalNodeCount={scopedGraph.totalNodeCount ?? visibleGraphNodes.length}
+              groupedNodeCount={scopedGraph.groupedNodeCount ?? 0}
+              hiddenNodeCount={scopedGraph.hiddenNodeCount ?? 0}
               breadcrumbs={graphBreadcrumbs}
               labelMode={graphLabelMode}
               onLabelModeChange={setGraphLabelMode}
@@ -378,14 +427,24 @@ export default function App() {
               onColorModeChange={setGraphColorMode}
               onScopeModeChange={(mode) => {
                 setGraphScopeMode(mode);
+                setGraphPreset(mode === 'project' ? 'overview' : 'direct');
                 setDependencyPathTargetId(null);
               }}
-              onNeighborhoodDepthChange={setFileNeighborhoodDepth}
-              onFolderBoundaryModeChange={setFolderBoundaryMode}
-              onBreadcrumbSelect={selectAndExpandNode}
+              onNeighborhoodDepthChange={(depth) => {
+                setFileNeighborhoodDepth(depth);
+                setGraphPreset(depth === 1 ? 'direct' : 'full');
+              }}
+              onFolderBoundaryModeChange={(mode) => {
+                setFolderBoundaryMode(mode);
+                setGraphPreset(mode === 'internal' ? 'direct' : 'full');
+              }}
+              onPresetChange={handlePresetChange}
+              onShowTypeOnlyEdgesChange={setShowTypeOnlyEdges}
+              onShowDynamicEdgesChange={setShowDynamicEdges}
+              onBreadcrumbSelect={handleNodeSelection}
               onDependencyPathTargetChange={setDependencyPathTargetId}
               onOpenNode={openNodeInCodeViewer}
-              onSelectNode={selectAndExpandNode}
+              onSelectNode={handleNodeSelection}
             />
           )}
         </div>
@@ -398,7 +457,7 @@ export default function App() {
           <FileTreeView
             rows={visibleRows}
             selectedNodeId={selectedNodeId}
-            onSelectNode={selectAndExpandNode}
+            onSelectNode={handleNodeSelection}
             onToggleFolder={toggleFolder}
             onDragStart={() => startDragging('explorer')}
             onDrop={handleExplorerDrop}
@@ -433,7 +492,7 @@ export default function App() {
                     <FileCodeViewer
                       node={activeCodeNode}
                       index={index}
-                      onSelectNode={selectAndExpandNode}
+                      onSelectNode={handleNodeSelection}
                       eligibleTabs={millerChain}
                       activeTabId={activeCodeNodeId}
                       onTabSelect={setActiveCodeNodeId}

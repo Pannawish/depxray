@@ -23,8 +23,11 @@ export interface ForceGraphNode {
   internalEdgeCount?: number;
   isDependencyPath?: boolean;
   isDependencyPathTarget?: boolean;
+  isHub?: boolean;
   x?: number;
   y?: number;
+  fx?: number;
+  fy?: number;
 }
 
 export interface ForceGraphLink {

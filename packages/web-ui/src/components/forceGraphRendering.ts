@@ -65,8 +65,24 @@ export function getNodeRadius(node: ForceGraphNode, selectedNodeId: string | nul
   return 4;
 }
 
-export function getLinkColor(link: ForceGraphLink): string {
+export function getLinkEndpointId(endpoint: unknown): string | null {
+  if (typeof endpoint === 'string') return endpoint;
+  if (endpoint && typeof endpoint === 'object' && 'id' in endpoint) {
+    return typeof endpoint.id === 'string' ? endpoint.id : null;
+  }
+  return null;
+}
+
+export function isLinkIncident(link: ForceGraphLink, nodeId: string | null): boolean {
+  return Boolean(
+    nodeId &&
+      (getLinkEndpointId(link.source) === nodeId || getLinkEndpointId(link.target) === nodeId),
+  );
+}
+
+export function getLinkColor(link: ForceGraphLink, activeNodeId: string | null = null): string {
   if (link.isDependencyPath || link.isImpactPath) return '#0891b2';
+  if (activeNodeId && !isLinkIncident(link, activeNodeId)) return 'rgba(148, 163, 184, 0.12)';
   if (link.scopeRole === 'membership') return '#cbd5e1';
   if (link.scopeRole === 'incoming') return '#2563eb';
   if (link.scopeRole === 'outgoing') return '#c2410c';
@@ -77,10 +93,31 @@ export function getLinkColor(link: ForceGraphLink): string {
   return '#b7c1cd';
 }
 
-export function getLinkWidth(link: ForceGraphLink): number {
+export function getLinkWidth(link: ForceGraphLink, activeNodeId: string | null = null): number {
   if (link.isDependencyPath) return 3;
+  if (activeNodeId && !isLinkIncident(link, activeNodeId)) return 0.5;
   if ((link.aggregateCount ?? 1) > 1) return Math.min(6, 1 + Math.log2(link.aggregateCount ?? 1));
   return link.ruleSeverity || link.isImpactPath || link.circular || link.crossPackage ? 2 : 1;
+}
+
+export function getSemanticLabelSize(globalScale: number, selected: boolean): number {
+  const screenPixels = globalScale < 0.75 ? 12 : globalScale < 1.75 ? 10.5 : 8.5;
+  return (selected ? Math.max(11, screenPixels) : screenPixels) / Math.max(globalScale, 0.1);
+}
+
+export function shouldShowSemanticLabel(
+  node: ForceGraphNode,
+  globalScale: number,
+  selectedNodeId: string | null,
+  activeNodeId: string | null,
+  labelMode: 'smart' | 'all' | 'none',
+): boolean {
+  const emphasized = node.id === selectedNodeId || node.id === activeNodeId;
+  if (emphasized) return true;
+  if (labelMode === 'none') return false;
+  if (labelMode === 'all') return true;
+  if (globalScale < 0.75) return node.kind === 'directory' || Boolean(node.isHub);
+  return true;
 }
 
 export function drawNode(
@@ -93,6 +130,8 @@ export function drawNode(
   colorMode: GraphColorMode,
   maxComplexity: number,
   maxSize: number,
+  activeNodeId: string | null = null,
+  connectedNodeIds: Set<string> = new Set(),
 ): void {
   const graphNode = node as NodeObject<ForceGraphNode> & ForceGraphNode;
   const x = graphNode.x ?? 0;
@@ -100,6 +139,11 @@ export function drawNode(
   const radius = getNodeRadius(graphNode, selectedNodeId);
   const color = nodeColor(graphNode, selectedNodeId, colorMode, maxComplexity, maxSize);
 
+  const dimmed = Boolean(
+    activeNodeId && graphNode.id !== activeNodeId && !connectedNodeIds.has(graphNode.id),
+  );
+  context.save();
+  if (dimmed) context.globalAlpha = 0.22;
   context.beginPath();
   if (graphNode.kind === 'directory') context.rect(x - radius, y - radius, radius * 2, radius * 2);
   else context.arc(x, y, radius, 0, 2 * Math.PI, false);
@@ -140,9 +184,12 @@ export function drawNode(
     else context.arc(x, y, radius, 0, 2 * Math.PI, false);
     context.stroke();
   }
-  if (labelMode === 'none' && graphNode.id !== selectedNodeId) return;
+  if (!shouldShowSemanticLabel(graphNode, globalScale, selectedNodeId, activeNodeId, labelMode)) {
+    context.restore();
+    return;
+  }
 
-  const fontSize = Math.max(9, 11 / globalScale);
+  const fontSize = getSemanticLabelSize(globalScale, graphNode.id === selectedNodeId);
   context.font = `${fontSize}px "Avenir Next", "Segoe UI", sans-serif`;
   context.textAlign = 'center';
   context.textBaseline = 'top';
@@ -163,12 +210,15 @@ export function drawNode(
       bounds.top < existing.bottom &&
       bounds.bottom > existing.top,
   );
-  if (labelMode === 'smart' && collides && graphNode.id !== selectedNodeId && globalScale <= 2.2)
+  if (labelMode === 'smart' && collides && graphNode.id !== selectedNodeId && globalScale <= 2.2) {
+    context.restore();
     return;
+  }
 
   occupiedLabelBounds.push(bounds);
   context.fillStyle = 'rgba(255, 255, 255, 0.86)';
   context.fillRect(bounds.left, bounds.top, bounds.right - bounds.left, bounds.bottom - bounds.top);
   context.fillStyle = '#17202a';
   context.fillText(graphNode.label, x, labelY);
+  context.restore();
 }

@@ -70,12 +70,18 @@ describe('explorer interactions', () => {
         canUseFileScope={false}
         neighborhoodDepth={1}
         folderBoundaryMode="all"
+        preset="overview"
+        showTypeOnlyEdges={false}
+        showDynamicEdges={false}
         breadcrumbs={[]}
         pathResult={null}
         pathLabel={null}
         onScopeModeChange={onScopeModeChange}
         onNeighborhoodDepthChange={vi.fn()}
         onFolderBoundaryModeChange={vi.fn()}
+        onPresetChange={vi.fn()}
+        onShowTypeOnlyEdgesChange={vi.fn()}
+        onShowDynamicEdgesChange={vi.fn()}
         onBreadcrumbSelect={vi.fn()}
         onClearPath={vi.fn()}
       />,
@@ -94,17 +100,57 @@ describe('explorer interactions', () => {
         canUseFileScope
         neighborhoodDepth={1}
         folderBoundaryMode="all"
+        preset="direct"
+        showTypeOnlyEdges={false}
+        showDynamicEdges={false}
         breadcrumbs={[]}
         pathResult={null}
         pathLabel={null}
         onScopeModeChange={onScopeModeChange}
         onNeighborhoodDepthChange={vi.fn()}
         onFolderBoundaryModeChange={vi.fn()}
+        onPresetChange={vi.fn()}
+        onShowTypeOnlyEdgesChange={vi.fn()}
+        onShowDynamicEdgesChange={vi.fn()}
         onBreadcrumbSelect={vi.fn()}
         onClearPath={vi.fn()}
       />,
     );
     expect(screen.getByTitle('Dependency neighborhood depth')).toBeTruthy();
+  });
+
+  it('applies graph presets and optional edge toggles', async () => {
+    const user = userEvent.setup();
+    const onPresetChange = vi.fn();
+    const onShowTypeOnlyEdgesChange = vi.fn();
+    render(
+      <GraphContextBar
+        scopeMode="project"
+        canUseFolderScope
+        canUseFileScope
+        neighborhoodDepth={1}
+        folderBoundaryMode="all"
+        preset="overview"
+        showTypeOnlyEdges={false}
+        showDynamicEdges={false}
+        breadcrumbs={[]}
+        pathResult={null}
+        pathLabel={null}
+        onScopeModeChange={vi.fn()}
+        onNeighborhoodDepthChange={vi.fn()}
+        onFolderBoundaryModeChange={vi.fn()}
+        onPresetChange={onPresetChange}
+        onShowTypeOnlyEdgesChange={onShowTypeOnlyEdgesChange}
+        onShowDynamicEdgesChange={vi.fn()}
+        onBreadcrumbSelect={vi.fn()}
+        onClearPath={vi.fn()}
+      />,
+    );
+
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Graph view preset' }), 'impact');
+    expect(onPresetChange).toHaveBeenCalledWith('impact');
+    await user.click(screen.getByLabelText('Type-only'));
+    expect(onShowTypeOnlyEdgesChange).toHaveBeenCalledWith(true);
   });
 
   it('explains the health score using the scorer breakdown', async () => {

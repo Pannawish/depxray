@@ -16,6 +16,7 @@ export type DependencyGraphNode = GraphNode;
 export type DepthFilter = 1 | 2 | 3 | 4 | 'all';
 export type GraphMode = ExplorerGraphMode;
 export type GraphScopeMode = 'project' | 'folder' | 'file';
+export type GraphPreset = 'overview' | 'direct' | 'full' | 'circular' | 'violations' | 'impact';
 export type FileNeighborhoodDepth = 1 | 2 | 'all';
 export type FolderBoundaryMode = 'all' | 'internal' | 'incoming' | 'outgoing';
 export type GraphScopeNodeRole =

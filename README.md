@@ -106,15 +106,20 @@ Current UI and graph-data capabilities include:
 
 - file tree search by path
 - compact rows for large repos
-- force-directed graph view for dependency and structure data
-- graph zoom, pan, node dragging, click-to-select, and selected-node centering
+- interactive graph view for dependency and structure data
+- graph zoom, pan, click-to-select, stable deterministic layouts, and selected-node centering
 - context-aware Project, Folder, and File neighborhood graph scopes with breadcrumbs
+- quick graph presets for overview, direct relationships, full neighborhoods, circular dependencies, architecture violations, and high-impact files
 - direct, two-level, and complete file dependency neighborhoods
+- three-column file layouts for dependents, the selected file, and dependencies
 - folder boundary views for internal, incoming, outgoing, or all dependencies
-- collapsed folder clusters with aggregated dependency counts for large scopes
+- top-level project and folder clusters with aggregated dependency counts
+- an 80-node initial rendering budget with drillable folder grouping for larger scopes
 - shortest dependency-path highlighting and right-click graph actions
 - selected-file impact highlighting, showing dependents and dependency paths in the force graph
-- graph node labels with Smart, All, and None label visibility modes
+- semantic graph labels that prioritize folders, selected files, and hubs while becoming smaller on close zoom; Smart, All, and None modes remain available
+- hover and selection focus that fades unrelated nodes and edges, with directional arrows reserved for emphasized relationships
+- type-only and dynamic dependency edges hidden by default and available as optional toggles
 - graph node coloring by file extension, circular status, orphan status, unused exports, and unresolved imports
 - graph heatmap coloring by complexity, file size, and instability
 - graph node coloring by workspace in monorepos, with dashed cross-package dependency edges

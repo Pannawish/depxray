@@ -11,18 +11,27 @@ import type {
   FileNeighborhoodDepth,
   FolderBoundaryMode,
   GraphMode,
+  GraphPreset,
   GraphScopeMode,
 } from '../types.js';
 import type { DependencyPathResult, GraphBreadcrumb } from '../graphScope.js';
 import type { GraphColorMode } from '../graphColors.js';
 import { GraphContextBar } from './GraphContextBar.js';
+import { getStableGraphPositions } from '../graphLayout.js';
 import {
   type ForceGraphLink,
   type ForceGraphNode,
   type LabelBounds,
   type NodeContextMenu,
 } from './forceGraphModel.js';
-import { drawNode, getLinkColor, getLinkWidth, getNodeRadius } from './forceGraphRendering.js';
+import {
+  drawNode,
+  getLinkEndpointId,
+  getLinkColor,
+  getLinkWidth,
+  getNodeRadius,
+  isLinkIncident,
+} from './forceGraphRendering.js';
 
 interface ForceGraphViewProps {
   nodes: ExplorerGraphNode[];
@@ -44,6 +53,12 @@ interface ForceGraphViewProps {
   canUseFileScope: boolean;
   neighborhoodDepth: FileNeighborhoodDepth;
   folderBoundaryMode: FolderBoundaryMode;
+  preset: GraphPreset;
+  showTypeOnlyEdges: boolean;
+  showDynamicEdges: boolean;
+  totalNodeCount: number;
+  groupedNodeCount: number;
+  hiddenNodeCount: number;
   breadcrumbs: GraphBreadcrumb[];
   labelMode: 'smart' | 'all' | 'none';
   onLabelModeChange: (labelMode: 'smart' | 'all' | 'none') => void;
@@ -52,6 +67,9 @@ interface ForceGraphViewProps {
   onScopeModeChange: (mode: GraphScopeMode) => void;
   onNeighborhoodDepthChange: (depth: FileNeighborhoodDepth) => void;
   onFolderBoundaryModeChange: (mode: FolderBoundaryMode) => void;
+  onPresetChange: (preset: GraphPreset) => void;
+  onShowTypeOnlyEdgesChange: (show: boolean) => void;
+  onShowDynamicEdgesChange: (show: boolean) => void;
   onBreadcrumbSelect: (nodeId: string) => void;
   onDependencyPathTargetChange: (nodeId: string | null) => void;
   onOpenNode: (nodeId: string) => void;
@@ -78,6 +96,12 @@ export function ForceGraphView({
   canUseFileScope,
   neighborhoodDepth,
   folderBoundaryMode,
+  preset,
+  showTypeOnlyEdges,
+  showDynamicEdges,
+  totalNodeCount,
+  groupedNodeCount,
+  hiddenNodeCount,
   breadcrumbs,
   labelMode,
   onLabelModeChange,
@@ -86,6 +110,9 @@ export function ForceGraphView({
   onScopeModeChange,
   onNeighborhoodDepthChange,
   onFolderBoundaryModeChange,
+  onPresetChange,
+  onShowTypeOnlyEdgesChange,
+  onShowDynamicEdgesChange,
   onBreadcrumbSelect,
   onDependencyPathTargetChange,
   onOpenNode,
@@ -97,6 +124,7 @@ export function ForceGraphView({
   const occupiedLabelBoundsRef = useRef<LabelBounds[]>([]);
   const [size, setSize] = useState({ width: 640, height: 420 });
   const [contextMenu, setContextMenu] = useState<NodeContextMenu | null>(null);
+  const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!contextMenu) {
@@ -139,6 +167,12 @@ export function ForceGraphView({
 
   const graphData = useMemo<GraphData<ForceGraphNode, ForceGraphLink>>(() => {
     const nodeIds = new Set(nodes.map((node) => node.id));
+    const positions = getStableGraphPositions(nodes, scopeMode);
+    const degreeValues = nodes
+      .map((node) => (node.inDegree ?? 0) + (node.outDegree ?? 0))
+      .sort((a, b) => b - a);
+    const hubThreshold =
+      degreeValues[Math.min(degreeValues.length - 1, Math.floor(nodes.length * 0.1))] ?? 0;
     const graphNodes: ForceGraphNode[] = nodes.map((node) => ({
       id: node.id,
       label: node.label,
@@ -162,14 +196,11 @@ export function ForceGraphView({
       internalEdgeCount: node.internalEdgeCount,
       isDependencyPath: dependencyPathNodeIds.has(node.id),
       isDependencyPathTarget: dependencyPathTargetId === node.id,
-      x:
-        node.scopeRole === 'dependent' || node.scopeRole === 'external-incoming'
-          ? -140
-          : node.scopeRole === 'import' || node.scopeRole === 'external-outgoing'
-            ? 140
-            : node.scopeRole === 'focus'
-              ? 0
-              : undefined,
+      isHub: (node.inDegree ?? 0) + (node.outDegree ?? 0) >= Math.max(3, hubThreshold),
+      x: positions.get(node.id)?.x,
+      y: positions.get(node.id)?.y,
+      fx: positions.get(node.id)?.x,
+      fy: positions.get(node.id)?.y,
     }));
 
     const graphLinks: ForceGraphLink[] = edges
@@ -212,7 +243,24 @@ export function ForceGraphView({
     nodes,
     orphanNodeIds,
     selectedNodeId,
+    scopeMode,
   ]);
+  const selectedNodeIsVisible = graphData.nodes.some((node) => node.id === selectedNodeId);
+  const activeNodeId =
+    hoveredNodeId ?? (scopeMode === 'file' && selectedNodeIsVisible ? selectedNodeId : null);
+  const connectedNodeIds = useMemo(() => {
+    const connected = new Set<string>();
+    if (!activeNodeId) return connected;
+    connected.add(activeNodeId);
+    for (const link of graphData.links) {
+      if (!isLinkIncident(link, activeNodeId)) continue;
+      const source = getLinkEndpointId(link.source);
+      const target = getLinkEndpointId(link.target);
+      if (typeof source === 'string') connected.add(source);
+      if (typeof target === 'string') connected.add(target);
+    }
+    return connected;
+  }, [activeNodeId, graphData.links]);
   const maxComplexity = useMemo(
     () => Math.max(1, ...graphData.nodes.map((node) => node.complexity ?? 0)),
     [graphData.nodes],
@@ -253,18 +301,6 @@ export function ForceGraphView({
 
     graphRef.current?.centerAt(selectedGraphNode.x, selectedGraphNode.y, 450);
   }, [graphData.nodes, selectedNodeId]);
-
-  if (!nodes.length) {
-    return (
-      <section className="force-graph-panel empty-state">
-        <div className="panel-header">
-          <p className="eyebrow">Graph View</p>
-          <h2>No visible nodes</h2>
-        </div>
-        <p className="empty-copy">Adjust the search or filters to show graph nodes.</p>
-      </section>
-    );
-  }
 
   return (
     <section className="force-graph-panel">
@@ -316,6 +352,11 @@ export function ForceGraphView({
               unresolved
             </span>
             <span>{graphMode}</span>
+            {totalNodeCount > nodes.length ? (
+              <span title={`${groupedNodeCount} folder groups; ${hiddenNodeCount} nodes omitted`}>
+                {totalNodeCount.toLocaleString()} total · grouped
+              </span>
+            ) : null}
           </div>
         </div>
       </div>
@@ -326,17 +367,29 @@ export function ForceGraphView({
         canUseFileScope={canUseFileScope}
         neighborhoodDepth={neighborhoodDepth}
         folderBoundaryMode={folderBoundaryMode}
+        preset={preset}
+        showTypeOnlyEdges={showTypeOnlyEdges}
+        showDynamicEdges={showDynamicEdges}
         breadcrumbs={breadcrumbs}
         pathResult={dependencyPathResult}
         pathLabel={dependencyPathLabel}
         onScopeModeChange={onScopeModeChange}
         onNeighborhoodDepthChange={onNeighborhoodDepthChange}
         onFolderBoundaryModeChange={onFolderBoundaryModeChange}
+        onPresetChange={onPresetChange}
+        onShowTypeOnlyEdgesChange={onShowTypeOnlyEdgesChange}
+        onShowDynamicEdgesChange={onShowDynamicEdgesChange}
         onBreadcrumbSelect={onBreadcrumbSelect}
         onClearPath={() => onDependencyPathTargetChange(null)}
       />
 
       <div className="force-graph-canvas" ref={containerRef}>
+        {!nodes.length ? (
+          <div className="graph-empty-overlay">
+            <strong>No matching relationships</strong>
+            <span>Choose another view or enable optional edge types.</span>
+          </div>
+        ) : null}
         <ForceGraph2D<ForceGraphNode, ForceGraphLink>
           ref={graphRef}
           graphData={graphData}
@@ -345,17 +398,22 @@ export function ForceGraphView({
           backgroundColor="#ffffff"
           cooldownTicks={nodes.length > 1000 ? 100 : 80}
           enablePanInteraction
-          enableNodeDrag
+          enableNodeDrag={false}
           enablePointerInteraction
           enableZoomInteraction
           linkColor={(link: LinkObject<ForceGraphNode, ForceGraphLink>) =>
-            getLinkColor(link as ForceGraphLink)
+            getLinkColor(link as ForceGraphLink, activeNodeId)
           }
           linkDirectionalArrowColor={(link: LinkObject<ForceGraphNode, ForceGraphLink>) =>
-            getLinkColor(link as ForceGraphLink)
+            getLinkColor(link as ForceGraphLink, activeNodeId)
           }
           linkDirectionalArrowLength={(link: LinkObject<ForceGraphNode, ForceGraphLink>) =>
-            (link as ForceGraphLink).scopeRole === 'membership'
+            (link as ForceGraphLink).scopeRole === 'membership' ||
+            (!isLinkIncident(link as ForceGraphLink, activeNodeId) &&
+              !(link as ForceGraphLink).isDependencyPath &&
+              !(link as ForceGraphLink).isImpactPath &&
+              !(link as ForceGraphLink).ruleSeverity &&
+              !(link as ForceGraphLink).circular)
               ? 0
               : graphMode === 'dependencies'
                 ? 5
@@ -372,7 +430,7 @@ export function ForceGraphView({
                   : null
           }
           linkWidth={(link: LinkObject<ForceGraphNode, ForceGraphLink>) =>
-            getLinkWidth(link as ForceGraphLink)
+            getLinkWidth(link as ForceGraphLink, activeNodeId)
           }
           linkLabel={(link: LinkObject<ForceGraphNode, ForceGraphLink>) => {
             const graphLink = link as ForceGraphLink;
@@ -395,6 +453,8 @@ export function ForceGraphView({
               colorMode,
               maxComplexity,
               maxSize,
+              activeNodeId,
+              connectedNodeIds,
             );
           }}
           nodeLabel={(node: NodeObject<ForceGraphNode>) => {
@@ -448,6 +508,7 @@ export function ForceGraphView({
               y: event.clientY,
             });
           }}
+          onNodeHover={(node) => setHoveredNodeId(typeof node?.id === 'string' ? node.id : null)}
           onBackgroundClick={() => setContextMenu(null)}
           onEngineStop={() => {
             if (!hasFittedRef.current) {

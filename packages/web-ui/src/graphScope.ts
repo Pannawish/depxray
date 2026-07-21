@@ -17,6 +17,9 @@ export interface ScopedGraph {
   nodes: ExplorerGraphNode[];
   edges: ExplorerGraphEdge[];
   focusNodeId: string | null;
+  totalNodeCount?: number;
+  groupedNodeCount?: number;
+  hiddenNodeCount?: number;
 }
 
 export interface GraphBreadcrumb {
@@ -38,6 +41,8 @@ const DEFAULT_FILTERS: DependencyFilters = {
   circularOnly: false,
   orphanOnly: false,
 };
+
+export const DEFAULT_GRAPH_NODE_BUDGET = 80;
 
 function sortNodes(nodes: ExplorerGraphNode[]): ExplorerGraphNode[] {
   return [...nodes].sort((a, b) => a.relativePath.localeCompare(b.relativePath));
@@ -149,11 +154,213 @@ export function getFileNeighborhoodGraph(
     .filter((edge) => visibleNodeIds.has(edge.source) && visibleNodeIds.has(edge.target))
     .map((edge) => ({ ...edge, scopeRole: 'dependency' as const }));
 
+  return limitGraphToBudget(
+    {
+      nodes: sortNodes(nodes),
+      edges: sortEdges(edges),
+      focusNodeId: nodeId,
+    },
+    index,
+  );
+}
+
+function importance(node: ExplorerGraphNode, focusNodeId: string | null): number {
+  if (node.id === focusNodeId) return Number.POSITIVE_INFINITY;
+  const roleScore =
+    node.scopeRole === 'dependent' || node.scopeRole === 'import'
+      ? 1000
+      : node.scopeRole === 'related'
+        ? 900
+        : 0;
+  return roleScore + (node.inDegree ?? 0) * 4 + (node.outDegree ?? 0) * 2;
+}
+
+export function limitGraphToBudget(
+  graph: ScopedGraph,
+  index: FileRelationshipIndex,
+  budget = DEFAULT_GRAPH_NODE_BUDGET,
+): ScopedGraph {
+  if (graph.nodes.length <= budget) {
+    return {
+      ...graph,
+      totalNodeCount: graph.nodes.length,
+      groupedNodeCount: 0,
+      hiddenNodeCount: 0,
+    };
+  }
+
+  const groupReserve = Math.min(16, Math.max(4, Math.floor(budget * 0.2)));
+  const keptNodes = [...graph.nodes]
+    .sort(
+      (a, b) =>
+        importance(b, graph.focusNodeId) - importance(a, graph.focusNodeId) ||
+        a.relativePath.localeCompare(b.relativePath),
+    )
+    .slice(0, budget - groupReserve);
+  const keptIds = new Set(keptNodes.map((node) => node.id));
+  const groupedMembers = new Map<string, ExplorerGraphNode[]>();
+
+  for (const node of graph.nodes) {
+    if (keptIds.has(node.id)) continue;
+    const folderId = index.parentById.get(node.id);
+    if (!folderId) continue;
+    const members = groupedMembers.get(folderId) ?? [];
+    members.push(node);
+    groupedMembers.set(folderId, members);
+  }
+
+  const selectedGroups = [...groupedMembers.entries()]
+    .sort(
+      ([aId, a], [bId, b]) =>
+        b.length - a.length ||
+        (index.nodeById.get(aId)?.relativePath ?? aId).localeCompare(
+          index.nodeById.get(bId)?.relativePath ?? bId,
+        ),
+    )
+    .slice(0, groupReserve);
+  const selectedGroupById = new Map(selectedGroups);
+  const nodeToBucket = new Map<string, string>();
+  for (const [folderId, members] of selectedGroups) {
+    members.forEach((member) => nodeToBucket.set(member.id, folderId));
+  }
+
+  const groupNodes = selectedGroups.flatMap(([folderId, members]) => {
+    const folder = index.nodeById.get(folderId) ?? index.structureNodeById.get(folderId);
+    if (!folder || keptIds.has(folderId)) return [];
+    const roles = new Set(members.map((member) => member.scopeRole));
+    return [
+      {
+        ...folder,
+        scopeRole: roles.size === 1 ? members[0]?.scopeRole : 'related',
+        memberNodeIds: members.map((member) => member.id).sort(),
+        memberCount: members.length,
+      } satisfies ExplorerGraphNode,
+    ];
+  });
+  const enrichedKeptNodes = keptNodes.map((node) => {
+    const grouped = selectedGroupById.get(node.id);
+    if (!grouped) return node;
+    return {
+      ...node,
+      memberNodeIds: [...(node.memberNodeIds ?? []), ...grouped.map((member) => member.id)].sort(),
+      memberCount: (node.memberCount ?? 0) + grouped.length,
+    };
+  });
+  const representedGroupIds = new Set([
+    ...groupNodes.map((node) => node.id),
+    ...selectedGroups.filter(([folderId]) => keptIds.has(folderId)).map(([folderId]) => folderId),
+  ]);
+  const visibleIds = new Set([...keptIds, ...groupNodes.map((node) => node.id)]);
+  const aggregates = new Map<string, ExplorerGraphEdge>();
+
+  for (const edge of graph.edges) {
+    const source = keptIds.has(edge.source) ? edge.source : nodeToBucket.get(edge.source);
+    const target = keptIds.has(edge.target) ? edge.target : nodeToBucket.get(edge.target);
+    if (
+      !source ||
+      !target ||
+      source === target ||
+      !visibleIds.has(source) ||
+      !visibleIds.has(target)
+    ) {
+      continue;
+    }
+    const key = `${source}->${target}`;
+    const existing = aggregates.get(key);
+    if (!existing) {
+      aggregates.set(key, {
+        ...edge,
+        id: `limited:${key}`,
+        source,
+        target,
+        aggregateCount: edge.aggregateCount ?? 1,
+        memberEdgeIds: edge.memberEdgeIds ?? [edge.id],
+      });
+      continue;
+    }
+    existing.aggregateCount = (existing.aggregateCount ?? 1) + (edge.aggregateCount ?? 1);
+    existing.memberEdgeIds = [
+      ...(existing.memberEdgeIds ?? []),
+      ...(edge.memberEdgeIds ?? [edge.id]),
+    ];
+    existing.isCrossPackage ||= edge.isCrossPackage;
+    existing.ruleViolations = [...(existing.ruleViolations ?? []), ...(edge.ruleViolations ?? [])];
+  }
+
   return {
-    nodes: sortNodes(nodes),
-    edges: sortEdges(edges),
-    focusNodeId: nodeId,
+    nodes: sortNodes([...enrichedKeptNodes, ...groupNodes]),
+    edges: sortEdges([...aggregates.values()]),
+    focusNodeId: graph.focusNodeId,
+    totalNodeCount: graph.nodes.length,
+    groupedNodeCount: representedGroupIds.size,
+    hiddenNodeCount:
+      graph.nodes.length -
+      keptNodes.length -
+      [...representedGroupIds].reduce(
+        (count, groupId) => count + (groupedMembers.get(groupId)?.length ?? 0),
+        0,
+      ),
   };
+}
+
+export function getProjectOverviewGraph(
+  index: FileRelationshipIndex,
+  filters: DependencyFilters = DEFAULT_FILTERS,
+): ScopedGraph {
+  if (!index.rootId) return { nodes: [], edges: [], focusNodeId: null };
+  return getFolderBoundaryGraph(index.rootId, index, 'all', filters);
+}
+
+export function getCircularDependenciesGraph(
+  index: FileRelationshipIndex,
+  filters: DependencyFilters = DEFAULT_FILTERS,
+): ScopedGraph {
+  const nodes = [...index.circularNodeIds]
+    .map((id) => index.nodeById.get(id))
+    .filter((node): node is ExplorerGraphNode => Boolean(node));
+  const ids = new Set(nodes.map((node) => node.id));
+  const edges = filterDependencyEdges(index.dependencyEdges, filters).filter(
+    (edge) => ids.has(edge.source) && ids.has(edge.target),
+  );
+  return limitGraphToBudget({ nodes, edges, focusNodeId: null }, index);
+}
+
+export function getArchitectureViolationsGraph(
+  index: FileRelationshipIndex,
+  filters: DependencyFilters = DEFAULT_FILTERS,
+): ScopedGraph {
+  const edges = filterDependencyEdges(index.dependencyEdges, filters).filter(
+    (edge) => (edge.ruleViolations?.length ?? 0) > 0,
+  );
+  const ids = new Set(edges.flatMap((edge) => [edge.source, edge.target]));
+  const nodes = [...ids]
+    .map((id) => index.nodeById.get(id))
+    .filter((node): node is ExplorerGraphNode => Boolean(node));
+  return limitGraphToBudget({ nodes, edges, focusNodeId: null }, index);
+}
+
+export function getHighImpactGraph(
+  index: FileRelationshipIndex,
+  filters: DependencyFilters = DEFAULT_FILTERS,
+): ScopedGraph {
+  const ranked = [...index.dependencyNodeById.values()]
+    .sort(
+      (a, b) =>
+        (b.inDegree ?? 0) - (a.inDegree ?? 0) ||
+        (b.outDegree ?? 0) - (a.outDegree ?? 0) ||
+        a.relativePath.localeCompare(b.relativePath),
+    )
+    .slice(0, 24);
+  const hubIds = new Set(ranked.map((node) => node.id));
+  const relevantEdges = filterDependencyEdges(index.dependencyEdges, filters).filter(
+    (edge) => hubIds.has(edge.source) || hubIds.has(edge.target),
+  );
+  const ids = new Set(relevantEdges.flatMap((edge) => [edge.source, edge.target]));
+  ranked.forEach((node) => ids.add(node.id));
+  const nodes = [...ids]
+    .map((id) => index.nodeById.get(id))
+    .filter((node): node is ExplorerGraphNode => Boolean(node));
+  return limitGraphToBudget({ nodes, edges: relevantEdges, focusNodeId: null }, index);
 }
 
 function directChildUnder(
@@ -365,11 +572,14 @@ export function getFolderBoundaryGraph(
     });
   }
 
-  return {
-    nodes: sortNodes(nodes),
-    edges: sortEdges(edges),
-    focusNodeId: folderId,
-  };
+  return limitGraphToBudget(
+    {
+      nodes: sortNodes(nodes),
+      edges: sortEdges(edges),
+      focusNodeId: folderId,
+    },
+    index,
+  );
 }
 
 export function getGraphBreadcrumbs(

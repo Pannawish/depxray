@@ -14,7 +14,7 @@
   --warning-soft: #f7ead7;
   --info: #7c3aed;
   --info-soft: #efe7ff;
-  font-family: "Avenir Next", "Segoe UI", sans-serif;
+  font-family: 'Avenir Next', 'Segoe UI', sans-serif;
   color: var(--text);
   background: var(--bg);
   font-synthesis: none;
@@ -79,7 +79,7 @@ button {
 
 .explorer-toolbar {
   display: grid;
-  grid-template-areas: "title search actions";
+  grid-template-areas: 'title search actions';
   grid-template-columns: auto minmax(220px, 480px) minmax(0, 1fr);
   align-items: center;
   padding: 12px 16px;
@@ -951,8 +951,7 @@ button {
   touch-action: none;
   background:
     linear-gradient(#f8fafc 1px, transparent 1px),
-    linear-gradient(90deg, #f8fafc 1px, transparent 1px),
-    #ffffff;
+    linear-gradient(90deg, #f8fafc 1px, transparent 1px), #ffffff;
   background-size: 20px 20px;
 }
 
@@ -1003,6 +1002,53 @@ button {
   border-bottom: 1px solid var(--border);
   background: #f8fafc;
   overflow-x: auto;
+}
+
+.graph-preset-select select {
+  min-width: 150px;
+}
+
+.graph-edge-toggles {
+  display: inline-flex;
+  flex: 0 0 auto;
+  gap: 8px;
+  padding: 5px 8px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: #ffffff;
+}
+
+.graph-edge-toggles label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 0.72rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.graph-edge-toggles input {
+  accent-color: #0f766e;
+}
+
+.graph-empty-overlay {
+  position: absolute;
+  z-index: 2;
+  inset: 0;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 5px;
+  padding: 24px;
+  color: var(--muted);
+  text-align: center;
+  pointer-events: none;
+}
+
+.graph-empty-overlay strong {
+  color: var(--text);
 }
 
 .graph-scope-toggle {
@@ -1191,7 +1237,7 @@ button {
 }
 
 .dashboard-info-button:hover,
-.dashboard-info-button[aria-expanded="true"] {
+.dashboard-info-button[aria-expanded='true'] {
   border-color: var(--accent);
   background: var(--accent-soft);
 }
@@ -1850,7 +1896,8 @@ button {
   overflow: auto;
   background: #181824;
   color: #e2e4e9;
-  font-family: "Fira Code", "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-family:
+    'Fira Code', 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 0.82rem;
   padding: 12px 0;
   line-height: 1.6;
@@ -1911,7 +1958,7 @@ button {
   cursor: pointer;
   opacity: 0.85;
   font-weight: 600;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   transition: all 0.15s ease;
   align-self: center;
 }
@@ -1932,7 +1979,7 @@ button {
   color: #ddd6fe;
   font-size: 0.72rem;
   font-weight: 600;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   align-self: center;
 }
 
@@ -1981,19 +2028,25 @@ button {
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 @media (max-width: 1600px) {
   .explorer-toolbar {
     grid-template-areas:
-      "title search"
-      "actions actions";
+      'title search'
+      'actions actions';
     grid-template-columns: auto minmax(220px, 1fr);
     gap: 10px 16px;
   }
@@ -2040,8 +2093,8 @@ button {
     overflow: visible;
   }
 
-  .swap-layout-btn[title*="horizontal"],
-  .swap-layout-btn[title*="Horizontal"] {
+  .swap-layout-btn[title*='horizontal'],
+  .swap-layout-btn[title*='Horizontal'] {
     display: none;
   }
 
@@ -2064,8 +2117,8 @@ button {
 @media (max-width: 900px) {
   .explorer-toolbar {
     grid-template-areas:
-      "title search"
-      "actions actions";
+      'title search'
+      'actions actions';
     grid-template-columns: auto minmax(0, 1fr);
     padding: 10px;
   }
@@ -2129,9 +2182,9 @@ button {
 
   .explorer-toolbar {
     grid-template-areas:
-      "title"
-      "search"
-      "actions";
+      'title'
+      'search'
+      'actions';
     grid-template-columns: 1fr;
     align-items: stretch;
     gap: 9px;
@@ -2244,6 +2297,22 @@ button {
 
   .graph-context-bar {
     align-items: flex-start;
+    flex-wrap: wrap;
+    overflow-x: visible;
+  }
+
+  .graph-preset-select {
+    flex: 1 1 190px;
+  }
+
+  .graph-preset-select select {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .graph-edge-toggles {
+    flex: 1 1 auto;
+    justify-content: space-around;
   }
 
   .graph-breadcrumbs {

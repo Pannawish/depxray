@@ -9,7 +9,9 @@ import {
   getFileNeighborhoodGraph,
   getFolderBoundaryGraph,
   getGraphBreadcrumbs,
+  getProjectOverviewGraph,
   getShortestDependencyPath,
+  limitGraphToBudget,
 } from './graphScope.js';
 import type { ExplorerGraphSet } from './types.js';
 
@@ -475,6 +477,43 @@ describe('relationship index', () => {
     expect(
       graph.edges.some((edge) => edge.scopeRole === 'membership' && edge.target === components),
     ).toBe(true);
+  });
+
+  it('builds a project overview from top-level folders and files', () => {
+    const index = buildRelationshipIndex(makeDataSet());
+    const graph = getProjectOverviewGraph(index);
+
+    expect(graph.focusNodeId).toBe(root);
+    expect(graph.nodes.map((node) => node.id)).toEqual([root, external, src]);
+    expect(graph.nodes.find((node) => node.id === src)?.memberCount).toBe(4);
+    expect(graph.edges.some((edge) => edge.aggregateCount === 1)).toBe(true);
+  });
+
+  it('groups oversized graph neighborhoods into drillable folders', () => {
+    const index = buildRelationshipIndex(makeDataSet());
+    const template = index.nodeById.get(app)!;
+    const nodes = [template];
+    const edges = [];
+    for (let number = 0; number < 90; number += 1) {
+      const id = `${src}/generated-${number}.ts`;
+      const node = { ...template, id, label: `generated-${number}.ts`, relativePath: id };
+      nodes.push(node);
+      index.nodeById.set(id, node);
+      index.parentById.set(id, src);
+      edges.push({
+        id: `generated-${number}`,
+        source: app,
+        target: id,
+        kind: 'dependencies' as const,
+      });
+    }
+
+    const graph = limitGraphToBudget({ nodes, edges, focusNodeId: app }, index, 20);
+
+    expect(graph.nodes.length).toBeLessThanOrEqual(20);
+    expect(graph.totalNodeCount).toBe(91);
+    expect(graph.groupedNodeCount).toBe(1);
+    expect(graph.nodes.find((node) => node.id === src)?.memberCount).toBeGreaterThan(60);
   });
 
   it('returns graph breadcrumbs and the shortest dependency path in either direction', () => {

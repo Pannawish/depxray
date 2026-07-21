@@ -15,11 +15,31 @@ test('folder and file selections update the details panel', async ({ page }) => 
   await page.getByRole('treeitem', { name: /src/ }).click();
   await expect(page.locator('.details-panel .eyebrow')).toHaveText('Folder');
   await expect(page.locator('.details-panel h2')).toHaveText('src');
+  await expect(page.getByRole('button', { name: 'Folder' })).toHaveClass(/active/);
+  await expect(page.getByRole('combobox', { name: 'Graph view preset' })).toHaveValue('direct');
 
   await page.getByRole('button', { name: 'Expand src' }).click();
   await page.getByRole('treeitem', { name: /App\.tsx/ }).click();
   await expect(page.locator('.details-panel .eyebrow')).toHaveText('File');
   await expect(page.locator('.details-panel h2')).toHaveText('App.tsx');
+  await expect(page.getByRole('button', { name: 'File neighborhood' })).toHaveClass(/active/);
+});
+
+test('graph presets and optional edges stay usable when a preset has no matches', async ({
+  page,
+}) => {
+  await page.goto('/');
+
+  const preset = page.getByRole('combobox', { name: 'Graph view preset' });
+  await preset.selectOption('violations');
+  await expect(page.locator('.graph-empty-overlay')).toContainText('No matching relationships');
+  await preset.selectOption('overview');
+  await expect(page.locator('.force-graph-canvas canvas')).toBeVisible();
+
+  await page.getByLabel('Type-only').check();
+  await page.getByLabel('Dynamic').check();
+  await expect(page.getByLabel('Type-only')).toBeChecked();
+  await expect(page.getByLabel('Dynamic')).toBeChecked();
 });
 
 test.describe('responsive explorer', () => {
