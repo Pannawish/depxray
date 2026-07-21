@@ -5,6 +5,12 @@ import {
   getFolderSummary,
   getImpactSummary,
 } from './relationshipIndex.js';
+import {
+  getFileNeighborhoodGraph,
+  getFolderBoundaryGraph,
+  getGraphBreadcrumbs,
+  getShortestDependencyPath,
+} from './graphScope.js';
 import type { ExplorerGraphSet } from './types.js';
 
 const root = '/project';
@@ -411,5 +417,89 @@ describe('relationship index', () => {
       app,
       types,
     ]);
+  });
+
+  it('builds direct and two-level file dependency neighborhoods', () => {
+    const index = buildRelationshipIndex(makeDataSet());
+    const direct = getFileNeighborhoodGraph(header, index, 1);
+    const twoLevels = getFileNeighborhoodGraph(header, index, 2);
+
+    expect(direct.nodes.map((node) => node.id)).toEqual([external, app, header]);
+    expect(direct.nodes.find((node) => node.id === header)?.scopeRole).toBe('focus');
+    expect(direct.nodes.find((node) => node.id === external)?.scopeRole).toBe('dependent');
+    expect(direct.edges.map((edge) => edge.id)).toEqual([
+      'external-header',
+      'app-header',
+      'header-app',
+    ]);
+    expect(twoLevels.nodes.map((node) => node.id)).toEqual([
+      external,
+      app,
+      header,
+      lazy,
+      types,
+    ]);
+  });
+
+  it('builds folder boundary graphs with collapsed child folders and aggregated edges', () => {
+    const dataSet = makeDataSet();
+    const components = `${src}/components`;
+    const structure = dataSet.graphs.structure!;
+    structure.nodes.push({
+      id: components,
+      label: 'components',
+      relativePath: 'src/components',
+      absolutePath: components,
+      kind: 'directory',
+      extension: null,
+      depth: 2,
+      collapsed: false,
+      hidden: false,
+      childCount: 1,
+      descendantCount: 1,
+    });
+    structure.edges = structure.edges
+      .filter((edge) => edge.id !== `${src}->${header}`)
+      .concat([
+        { id: `${src}->${components}`, source: src, target: components, kind: 'structure' },
+        { id: `${components}->${header}`, source: components, target: header, kind: 'structure' },
+      ]);
+
+    const index = buildRelationshipIndex(dataSet);
+    const graph = getFolderBoundaryGraph(src, index, 'all');
+    const componentCluster = graph.nodes.find((node) => node.id === components);
+
+    expect(graph.focusNodeId).toBe(src);
+    expect(graph.nodes.some((node) => node.id === header)).toBe(false);
+    expect(componentCluster?.memberNodeIds).toEqual([header]);
+    expect(componentCluster?.memberCount).toBe(1);
+    expect(graph.nodes.find((node) => node.id === external)?.scopeRole).toBe('external-incoming');
+    expect(graph.edges.find((edge) => edge.id === `scope:incoming:${external}->${components}`)).toMatchObject({
+      aggregateCount: 1,
+      memberEdgeIds: ['external-header'],
+    });
+    expect(graph.edges.some((edge) => edge.scopeRole === 'membership' && edge.target === components)).toBe(true);
+  });
+
+  it('returns graph breadcrumbs and the shortest dependency path in either direction', () => {
+    const index = buildRelationshipIndex(makeDataSet());
+
+    expect(getGraphBreadcrumbs(header, index).map((item) => item.id)).toEqual([
+      root,
+      src,
+      header,
+    ]);
+    expect(getShortestDependencyPath(header, types, index)).toEqual({
+      connected: true,
+      direction: 'forward',
+      nodeIds: [header, app, types],
+      edgeIds: ['header-app', 'app-types'],
+    });
+    expect(getShortestDependencyPath(types, external, index)).toEqual({
+      connected: true,
+      direction: 'reverse',
+      nodeIds: [external, header, app, types],
+      edgeIds: ['external-header', 'header-app', 'app-types'],
+    });
   });
 });

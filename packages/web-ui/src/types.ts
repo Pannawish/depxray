@@ -17,6 +17,19 @@ export type {
 
 export type DepthFilter = 1 | 2 | 3 | 4 | 'all';
 export type GraphMode = 'structure' | 'dependencies';
+export type GraphScopeMode = 'project' | 'folder' | 'file';
+export type FileNeighborhoodDepth = 1 | 2 | 'all';
+export type FolderBoundaryMode = 'all' | 'internal' | 'incoming' | 'outgoing';
+export type GraphScopeNodeRole =
+  | 'focus'
+  | 'import'
+  | 'dependent'
+  | 'related'
+  | 'internal'
+  | 'external-incoming'
+  | 'external-outgoing'
+  | 'external-both';
+export type GraphScopeEdgeRole = 'dependency' | 'internal' | 'incoming' | 'outgoing' | 'membership';
 
 export interface ExplorerGraphNode extends StructureGraphNode {
   inDegree?: number;
@@ -29,6 +42,10 @@ export interface ExplorerGraphNode extends StructureGraphNode {
   unusedExports?: DependencyGraphNode['unusedExports'];
   unresolvedImports?: DependencyGraphNode['unresolvedImports'];
   pluginData?: DependencyGraphNode['pluginData'];
+  scopeRole?: GraphScopeNodeRole;
+  memberNodeIds?: string[];
+  memberCount?: number;
+  internalEdgeCount?: number;
 }
 
 export interface ExplorerGraphEdge extends StructureGraphEdge {
@@ -40,6 +57,9 @@ export interface ExplorerGraphEdge extends StructureGraphEdge {
   isCrossPackage?: DependencyGraphEdge['isCrossPackage'];
   ruleViolations?: DependencyGraphEdge['ruleViolations'];
   pluginData?: DependencyGraphEdge['pluginData'];
+  scopeRole?: GraphScopeEdgeRole;
+  aggregateCount?: number;
+  memberEdgeIds?: string[];
 }
 
 export interface ExplorerGraphData {

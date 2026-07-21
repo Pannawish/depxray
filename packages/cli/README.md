@@ -48,7 +48,7 @@ npx depxray scan
 
 The default `scan` command starts a local browser UI. If port `5178` is busy, `depxray` automatically tries the next free port.
 
-The browser UI opens with the graph view in the center panel. Use the toolbar to switch between **Graph**, **Dashboard**, and **Miller** views. In graph view, you can zoom, pan, drag nodes, click nodes to select files, see selected-file blast radius highlighting, switch label visibility between **Smart**, **All**, and **None**, color nodes by extension or health metrics, filter files with unused exports, and inspect unresolved import warnings directly in file details.
+The browser UI opens with the graph view in the center panel. Use the toolbar to switch between **Graph**, **Dashboard**, and **Miller** views. In graph view, selecting a file opens a dependency neighborhood with direct, two-level, or complete depth; selecting a folder opens an aggregated boundary graph with internal, incoming, and outgoing filters. The graph also provides Project/Folder/File scope controls, breadcrumbs, shortest dependency-path highlighting, right-click node actions, zoom, pan, node dragging, blast-radius highlighting, label visibility controls, health-metric coloring, unused-export filters, and unresolved-import details.
 
 ## Quick Examples
 

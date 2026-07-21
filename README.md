@@ -108,6 +108,11 @@ Current UI and graph-data capabilities include:
 - compact rows for large repos
 - force-directed graph view for dependency and structure data
 - graph zoom, pan, node dragging, click-to-select, and selected-node centering
+- context-aware Project, Folder, and File neighborhood graph scopes with breadcrumbs
+- direct, two-level, and complete file dependency neighborhoods
+- folder boundary views for internal, incoming, outgoing, or all dependencies
+- collapsed folder clusters with aggregated dependency counts for large scopes
+- shortest dependency-path highlighting and right-click graph actions
 - selected-file impact highlighting, showing dependents and dependency paths in the force graph
 - graph node labels with Smart, All, and None label visibility modes
 - graph node coloring by file extension, circular status, orphan status, unused exports, and unresolved imports

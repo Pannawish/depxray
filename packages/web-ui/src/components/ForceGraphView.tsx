@@ -8,9 +8,15 @@ import ForceGraph2D, {
 import type {
   ExplorerGraphEdge,
   ExplorerGraphNode,
+  FileNeighborhoodDepth,
+  FolderBoundaryMode,
   GraphMode,
+  GraphScopeMode,
+  GraphScopeNodeRole,
 } from '../types.js';
+import type { DependencyPathResult, GraphBreadcrumb } from '../graphScope.js';
 import { interpolateHeatColor, type GraphColorMode } from '../graphColors.js';
+import { GraphContextBar } from './GraphContextBar.js';
 
 interface ForceGraphViewProps {
   nodes: ExplorerGraphNode[];
@@ -21,11 +27,28 @@ interface ForceGraphViewProps {
   impactNodeIds: Set<string>;
   impactEdgeIds: Set<string>;
   impactAffectedCount: number;
+  dependencyPathNodeIds: Set<string>;
+  dependencyPathEdgeIds: Set<string>;
+  dependencyPathTargetId: string | null;
+  dependencyPathResult: DependencyPathResult | null;
+  dependencyPathLabel: string | null;
   graphMode: GraphMode;
+  scopeMode: GraphScopeMode;
+  canUseFolderScope: boolean;
+  canUseFileScope: boolean;
+  neighborhoodDepth: FileNeighborhoodDepth;
+  folderBoundaryMode: FolderBoundaryMode;
+  breadcrumbs: GraphBreadcrumb[];
   labelMode: 'smart' | 'all' | 'none';
   onLabelModeChange: (labelMode: 'smart' | 'all' | 'none') => void;
   colorMode: GraphColorMode;
   onColorModeChange: (mode: GraphColorMode) => void;
+  onScopeModeChange: (mode: GraphScopeMode) => void;
+  onNeighborhoodDepthChange: (depth: FileNeighborhoodDepth) => void;
+  onFolderBoundaryModeChange: (mode: FolderBoundaryMode) => void;
+  onBreadcrumbSelect: (nodeId: string) => void;
+  onDependencyPathTargetChange: (nodeId: string | null) => void;
+  onOpenNode: (nodeId: string) => void;
   onSelectNode: (nodeId: string) => void;
 }
 
@@ -47,6 +70,13 @@ interface ForceGraphNode {
   unresolvedImportsCount?: number;
   isImpacted?: boolean;
   isImpactTarget?: boolean;
+  scopeRole?: GraphScopeNodeRole;
+  memberCount?: number;
+  internalEdgeCount?: number;
+  isDependencyPath?: boolean;
+  isDependencyPathTarget?: boolean;
+  x?: number;
+  y?: number;
 }
 
 interface ForceGraphLink {
@@ -60,6 +90,16 @@ interface ForceGraphLink {
   crossPackage?: boolean;
   ruleSeverity?: 'error' | 'warning';
   isImpactPath?: boolean;
+  isDependencyPath?: boolean;
+  scopeRole?: ExplorerGraphEdge['scopeRole'];
+  aggregateCount?: number;
+  memberEdgeIds?: string[];
+}
+
+interface NodeContextMenu {
+  node: ForceGraphNode;
+  x: number;
+  y: number;
 }
 
 interface LabelBounds {
@@ -104,6 +144,19 @@ function getWorkspaceColor(workspace: string): string {
 function getNodeColor(node: ForceGraphNode, selectedNodeId: string | null): string {
   if (node.id === selectedNodeId) {
     return '#0f6b59';
+  }
+
+  if (node.scopeRole === 'dependent' || node.scopeRole === 'external-incoming') {
+    return '#2563eb';
+  }
+  if (node.scopeRole === 'import' || node.scopeRole === 'external-outgoing') {
+    return '#c2410c';
+  }
+  if (node.scopeRole === 'related' || node.scopeRole === 'external-both') {
+    return '#7c3aed';
+  }
+  if (node.scopeRole === 'internal') {
+    return node.kind === 'directory' ? '#475569' : '#0f766e';
   }
 
   if (node.isCircular) {
@@ -165,10 +218,48 @@ function getNodeRadius(node: ForceGraphNode, selectedNodeId: string | null): num
   }
 
   if (node.kind === 'directory') {
-    return 5;
+    return 5 + Math.min(5, Math.sqrt(node.memberCount ?? 1));
   }
 
   return 4;
+}
+
+function getLinkColor(link: ForceGraphLink): string {
+  if (link.isDependencyPath || link.isImpactPath) {
+    return '#0891b2';
+  }
+  if (link.scopeRole === 'membership') {
+    return '#cbd5e1';
+  }
+  if (link.scopeRole === 'incoming') {
+    return '#2563eb';
+  }
+  if (link.scopeRole === 'outgoing') {
+    return '#c2410c';
+  }
+  if (link.ruleSeverity === 'error') {
+    return '#dc2626';
+  }
+  if (link.ruleSeverity === 'warning') {
+    return '#d97706';
+  }
+  if (link.circular) {
+    return '#b33a32';
+  }
+  if (link.crossPackage) {
+    return '#475569';
+  }
+  return '#b7c1cd';
+}
+
+function getLinkWidth(link: ForceGraphLink): number {
+  if (link.isDependencyPath) {
+    return 3;
+  }
+  if ((link.aggregateCount ?? 1) > 1) {
+    return Math.min(6, 1 + Math.log2(link.aggregateCount ?? 1));
+  }
+  return link.ruleSeverity || link.isImpactPath || link.circular || link.crossPackage ? 2 : 1;
 }
 
 function drawNode(
@@ -189,9 +280,21 @@ function drawNode(
   const color = getNodeColorByMode(graphNode, selectedNodeId, colorMode, maxComplexity, maxSize);
 
   context.beginPath();
-  context.arc(x, y, radius, 0, 2 * Math.PI, false);
+  if (graphNode.kind === 'directory') {
+    context.rect(x - radius, y - radius, radius * 2, radius * 2);
+  } else {
+    context.arc(x, y, radius, 0, 2 * Math.PI, false);
+  }
   context.fillStyle = color;
   context.fill();
+
+  if (graphNode.isDependencyPath || graphNode.isDependencyPathTarget) {
+    context.lineWidth = (graphNode.isDependencyPathTarget ? 3 : 2) / globalScale;
+    context.strokeStyle = graphNode.isDependencyPathTarget ? '#7c3aed' : '#0891b2';
+    context.beginPath();
+    context.arc(x, y, radius + 6 / globalScale, 0, 2 * Math.PI, false);
+    context.stroke();
+  }
 
   if (graphNode.isImpacted || graphNode.isImpactTarget) {
     context.lineWidth = (graphNode.isImpactTarget ? 2.5 : 2) / globalScale;
@@ -204,6 +307,12 @@ function drawNode(
   if (graphNode.id === selectedNodeId) {
     context.lineWidth = 2 / globalScale;
     context.strokeStyle = '#063f35';
+    context.beginPath();
+    if (graphNode.kind === 'directory') {
+      context.rect(x - radius, y - radius, radius * 2, radius * 2);
+    } else {
+      context.arc(x, y, radius, 0, 2 * Math.PI, false);
+    }
     context.stroke();
   }
 
@@ -255,11 +364,28 @@ export function ForceGraphView({
   impactNodeIds,
   impactEdgeIds,
   impactAffectedCount,
+  dependencyPathNodeIds,
+  dependencyPathEdgeIds,
+  dependencyPathTargetId,
+  dependencyPathResult,
+  dependencyPathLabel,
   graphMode,
+  scopeMode,
+  canUseFolderScope,
+  canUseFileScope,
+  neighborhoodDepth,
+  folderBoundaryMode,
+  breadcrumbs,
   labelMode,
   onLabelModeChange,
   colorMode,
   onColorModeChange,
+  onScopeModeChange,
+  onNeighborhoodDepthChange,
+  onFolderBoundaryModeChange,
+  onBreadcrumbSelect,
+  onDependencyPathTargetChange,
+  onOpenNode,
   onSelectNode,
 }: ForceGraphViewProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -267,6 +393,26 @@ export function ForceGraphView({
   const hasFittedRef = useRef(false);
   const occupiedLabelBoundsRef = useRef<LabelBounds[]>([]);
   const [size, setSize] = useState({ width: 640, height: 420 });
+  const [contextMenu, setContextMenu] = useState<NodeContextMenu | null>(null);
+
+  useEffect(() => {
+    if (!contextMenu) {
+      return;
+    }
+
+    const closeMenu = () => setContextMenu(null);
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        closeMenu();
+      }
+    };
+    window.addEventListener('click', closeMenu);
+    window.addEventListener('keydown', closeOnEscape);
+    return () => {
+      window.removeEventListener('click', closeMenu);
+      window.removeEventListener('keydown', closeOnEscape);
+    };
+  }, [contextMenu]);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -308,6 +454,18 @@ export function ForceGraphView({
       unresolvedImportsCount: node.unresolvedImports?.length ?? 0,
       isImpacted: impactNodeIds.has(node.id) && node.id !== selectedNodeId,
       isImpactTarget: impactNodeIds.has(node.id) && node.id === selectedNodeId,
+      scopeRole: node.scopeRole,
+      memberCount: node.memberCount,
+      internalEdgeCount: node.internalEdgeCount,
+      isDependencyPath: dependencyPathNodeIds.has(node.id),
+      isDependencyPathTarget: dependencyPathTargetId === node.id,
+      x: node.scopeRole === 'dependent' || node.scopeRole === 'external-incoming'
+        ? -140
+        : node.scopeRole === 'import' || node.scopeRole === 'external-outgoing'
+          ? 140
+          : node.scopeRole === 'focus'
+            ? 0
+            : undefined,
     }));
 
     const graphLinks: ForceGraphLink[] = edges
@@ -322,6 +480,10 @@ export function ForceGraphView({
         dynamic: edge.isDynamic,
         crossPackage: edge.isCrossPackage,
         isImpactPath: impactEdgeIds.has(edge.id),
+        isDependencyPath: dependencyPathEdgeIds.has(edge.id) || (edge.memberEdgeIds ?? []).some((id) => dependencyPathEdgeIds.has(id)),
+        scopeRole: edge.scopeRole,
+        aggregateCount: edge.aggregateCount,
+        memberEdgeIds: edge.memberEdgeIds,
         ruleSeverity: edge.ruleViolations?.some((violation) => violation.severity === 'error')
           ? 'error'
           : edge.ruleViolations?.length
@@ -333,7 +495,18 @@ export function ForceGraphView({
       nodes: graphNodes,
       links: graphLinks,
     };
-  }, [circularNodeIds, edges, impactEdgeIds, impactNodeIds, nodes, orphanNodeIds, selectedNodeId]);
+  }, [
+    circularNodeIds,
+    dependencyPathEdgeIds,
+    dependencyPathNodeIds,
+    dependencyPathTargetId,
+    edges,
+    impactEdgeIds,
+    impactNodeIds,
+    nodes,
+    orphanNodeIds,
+    selectedNodeId,
+  ]);
   const maxComplexity = useMemo(() => (
     Math.max(1, ...graphData.nodes.map((node) => node.complexity ?? 0))
   ), [graphData.nodes]);
@@ -426,6 +599,22 @@ export function ForceGraphView({
         </div>
       </div>
 
+      <GraphContextBar
+        scopeMode={scopeMode}
+        canUseFolderScope={canUseFolderScope}
+        canUseFileScope={canUseFileScope}
+        neighborhoodDepth={neighborhoodDepth}
+        folderBoundaryMode={folderBoundaryMode}
+        breadcrumbs={breadcrumbs}
+        pathResult={dependencyPathResult}
+        pathLabel={dependencyPathLabel}
+        onScopeModeChange={onScopeModeChange}
+        onNeighborhoodDepthChange={onNeighborhoodDepthChange}
+        onFolderBoundaryModeChange={onFolderBoundaryModeChange}
+        onBreadcrumbSelect={onBreadcrumbSelect}
+        onClearPath={() => onDependencyPathTargetChange(null)}
+      />
+
       <div className="force-graph-canvas" ref={containerRef}>
         <ForceGraph2D<ForceGraphNode, ForceGraphLink>
           ref={graphRef}
@@ -438,47 +627,34 @@ export function ForceGraphView({
           enableNodeDrag
           enablePointerInteraction
           enableZoomInteraction
-          linkColor={(link: LinkObject<ForceGraphNode, ForceGraphLink>) => (
-            (link as ForceGraphLink).ruleSeverity === 'error'
-              ? '#dc2626'
-              : (link as ForceGraphLink).ruleSeverity === 'warning'
-                ? '#d97706'
-                : (link as ForceGraphLink).isImpactPath
-                  ? '#0891b2'
-                : (link as ForceGraphLink).circular
-              ? '#b33a32'
-              : (link as ForceGraphLink).crossPackage
-                ? '#475569'
-                : '#b7c1cd'
+          linkColor={(link: LinkObject<ForceGraphNode, ForceGraphLink>) => getLinkColor(link as ForceGraphLink)}
+          linkDirectionalArrowColor={(link: LinkObject<ForceGraphNode, ForceGraphLink>) => getLinkColor(link as ForceGraphLink)}
+          linkDirectionalArrowLength={(link: LinkObject<ForceGraphNode, ForceGraphLink>) => (
+            (link as ForceGraphLink).scopeRole === 'membership'
+              ? 0
+              : graphMode === 'dependencies' ? 5 : 3
           )}
-          linkDirectionalArrowColor={(link: LinkObject<ForceGraphNode, ForceGraphLink>) => (
-            (link as ForceGraphLink).ruleSeverity === 'error'
-              ? '#dc2626'
-              : (link as ForceGraphLink).ruleSeverity === 'warning'
-                ? '#d97706'
-                : (link as ForceGraphLink).isImpactPath
-                  ? '#0891b2'
-                : (link as ForceGraphLink).circular
-                  ? '#b33a32'
-                  : '#94a3b8'
-          )}
-          linkDirectionalArrowLength={graphMode === 'dependencies' ? 5 : 3}
           linkDirectionalArrowRelPos={1}
           linkLineDash={(link: LinkObject<ForceGraphNode, ForceGraphLink>) => (
-            (link as ForceGraphLink).crossPackage
+            (link as ForceGraphLink).scopeRole === 'membership'
+              ? [2, 4]
+              : (link as ForceGraphLink).crossPackage
               ? [7, 4]
               : (link as ForceGraphLink).typeOnly
                 ? [4, 3]
                 : null
           )}
-          linkWidth={(link: LinkObject<ForceGraphNode, ForceGraphLink>) => (
-            (link as ForceGraphLink).ruleSeverity ||
-            (link as ForceGraphLink).isImpactPath ||
-            (link as ForceGraphLink).circular ||
-            (link as ForceGraphLink).crossPackage
-              ? 2
-              : 1
-          )}
+          linkWidth={(link: LinkObject<ForceGraphNode, ForceGraphLink>) => getLinkWidth(link as ForceGraphLink)}
+          linkLabel={(link: LinkObject<ForceGraphNode, ForceGraphLink>) => {
+            const graphLink = link as ForceGraphLink;
+            if (graphLink.scopeRole === 'membership') {
+              return `${graphLink.aggregateCount ?? 1} file(s) in group`;
+            }
+            const count = graphLink.aggregateCount ?? 1;
+            return count > 1
+              ? `${count} aggregated dependencies`
+              : graphLink.importSpecifier ?? 'dependency';
+          }}
           nodeCanvasObject={(node, context, globalScale) => {
             drawNode(
               node,
@@ -518,11 +694,26 @@ export function ForceGraphView({
             context.arc(graphNode.x ?? 0, graphNode.y ?? 0, radius, 0, 2 * Math.PI, false);
             context.fill();
           }}
-          onNodeClick={(node: NodeObject<ForceGraphNode>) => {
-            if (typeof node.id === 'string') {
+          onNodeClick={(node: NodeObject<ForceGraphNode>, event: MouseEvent) => {
+            if (typeof node.id !== 'string') {
+              return;
+            }
+            const graphNode = node as ForceGraphNode;
+            if (event.detail > 1 || graphNode.kind === 'directory' || !canUseFileScope || node.id === selectedNodeId) {
               onSelectNode(node.id);
+            } else {
+              onDependencyPathTargetChange(node.id);
             }
           }}
+          onNodeRightClick={(node: NodeObject<ForceGraphNode>, event: MouseEvent) => {
+            event.preventDefault();
+            setContextMenu({
+              node: node as ForceGraphNode,
+              x: event.clientX,
+              y: event.clientY,
+            });
+          }}
+          onBackgroundClick={() => setContextMenu(null)}
           onEngineStop={() => {
             if (!hasFittedRef.current) {
               fitGraph(250);
@@ -534,6 +725,46 @@ export function ForceGraphView({
           showPointerCursor
         />
       </div>
+
+      {contextMenu ? (
+        <div
+          className="graph-context-menu"
+          onClick={(event) => event.stopPropagation()}
+          style={{ left: contextMenu.x, top: contextMenu.y }}
+        >
+          {contextMenu.node.kind === 'file' ? (
+            <button
+              onClick={() => {
+                onOpenNode(contextMenu.node.id);
+                setContextMenu(null);
+              }}
+              type="button"
+            >
+              Open source
+            </button>
+          ) : null}
+          <button
+            onClick={() => {
+              onSelectNode(contextMenu.node.id);
+              setContextMenu(null);
+            }}
+            type="button"
+          >
+            {contextMenu.node.kind === 'directory' ? 'Drill into folder' : 'Focus neighborhood'}
+          </button>
+          {canUseFileScope && contextMenu.node.kind === 'file' && contextMenu.node.id !== selectedNodeId ? (
+            <button
+              onClick={() => {
+                onDependencyPathTargetChange(contextMenu.node.id);
+                setContextMenu(null);
+              }}
+              type="button"
+            >
+              Show dependency path
+            </button>
+          ) : null}
+        </div>
+      ) : null}
     </section>
   );
 }

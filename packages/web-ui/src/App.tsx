@@ -10,6 +10,12 @@ import { useGraphData } from './hooks/useGraphData.js';
 import { useRelationshipIndex } from './hooks/useRelationshipIndex.js';
 import type { GraphColorMode } from './graphColors.js';
 import {
+  getFileNeighborhoodGraph,
+  getFolderBoundaryGraph,
+  getGraphBreadcrumbs,
+  getShortestDependencyPath,
+} from './graphScope.js';
+import {
   getAncestorIds,
   getFolderSummary,
   getImpactSummary,
@@ -18,7 +24,10 @@ import {
 import type {
   DependencyFilters,
   ExplorerGraphNode,
+  FileNeighborhoodDepth,
+  FolderBoundaryMode,
   GraphMode,
+  GraphScopeMode,
 } from './types.js';
 
 const SOURCE_LABELS = {
@@ -54,6 +63,19 @@ function firstSelectableNode(index: FileRelationshipIndex): ExplorerGraphNode | 
   }
 
   return Array.from(index.nodeById.values())[0] ?? null;
+}
+
+function scopeModeForNode(
+  node: ExplorerGraphNode | null | undefined,
+  index: FileRelationshipIndex,
+): GraphScopeMode {
+  if (node?.kind === 'file' && index.dependencyNodeById.has(node.id)) {
+    return 'file';
+  }
+  if (node?.kind === 'directory' && node.id !== index.rootId && index.dependencyGraph) {
+    return 'folder';
+  }
+  return 'project';
 }
 
 function buildTreeRows(
@@ -264,6 +286,10 @@ export default function App() {
   const [centerViewMode, setCenterViewMode] = useState<CenterViewMode>('graph');
   const [graphColorMode, setGraphColorMode] = useState<GraphColorMode>('extension');
   const [graphLabelMode, setGraphLabelMode] = useState<'smart' | 'all' | 'none'>('smart');
+  const [graphScopeMode, setGraphScopeMode] = useState<GraphScopeMode>('project');
+  const [fileNeighborhoodDepth, setFileNeighborhoodDepth] = useState<FileNeighborhoodDepth>(1);
+  const [folderBoundaryMode, setFolderBoundaryMode] = useState<FolderBoundaryMode>('all');
+  const [dependencyPathTargetId, setDependencyPathTargetId] = useState<string | null>(null);
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
   
@@ -384,42 +410,110 @@ export default function App() {
   const deferredSearchTerm = useDeferredValue(searchTerm);
   const selectedNode = selectedNodeId ? (index.nodeById.get(selectedNodeId) ?? null) : null;
   const activeCodeNode = activeCodeNodeId ? (index.nodeById.get(activeCodeNodeId) ?? null) : null;
+  const dependencyFilters = useMemo<DependencyFilters>(() => ({
+    showTypeOnlyEdges: true,
+    showDynamicEdges: true,
+    circularOnly,
+    orphanOnly,
+    unusedExportsOnly,
+  }), [circularOnly, orphanOnly, unusedExportsOnly]);
 
   const folderSummary = activeCodeNode?.kind === 'directory'
-    ? getFolderSummary(activeCodeNode.id, index, {
-      showTypeOnlyEdges: true,
-      showDynamicEdges: true,
-      circularOnly,
-      orphanOnly,
-      unusedExportsOnly,
-    })
+    ? getFolderSummary(activeCodeNode.id, index, dependencyFilters)
     : null;
   const visibleRows = useMemo(() => (
-    buildTreeRows(index, expandedIds, deferredSearchTerm, {
-      showTypeOnlyEdges: true,
-      showDynamicEdges: true,
-      circularOnly,
-      orphanOnly,
-      unusedExportsOnly,
-    })
-  ), [deferredSearchTerm, circularOnly, orphanOnly, unusedExportsOnly, expandedIds, index]);
-  const graphMode: GraphMode = dataSet?.defaultMode === 'dependencies' && index.dependencyGraph
-    ? 'dependencies'
-    : 'structure';
-  const visibleGraphNodes = useMemo(() => (
-    buildGraphNodes(index, graphMode, deferredSearchTerm, {
-      showTypeOnlyEdges: true,
-      showDynamicEdges: true,
-      circularOnly,
-      orphanOnly,
-      unusedExportsOnly,
-    })
-  ), [circularOnly, deferredSearchTerm, graphMode, index, orphanOnly, unusedExportsOnly]);
-  const visibleGraphEdges = useMemo(() => (
+    buildTreeRows(index, expandedIds, deferredSearchTerm, dependencyFilters)
+  ), [deferredSearchTerm, dependencyFilters, expandedIds, index]);
+  const canUseFileScope = Boolean(selectedNode?.kind === 'file' && index.dependencyNodeById.has(selectedNode.id));
+  const folderScopeNode = selectedNode?.kind === 'directory'
+    ? selectedNode
+    : selectedNode
+      ? index.nodeById.get(index.parentById.get(selectedNode.id) ?? '') ?? null
+      : null;
+  const canUseFolderScope = Boolean(folderScopeNode?.kind === 'directory' && index.dependencyGraph);
+  const graphMode: GraphMode = index.dependencyGraph && (
+    graphScopeMode !== 'project' || dataSet?.defaultMode === 'dependencies'
+  ) ? 'dependencies' : 'structure';
+  const projectGraphNodes = useMemo(() => (
+    buildGraphNodes(index, graphMode, deferredSearchTerm, dependencyFilters)
+  ), [deferredSearchTerm, dependencyFilters, graphMode, index]);
+  const projectGraphEdges = useMemo(() => (
     graphMode === 'dependencies'
       ? index.dependencyEdges
       : (index.structureGraph?.edges ?? [])
   ), [graphMode, index.dependencyEdges, index.structureGraph]);
+  const scopedGraph = useMemo(() => {
+    if (graphScopeMode === 'file' && selectedNode?.kind === 'file') {
+      return getFileNeighborhoodGraph(
+        selectedNode.id,
+        index,
+        fileNeighborhoodDepth,
+        dependencyFilters,
+      );
+    }
+
+    if (graphScopeMode === 'folder' && folderScopeNode?.kind === 'directory') {
+      return getFolderBoundaryGraph(
+        folderScopeNode.id,
+        index,
+        folderBoundaryMode,
+        dependencyFilters,
+      );
+    }
+
+    return {
+      nodes: projectGraphNodes,
+      edges: projectGraphEdges,
+      focusNodeId: selectedNodeId,
+    };
+  }, [
+    dependencyFilters,
+    fileNeighborhoodDepth,
+    folderBoundaryMode,
+    folderScopeNode,
+    graphScopeMode,
+    index,
+    projectGraphEdges,
+    projectGraphNodes,
+    selectedNode,
+    selectedNodeId,
+  ]);
+  const visibleGraphNodes = scopedGraph.nodes;
+  const visibleGraphEdges = scopedGraph.edges;
+  const graphBreadcrumbs = useMemo(() => {
+    const anchorId = graphScopeMode === 'folder'
+      ? folderScopeNode?.id ?? null
+      : graphScopeMode === 'file'
+        ? selectedNode?.id ?? null
+        : index.rootId;
+    return getGraphBreadcrumbs(anchorId, index);
+  }, [folderScopeNode?.id, graphScopeMode, index, selectedNode?.id]);
+  const dependencyPathResult = useMemo(() => (
+    selectedNode?.kind === 'file' && dependencyPathTargetId
+      ? getShortestDependencyPath(selectedNode.id, dependencyPathTargetId, index, dependencyFilters)
+      : null
+  ), [dependencyFilters, dependencyPathTargetId, index, selectedNode]);
+  const dependencyPathNodeIds = useMemo(() => (
+    new Set(dependencyPathResult?.nodeIds ?? [])
+  ), [dependencyPathResult]);
+  const dependencyPathEdgeIds = useMemo(() => (
+    new Set(dependencyPathResult?.edgeIds ?? [])
+  ), [dependencyPathResult]);
+  const dependencyPathLabel = useMemo(() => {
+    if (!dependencyPathResult || !dependencyPathTargetId || selectedNode?.kind !== 'file') {
+      return null;
+    }
+    const target = index.nodeById.get(dependencyPathTargetId);
+    if (!target) {
+      return null;
+    }
+    if (!dependencyPathResult.connected) {
+      return `No dependency path: ${selectedNode.label} ↔ ${target.label}`;
+    }
+    const from = dependencyPathResult.direction === 'forward' ? selectedNode.label : target.label;
+    const to = dependencyPathResult.direction === 'forward' ? target.label : selectedNode.label;
+    return `${from} → ${to} · ${dependencyPathResult.edgeIds.length} hop${dependencyPathResult.edgeIds.length === 1 ? '' : 's'}`;
+  }, [dependencyPathResult, dependencyPathTargetId, index.nodeById, selectedNode]);
   const impactSummary = useMemo(() => (
     selectedNodeId ? getImpactSummary(selectedNodeId, index) : null
   ), [index, selectedNodeId]);
@@ -444,6 +538,8 @@ export default function App() {
   useEffect(() => {
     setExpandedIds(buildInitialExpandedIds(index));
     setSelectedNodeId(firstSelectableNode(index)?.id ?? null);
+    setGraphScopeMode('project');
+    setDependencyPathTargetId(null);
   }, [index]);
 
 
@@ -455,9 +551,12 @@ export default function App() {
     }
 
     if (!selectedNodeId || !visibleRows.some((row) => row.node.id === selectedNodeId)) {
-      setSelectedNodeId(visibleRows[0]?.node.id ?? null);
+      const nextNode = visibleRows[0]?.node ?? null;
+      setSelectedNodeId(nextNode?.id ?? null);
+      setGraphScopeMode(scopeModeForNode(nextNode, index));
+      setDependencyPathTargetId(null);
     }
-  }, [selectedNodeId, visibleRows]);
+  }, [index, selectedNodeId, visibleRows]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -486,6 +585,18 @@ export default function App() {
       });
     }
     setSelectedNodeId(nodeId);
+    setDependencyPathTargetId(null);
+    const node = index.nodeById.get(nodeId);
+    setGraphScopeMode(scopeModeForNode(node, index));
+  }
+
+  function openNodeInCodeViewer(nodeId: string) {
+    const node = index.nodeById.get(nodeId);
+    if (!node || node.kind !== 'file') {
+      return;
+    }
+    setMillerChain((current) => current.includes(nodeId) ? current : [...current, nodeId]);
+    setActiveCodeNodeId(nodeId);
   }
 
   function toggleFolder(nodeId: string) {
@@ -673,11 +784,31 @@ export default function App() {
               impactNodeIds={graphImpactNodeIds}
               impactEdgeIds={graphImpactEdgeIds}
               impactAffectedCount={graphMode === 'dependencies' ? impactSummary?.affectedCount ?? 0 : 0}
+              dependencyPathNodeIds={dependencyPathNodeIds}
+              dependencyPathEdgeIds={dependencyPathEdgeIds}
+              dependencyPathTargetId={dependencyPathTargetId}
+              dependencyPathResult={dependencyPathResult}
+              dependencyPathLabel={dependencyPathLabel}
               graphMode={graphMode}
+              scopeMode={graphScopeMode}
+              canUseFolderScope={canUseFolderScope}
+              canUseFileScope={canUseFileScope}
+              neighborhoodDepth={fileNeighborhoodDepth}
+              folderBoundaryMode={folderBoundaryMode}
+              breadcrumbs={graphBreadcrumbs}
               labelMode={graphLabelMode}
               onLabelModeChange={setGraphLabelMode}
               colorMode={graphColorMode}
               onColorModeChange={setGraphColorMode}
+              onScopeModeChange={(mode) => {
+                setGraphScopeMode(mode);
+                setDependencyPathTargetId(null);
+              }}
+              onNeighborhoodDepthChange={setFileNeighborhoodDepth}
+              onFolderBoundaryModeChange={setFolderBoundaryMode}
+              onBreadcrumbSelect={selectAndExpandNode}
+              onDependencyPathTargetChange={setDependencyPathTargetId}
+              onOpenNode={openNodeInCodeViewer}
               onSelectNode={selectAndExpandNode}
             />
           )}
