@@ -605,14 +605,10 @@ This repository is organized into four npm workspaces:
 
 ```mermaid
 graph TD
-  Core["@depxray/core
-Scanner and dependency engine"]
-  WebUI["@depxray/web-ui
-React browser UI"]
-  MCP["@depxray/mcp
-MCP server for AI clients"]
-  CLI["depxray
-Published CLI package"]
+  Core["@depxray/core<br/>Scanner and dependency engine"]
+  WebUI["@depxray/web-ui<br/>React browser UI"]
+  MCP["@depxray/mcp<br/>MCP server for AI clients"]
+  CLI["depxray<br/>Published CLI package"]
 
   Core --> WebUI
   Core --> MCP
