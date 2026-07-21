@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Removed
+
+- Removed the unmaintained VS Code extension scaffold; depxray continues to provide editor-independent CLI, browser UI, and MCP integrations.
+
 ## 3.1.0 - 11/06/2026
 
 ### Added

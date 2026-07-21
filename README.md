@@ -588,7 +588,7 @@ It supports:
 
 ## Monorepo Layout
 
-This repository is organized into four npm workspaces plus a VS Code extension scaffold:
+This repository is organized into four npm workspaces:
 
 ```mermaid
 graph TD
@@ -611,7 +611,6 @@ Published CLI package"]
 - [`packages/web-ui`](./packages/web-ui): React browser UI
 - [`packages/cli`](./packages/cli): published `depxray` package with the embedded web UI
 - [`packages/mcp`](./packages/mcp): MCP stdio server for agentic AI tools
-- [`packages/vscode-extension`](./packages/vscode-extension): VS Code extension scaffold with CodeLens, diagnostics, and dependency tree integration
 
 ## Local Development
 
