@@ -77,32 +77,42 @@ export function ExplorerToolbar({
 
       <div className="toolbar-actions">
         <div className="toolbar-action-controls">
-          <div className="center-view-toggle" aria-label="Center view mode">
-            <button
-              aria-pressed={centerViewMode === 'miller'}
-              className={centerViewMode === 'miller' ? 'active' : ''}
-              onClick={() => onCenterViewModeChange('miller')}
-              title="Show dependency drill-down columns"
-              type="button"
-            >
-              Miller
-            </button>
+          <div className="center-view-toggle" aria-label="Center view mode" role="group">
+            <span className="center-view-toggle-label">Center view</span>
             <button
               aria-pressed={centerViewMode === 'graph'}
               className={centerViewMode === 'graph' ? 'active' : ''}
               onClick={() => onCenterViewModeChange('graph')}
-              title="Show force-directed graph"
+              title="Switch center panel to the dependency graph"
               type="button"
             >
+              <span aria-hidden="true" className="center-view-icon">
+                ◉
+              </span>
               Graph
+            </button>
+            <button
+              aria-pressed={centerViewMode === 'miller'}
+              className={centerViewMode === 'miller' ? 'active' : ''}
+              onClick={() => onCenterViewModeChange('miller')}
+              title="Switch center panel to dependency drill-down columns"
+              type="button"
+            >
+              <span aria-hidden="true" className="center-view-icon">
+                ▥
+              </span>
+              Miller
             </button>
             <button
               aria-pressed={centerViewMode === 'dashboard'}
               className={centerViewMode === 'dashboard' ? 'active' : ''}
               onClick={() => onCenterViewModeChange('dashboard')}
-              title="Show codebase health dashboard"
+              title="Switch center panel to the codebase health dashboard"
               type="button"
             >
+              <span aria-hidden="true" className="center-view-icon">
+                ▦
+              </span>
               Dashboard
             </button>
           </div>

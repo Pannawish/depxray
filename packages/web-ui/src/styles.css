@@ -194,19 +194,34 @@ button {
 .center-view-toggle {
   display: flex;
   align-items: center;
-  gap: 2px;
-  height: 32px;
-  padding: 2px;
-  border: 1px solid var(--border);
-  border-radius: 99px;
-  background: var(--panel-subtle);
+  gap: 3px;
+  height: 38px;
+  padding: 3px;
+  border: 1px solid rgba(15, 107, 89, 0.38);
+  border-radius: 10px;
+  background: #edf8f5;
+  box-shadow: 0 0 0 2px rgba(15, 107, 89, 0.08);
+}
+
+.center-view-toggle-label {
+  padding: 0 7px;
+  color: var(--accent);
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.045em;
+  text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .center-view-toggle button {
-  height: 26px;
-  padding: 0 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  height: 30px;
+  padding: 0 9px;
   border: 0;
-  border-radius: 99px;
+  border-radius: 7px;
   background: transparent;
   color: var(--muted);
   cursor: pointer;
@@ -216,13 +231,19 @@ button {
 }
 
 .center-view-toggle button:hover {
+  background: rgba(255, 255, 255, 0.72);
   color: var(--text);
 }
 
 .center-view-toggle button.active {
-  background: #ffffff;
-  color: var(--accent);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  background: var(--accent);
+  color: #ffffff;
+  box-shadow: 0 2px 6px rgba(15, 107, 89, 0.24);
+}
+
+.center-view-icon {
+  font-size: 0.72rem;
+  line-height: 1;
 }
 
 .graph-label-select {
