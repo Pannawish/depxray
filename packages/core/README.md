@@ -100,7 +100,19 @@ console.log(health.grade);
 console.log(health.issues);
 console.log(health.hotspots);
 console.log(health.hubs);
+console.log(health.breakdown);
 ```
+
+Every score starts at 100. `breakdown` contains the observed value, rule, and points deducted for each signal:
+
+- circular chains: 5 points each, capped at 25
+- orphan files: 2 points each, capped at 20
+- unused internal exports: 0.5 points each, capped at 15
+- unresolved local imports: 3 points each, capped at 15
+- error-level architecture violations: 5 points each, capped at 25
+- average cyclomatic complexity: 10 points when above 10, or 20 points when above 20
+
+The final score is rounded and clamped between 0 and 100. Grades are A for 90-100, B for 80-89, C for 70-79, D for 60-69, and F for 0-59. The breakdown also includes the starting score, total deductions, average complexity, and grade thresholds so consumers can explain the result without duplicating scoring logic.
 
 ## Impact Analysis
 

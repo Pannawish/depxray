@@ -12,7 +12,7 @@
 
 - Browse a repo as a compact collapsible file tree
 - Explore dependencies in an interactive force-directed graph
-- Review a codebase health dashboard with A-F score, issue counts, complexity hotspots, and dependency hubs
+- Review a codebase health dashboard with an explainable A-F score, issue counts, complexity hotspots, and dependency hubs
 - Color graph nodes by extension, complexity, file size, or instability
 - Inspect outgoing imports and incoming dependents for a file
 - Analyze a file's dependency impact and refactor blast radius
@@ -128,7 +128,9 @@ Current UI and graph-data capabilities include:
 - folder summaries such as total files, direct children, descendants, internal imports, incoming external references, outgoing external references, circular files, and orphan files inside the folder
 - dependency metadata for type-only and dynamic imports in exported graph data
 - layout swapping and resizable panels
-- health dashboard with score, grade, issue summary, complexity hotspots, and dependency hubs
+- health dashboard with score, grade, issue summary, complexity hotspots, dependency hubs, and an information button that shows the exact calculation
+
+The health score starts at 100 and subtracts capped deductions for circular chains, orphan files, unused exports, unresolved local imports, error-level architecture violations, and elevated average complexity. The information panel shows the observed values, deduction rules, points lost, and A-F thresholds for the current scan. The final score is rounded and clamped between 0 and 100.
 
 If the default port `5178` is busy, `depxray` automatically tries the next free local port and prints that change in the terminal.
 
@@ -263,8 +265,6 @@ depxray impact <file> [dir] [options]
 Options:
 
 - `--json`: print machine-readable JSON
-- `--base <ref>`: compare with a Git ref and fail only for newly introduced findings
-- `--max-health-drop <points>`: also fail when the health score drops more than the allowed amount
 - `--format <format>`: `text` or `json`, default `text`
 - `--complexity-threshold <number>`: complexity score considered high
 - `--impact-threshold <number>`: transitive dependent count considered high-impact
@@ -283,7 +283,7 @@ npx depxray impact src/utils/format.ts /path/to/project --json
 
 ### `report`
 
-Generate a Markdown project health report with summary counts, hub files, heavy importers, orphan files, unused exports, unresolved imports, circular chains, and complexity hotspots.
+Generate a Markdown project health report with summary counts, hub files, heavy importers, orphan files, unused exports, unresolved imports, circular chains, complexity hotspots, devDependencies used in production, and import-convention violations.
 
 ```bash
 depxray report [dir] [options]
@@ -317,10 +317,16 @@ Options:
 
 - `--format <format>`: `text` or `json`
 - `--json`: print machine-readable JSON
+- `--base <ref>`: compare with a Git ref and fail only for newly introduced findings
+- `--max-health-drop <points>`: fail when the health score drops more than the allowed amount; requires `--base`
+- `--ignore <patterns...>`: exclude additional paths
+- `--extensions <exts...>`: choose scanned extensions
 - `--entry-points <patterns...>`: entry point patterns to exclude from orphan detection
 - `--prod-entry-points <patterns...>`: production entry points for devDependency checks
 - `--dev-entry-points <patterns...>`: development-only entry points for devDependency checks
 - `--ignore-type-imports`: ignore type-only imports for devDependency checks
+- `--no-circular`: skip circular dependency detection
+- `--no-aliases`: skip `tsconfig.json` / `jsconfig.json` path alias resolution
 
 Examples:
 

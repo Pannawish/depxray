@@ -10,7 +10,7 @@ For MCP-compatible AI clients, use the companion package `@depxray/mcp`.
 
 - Explore a repo as a compact file tree instead of a noisy full-project graph
 - Navigate an interactive force-directed graph for dependency and structure data
-- Review a health dashboard with score, grade, issue counts, complexity hotspots, and dependency hubs
+- Review a health dashboard with an explainable score, grade, issue counts, complexity hotspots, and dependency hubs
 - Color graph nodes by extension, complexity, file size, or instability
 - See what a file imports and what depends on it
 - Analyze a file's direct and transitive dependency impact before refactors
@@ -49,6 +49,8 @@ npx depxray scan
 The default `scan` command starts a local browser UI. If port `5178` is busy, `depxray` automatically tries the next free port.
 
 The browser UI opens with the graph view in the center panel. Use the toolbar to switch between **Graph**, **Dashboard**, and **Miller** views. In graph view, selecting a file opens a dependency neighborhood with direct, two-level, or complete depth; selecting a folder opens an aggregated boundary graph with internal, incoming, and outgoing filters. The graph also provides Project/Folder/File scope controls, breadcrumbs, shortest dependency-path highlighting, right-click node actions, zoom, pan, node dragging, blast-radius highlighting, label visibility controls, health-metric coloring, unused-export filters, and unresolved-import details.
+
+The Dashboard includes an information button beside the project score. It explains the current scan's `100 - deductions = score` calculation, observed issue values, capped deduction rules, architecture-rule errors, average-complexity penalty, and A-F grade thresholds. Reports created before the structured breakdown was added remain readable and prompt the user to rescan for the detailed calculation.
 
 ## Quick Examples
 
@@ -376,7 +378,7 @@ depxray impact src/App.tsx /path/to/project --json
 
 ### `report`
 
-Generate a Markdown project health report with summary counts, hub files, heavy importers, orphan files, circular chains, and complexity hotspots.
+Generate a Markdown project health report with summary counts, hub files, heavy importers, orphan files, unused exports, unresolved imports, circular chains, complexity hotspots, devDependencies used in production, and import-convention violations.
 
 ```bash
 depxray report [dir] [options]
@@ -405,6 +407,21 @@ Run all configured dependency health checks for CI. The command exits with code 
 ```bash
 depxray check [dir] [options]
 ```
+
+Options:
+
+- `--format <format>`: `text` or `json`, default `text`
+- `--json`: print machine-readable JSON
+- `--base <ref>`: compare with a Git ref and fail only for newly introduced findings
+- `--max-health-drop <points>`: fail when the health score drops more than the allowed amount; requires `--base`
+- `--ignore <patterns...>`: exclude paths from scanning
+- `--extensions <exts...>`: choose scanned extensions
+- `--entry-points <patterns...>`: entry point patterns to exclude from orphan detection
+- `--prod-entry-points <patterns...>`: production entry points for devDependency checks
+- `--dev-entry-points <patterns...>`: development-only entry points for devDependency checks
+- `--ignore-type-imports`: ignore type-only imports for devDependency checks
+- `--no-circular`: skip circular dependency detection
+- `--no-aliases`: skip `tsconfig.json` / `jsconfig.json` path alias resolution
 
 Examples:
 

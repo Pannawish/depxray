@@ -142,6 +142,9 @@ Optional dependency-mode inputs:
 - issue counts for circular chains, orphan files, unused exports, unresolved imports, and rule violations
 - complexity hotspots for files that may need review before editing
 - dependency hubs with high incoming import counts
+- a structured scoring breakdown with the starting score, total deductions, average complexity, per-signal observed values and deduction rules, and grade thresholds
+
+The score starts at 100 and subtracts capped deductions for circular chains, orphan files, unused internal exports, unresolved local imports, error-level architecture violations, and elevated average complexity. This is the same calculation used by the browser Dashboard, so agents can explain a score without reproducing the formula.
 
 `suggest_cleanup` returns impact, confidence, evidence, and false-positive caveats for orphan files, unused exports, unresolved imports, unused dependencies, and circular chains. Potential deletions and package removals require review rather than being labeled automatically safe.
 
