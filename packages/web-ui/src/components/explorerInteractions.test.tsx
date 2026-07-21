@@ -1,10 +1,13 @@
 // @vitest-environment jsdom
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { cleanup, render, screen } from '@testing-library/react';
+import { cleanup, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { FileTreeView, type FileTreeRowData } from './FileTreeView.js';
 import { GraphContextBar } from './GraphContextBar.js';
+import { DashboardView } from './DashboardView.js';
+import { buildRelationshipIndex } from '../relationshipIndex.js';
+import { sampleGraphSet } from '../mockData.js';
 
 afterEach(cleanup);
 
@@ -102,5 +105,27 @@ describe('explorer interactions', () => {
       />,
     );
     expect(screen.getByTitle('Dependency neighborhood depth')).toBeTruthy();
+  });
+
+  it('explains the health score using the scorer breakdown', async () => {
+    const user = userEvent.setup();
+    const index = buildRelationshipIndex(sampleGraphSet);
+    render(
+      <DashboardView
+        index={index}
+        healthScore={sampleGraphSet.graphs.dependencies?.healthScore}
+        onSelectNode={vi.fn()}
+      />,
+    );
+
+    const infoButton = screen.getByRole('button', { name: 'Explain health score' });
+    expect(infoButton.getAttribute('aria-expanded')).toBe('false');
+    await user.click(infoButton);
+
+    const explanation = screen.getByRole('region', { name: 'Health score explanation' });
+    expect(within(explanation).getByText('How the project score is calculated')).toBeTruthy();
+    expect(within(explanation).getByText('Circular dependencies')).toBeTruthy();
+    expect(within(explanation).getByText(/5 points per circular chain/)).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Hide health score explanation' })).toBeTruthy();
   });
 });

@@ -290,7 +290,7 @@ export const sampleDependencyGraphData: ExplorerGraphData = {
   totalImports: sampleDependencyEdges.length,
   healthScore: {
     grade: 'B',
-    score: 84,
+    score: 87,
     issues: {
       circularChains: 0,
       orphanFiles: 1,
@@ -310,6 +310,68 @@ export const sampleDependencyGraphData: ExplorerGraphData = {
       { file: 'src/hooks/useGraphData.ts', inDegree: 4, outDegree: 2 },
       { file: 'src/App.tsx', inDegree: 1, outDegree: 3 },
     ],
+    breakdown: {
+      startingScore: 100,
+      totalDeductions: 13,
+      averageComplexity: 11,
+      gradeThresholds: [
+        { grade: 'A', minimumScore: 90, label: '90–100' },
+        { grade: 'B', minimumScore: 80, label: '80–89' },
+        { grade: 'C', minimumScore: 70, label: '70–79' },
+        { grade: 'D', minimumScore: 60, label: '60–69' },
+        { grade: 'F', minimumScore: 0, label: '0–59' },
+      ],
+      deductions: [
+        {
+          key: 'circularChains',
+          label: 'Circular dependencies',
+          observedValue: 0,
+          observedLabel: '0 chains',
+          points: 0,
+          rule: '5 points per circular chain, capped at 25 points.',
+        },
+        {
+          key: 'orphanFiles',
+          label: 'Orphan files',
+          observedValue: 1,
+          observedLabel: '1 file',
+          points: 2,
+          rule: '2 points per file with no incoming imports, capped at 20 points.',
+        },
+        {
+          key: 'unusedExports',
+          label: 'Unused exports',
+          observedValue: 2,
+          observedLabel: '2 exports',
+          points: 1,
+          rule: '0.5 points per unused internal export, capped at 15 points.',
+        },
+        {
+          key: 'unresolvedImports',
+          label: 'Unresolved imports',
+          observedValue: 0,
+          observedLabel: '0 imports',
+          points: 0,
+          rule: '3 points per unresolved local import, capped at 15 points.',
+        },
+        {
+          key: 'ruleViolations',
+          label: 'Architecture violations',
+          observedValue: 0,
+          observedLabel: '0 errors',
+          points: 0,
+          rule: '5 points per error-level architecture violation, capped at 25 points.',
+        },
+        {
+          key: 'averageComplexity',
+          label: 'Average complexity',
+          observedValue: 11,
+          observedLabel: '11.0 average',
+          points: 10,
+          rule: '10 points above an average of 10, or 20 points above an average of 20.',
+        },
+      ],
+    },
   },
   nodes: sampleGraphData.nodes
     .filter((node) => node.kind === 'file' && ['.ts', '.tsx'].includes(node.extension ?? ''))

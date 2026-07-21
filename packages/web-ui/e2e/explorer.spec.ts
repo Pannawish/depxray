@@ -47,6 +47,13 @@ test.describe('responsive explorer', () => {
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto('/');
     await page.getByRole('button', { name: 'Dashboard' }).click();
+    await page.getByRole('button', { name: 'Explain health score' }).click();
+    await expect(page.getByRole('region', { name: 'Health score explanation' })).toContainText(
+      'Every scan starts at 100',
+    );
+    await expect(page.getByRole('region', { name: 'Health score explanation' })).toContainText(
+      'Architecture violations',
+    );
 
     const chartRow = page.locator('.dashboard-chart-row').first();
     await expect(chartRow.locator('strong')).toHaveText('GraphView.tsx');

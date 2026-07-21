@@ -83,5 +83,25 @@ describe('computeHealthScore', () => {
       inDegree: 3,
       outDegree: 0,
     });
+    expect(result.score).toBe(90);
+    expect(result.breakdown).toMatchObject({
+      startingScore: 100,
+      totalDeductions: 10.5,
+      averageComplexity: 7,
+    });
+    expect(result.breakdown.deductions).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ key: 'circularChains', points: 5 }),
+        expect.objectContaining({ key: 'unusedExports', points: 0.5 }),
+        expect.objectContaining({ key: 'averageComplexity', points: 0 }),
+      ]),
+    );
+    expect(result.breakdown.gradeThresholds.map((threshold) => threshold.grade)).toEqual([
+      'A',
+      'B',
+      'C',
+      'D',
+      'F',
+    ]);
   });
 });

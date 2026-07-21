@@ -1,7 +1,37 @@
 import type { ScanResult } from './types.js';
 
+export type HealthScoreGrade = 'A' | 'B' | 'C' | 'D' | 'F';
+export type HealthScoreDeductionKey =
+  | 'circularChains'
+  | 'orphanFiles'
+  | 'unusedExports'
+  | 'unresolvedImports'
+  | 'ruleViolations'
+  | 'averageComplexity';
+
+export interface HealthScoreDeduction {
+  key: HealthScoreDeductionKey;
+  label: string;
+  observedValue: number;
+  observedLabel: string;
+  points: number;
+  rule: string;
+}
+
+export interface HealthScoreBreakdown {
+  startingScore: 100;
+  totalDeductions: number;
+  averageComplexity: number;
+  deductions: HealthScoreDeduction[];
+  gradeThresholds: Array<{
+    grade: HealthScoreGrade;
+    minimumScore: number;
+    label: string;
+  }>;
+}
+
 export interface HealthScoreResult {
-  grade: 'A' | 'B' | 'C' | 'D' | 'F';
+  grade: HealthScoreGrade;
   score: number;
   issues: {
     circularChains: number;
@@ -20,26 +50,24 @@ export interface HealthScoreResult {
     inDegree: number;
     outDegree: number;
   }>;
+  /** Detailed scoring data. Optional when reading reports generated before this field existed. */
+  breakdown?: HealthScoreBreakdown;
 }
+
+const GRADE_THRESHOLDS: HealthScoreBreakdown['gradeThresholds'] = [
+  { grade: 'A', minimumScore: 90, label: '90–100' },
+  { grade: 'B', minimumScore: 80, label: '80–89' },
+  { grade: 'C', minimumScore: 70, label: '70–79' },
+  { grade: 'D', minimumScore: 60, label: '60–69' },
+  { grade: 'F', minimumScore: 0, label: '0–59' },
+];
 
 function clampScore(score: number): number {
   return Math.max(0, Math.min(100, Math.round(score)));
 }
 
 function gradeForScore(score: number): HealthScoreResult['grade'] {
-  if (score >= 90) {
-    return 'A';
-  }
-  if (score >= 80) {
-    return 'B';
-  }
-  if (score >= 70) {
-    return 'C';
-  }
-  if (score >= 60) {
-    return 'D';
-  }
-  return 'F';
+  return GRADE_THRESHOLDS.find((threshold) => score >= threshold.minimumScore)?.grade ?? 'F';
 }
 
 export function computeHealthScore(result: ScanResult): HealthScoreResult {
@@ -61,22 +89,59 @@ export function computeHealthScore(result: ScanResult): HealthScoreResult {
     complexityValues.length === 0
       ? 0
       : complexityValues.reduce((sum, value) => sum + value, 0) / complexityValues.length;
-  let score = 100;
-
-  score -= Math.min(25, issues.circularChains * 5);
-  score -= Math.min(20, issues.orphanFiles * 2);
-  score -= Math.min(15, issues.unusedExports * 0.5);
-  score -= Math.min(15, issues.unresolvedImports * 3);
-  score -= Math.min(25, issues.ruleViolations * 5);
-
-  if (averageComplexity > 10) {
-    score -= 10;
-  }
-  if (averageComplexity > 20) {
-    score -= 10;
-  }
-
-  const finalScore = clampScore(score);
+  const complexityDeduction = averageComplexity > 20 ? 20 : averageComplexity > 10 ? 10 : 0;
+  const deductions: HealthScoreDeduction[] = [
+    {
+      key: 'circularChains',
+      label: 'Circular dependencies',
+      observedValue: issues.circularChains,
+      observedLabel: `${issues.circularChains} chain${issues.circularChains === 1 ? '' : 's'}`,
+      points: Math.min(25, issues.circularChains * 5),
+      rule: '5 points per circular chain, capped at 25 points.',
+    },
+    {
+      key: 'orphanFiles',
+      label: 'Orphan files',
+      observedValue: issues.orphanFiles,
+      observedLabel: `${issues.orphanFiles} file${issues.orphanFiles === 1 ? '' : 's'}`,
+      points: Math.min(20, issues.orphanFiles * 2),
+      rule: '2 points per file with no incoming imports, capped at 20 points.',
+    },
+    {
+      key: 'unusedExports',
+      label: 'Unused exports',
+      observedValue: issues.unusedExports,
+      observedLabel: `${issues.unusedExports} export${issues.unusedExports === 1 ? '' : 's'}`,
+      points: Math.min(15, issues.unusedExports * 0.5),
+      rule: '0.5 points per unused internal export, capped at 15 points.',
+    },
+    {
+      key: 'unresolvedImports',
+      label: 'Unresolved imports',
+      observedValue: issues.unresolvedImports,
+      observedLabel: `${issues.unresolvedImports} import${issues.unresolvedImports === 1 ? '' : 's'}`,
+      points: Math.min(15, issues.unresolvedImports * 3),
+      rule: '3 points per unresolved local import, capped at 15 points.',
+    },
+    {
+      key: 'ruleViolations',
+      label: 'Architecture violations',
+      observedValue: issues.ruleViolations,
+      observedLabel: `${issues.ruleViolations} error${issues.ruleViolations === 1 ? '' : 's'}`,
+      points: Math.min(25, issues.ruleViolations * 5),
+      rule: '5 points per error-level architecture violation, capped at 25 points.',
+    },
+    {
+      key: 'averageComplexity',
+      label: 'Average complexity',
+      observedValue: averageComplexity,
+      observedLabel: `${averageComplexity.toFixed(1)} average`,
+      points: complexityDeduction,
+      rule: '10 points above an average of 10, or 20 points above an average of 20.',
+    },
+  ];
+  const totalDeductions = deductions.reduce((total, deduction) => total + deduction.points, 0);
+  const finalScore = clampScore(100 - totalDeductions);
   const hotspots = [...result.graph.nodes]
     .filter((node) => node.metrics)
     .sort(
@@ -111,5 +176,12 @@ export function computeHealthScore(result: ScanResult): HealthScoreResult {
     issues,
     hotspots,
     hubs,
+    breakdown: {
+      startingScore: 100,
+      totalDeductions,
+      averageComplexity,
+      deductions,
+      gradeThresholds: GRADE_THRESHOLDS,
+    },
   };
 }
