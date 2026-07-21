@@ -2,6 +2,30 @@
 
 ## Unreleased
 
+## 3.2.0 - 22/07/2026
+
+### Added
+
+- Added context-aware Project, Folder, and File graph scopes with breadcrumbs, direct/two-level/complete file neighborhoods, folder boundary filters, collapsed folder clusters, shortest dependency-path highlighting, and right-click graph actions.
+- Added baseline-aware CI checks with `depxray check --base <ref>` and optional health-regression limits through `--max-health-drop <points>`.
+- Added automatic entry-point detection for package manifests and common Next.js, Remix, SvelteKit, Astro, Gatsby, Nuxt, and Storybook conventions.
+- Added reusable scan sessions for stable watch-mode updates and a versioned graph payload contract shared by the CLI, browser UI, core package, and MCP server.
+- Added an accessible Dashboard score explanation with exact deductions, observed values, grade thresholds, and compatibility guidance for older reports.
+- Added repository linting, formatting, CI, browser-server integration tests, MCP integration tests, web UI interaction tests, and responsive Playwright coverage.
+
+### Changed
+
+- Improved the browser UI across desktop, tablet, and mobile layouts, including a less crowded toolbar, responsive panels, and readable Dashboard charts and score details.
+- Refactored large CLI, core, MCP, and web UI modules into smaller focused components with shared graph contracts and clearer maintenance boundaries.
+- Improved cleanup suggestions with confidence, evidence, impact labels, and false-positive caveats.
+- Updated all README files to match the current CLI options, graph behavior, report contents, MCP tools, and health-score calculation.
+
+### Fixed
+
+- Improved scan, graph payload, browser-server, and live-update stability with stronger validation and broader automated coverage.
+- Corrected the root command reference so baseline and health-drop options are documented under `check` instead of `impact`.
+- Ensured every published npm package includes the MIT license in its tarball.
+
 ### Removed
 
 - Removed the unmaintained VS Code extension scaffold; depxray continues to provide editor-independent CLI, browser UI, and MCP integrations.

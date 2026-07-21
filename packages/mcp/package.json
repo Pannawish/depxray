@@ -1,6 +1,6 @@
 {
   "name": "@depxray/mcp",
-  "version": "3.1.0",
+  "version": "3.2.0",
   "description": "MCP server that gives AI coding agents depxray codebase context, health scoring, dependency-chain explanations, cleanup suggestions, graph diffs, impact analysis, and refactor risk.",
   "type": "module",
   "main": "./dist/index.js",
@@ -21,7 +21,7 @@
     "prepublishOnly": "node ../../scripts/sync-versions.mjs && npm run build"
   },
   "dependencies": {
-    "@depxray/core": "3.1.0",
+    "@depxray/core": "3.2.0",
     "@modelcontextprotocol/sdk": "^1.29.0",
     "zod": "^4.4.3"
   },
