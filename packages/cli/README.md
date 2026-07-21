@@ -9,7 +9,7 @@ For MCP-compatible AI clients, use the companion package `@depxray/mcp`.
 ## Why depxray
 
 - Explore a repo as a compact file tree instead of a noisy full-project graph
-- Navigate an interactive force-directed graph for dependency and structure data
+- Navigate an interactive graph with focused layouts and drill-down scopes
 - Review a health dashboard with an explainable score, grade, issue counts, complexity hotspots, and dependency hubs
 - Color graph nodes by extension, complexity, file size, or instability
 - See what a file imports and what depends on it
@@ -48,7 +48,11 @@ npx depxray scan
 
 The default `scan` command starts a local browser UI. If port `5178` is busy, `depxray` automatically tries the next free port.
 
-The browser UI opens with the graph view in the center panel. Use the toolbar to switch between **Graph**, **Dashboard**, and **Miller** views. In graph view, selecting a file opens a dependency neighborhood with direct, two-level, or complete depth; selecting a folder opens an aggregated boundary graph with internal, incoming, and outgoing filters. The graph also provides Project/Folder/File scope controls, breadcrumbs, shortest dependency-path highlighting, right-click node actions, zoom, pan, node dragging, blast-radius highlighting, label visibility controls, health-metric coloring, unused-export filters, and unresolved-import details.
+The browser UI opens with the graph view in the center panel. A prominent **Center view** control switches between **Graph**, **Miller**, and **Dashboard**. In graph view, selecting a file automatically opens a dependency neighborhood; selecting a folder opens its aggregated boundary graph. Stable layouts present file relationships as Dependents → Selected → Dependencies, organize folder boundaries around their internal files, and summarize project dependencies as top-level clusters.
+
+Quick presets provide Overview, Direct relationships, Full neighborhood, Circular dependencies, Architecture violations, and High-impact files. Large scopes start with an 80-node rendering budget and collapse excess files into drillable folder groups. Hovering or selecting a node fades unrelated content, while directional arrows are reserved for emphasized relationships. Smart labels prioritize selected files, folders, and hubs, and become smaller at close zoom. Type-only and dynamic imports are hidden initially and can be enabled from the graph controls.
+
+The graph also provides Project/Folder/File scope controls, breadcrumbs, direct/two-level/complete neighborhoods, internal/incoming/outgoing folder filters, shortest dependency-path highlighting, right-click node actions, zoom, pan, blast-radius highlighting, label visibility controls, health-metric coloring, unused-export filters, and unresolved-import details.
 
 The Dashboard includes an information button beside the project score. It explains the current scan's `100 - deductions = score` calculation, observed issue values, capped deduction rules, architecture-rule errors, average-complexity penalty, and A-F grade thresholds. Reports created before the structured breakdown was added remain readable and prompt the user to rescan for the detailed calculation.
 
@@ -591,7 +595,7 @@ It supports:
 - dependency impact and refactor blast-radius analysis
 - per-file LOC, cyclomatic complexity, export count, and instability metrics
 - project health scoring and Markdown health reports with hub files, heavy importers, orphans, circular chains, and complexity hotspots
-- interactive force-directed dependency and structure graph visualization
+- interactive dependency and structure graph visualization with deterministic scoped layouts, presets, semantic labels, and folder aggregation
 - browser Health Dashboard and graph heatmap overlays
 - watch mode with live browser UI updates
 

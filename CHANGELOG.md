@@ -2,6 +2,27 @@
 
 ## Unreleased
 
+## 3.3.0 - 22/07/2026
+
+### Added
+
+- Added graph presets for Overview, Direct relationships, Full neighborhood, Circular dependencies, Architecture violations, and High-impact files.
+- Added deterministic scope-specific layouts: top-level project clusters, folder boundary layouts, and Dependents → Selected → Dependencies file neighborhoods.
+- Added an 80-node initial rendering budget with drillable folder grouping for oversized graph scopes.
+- Added optional controls for type-only and dynamic dependency edges, which are hidden by default to reduce noise.
+
+### Changed
+
+- Improved graph readability with semantic zoom labels, smaller labels at close zoom, folder and hub prioritization, collision handling, hover/selection focus, quieter edges, and contextual arrowheads.
+- Made the Graph, Miller, and Dashboard switch more prominent with a labeled segmented control, icons, stronger active styling, and responsive behavior.
+- Changed project-tree row labels to use normal font weight, including search matches.
+- Updated the root and published CLI documentation for the current browser graph behavior.
+
+### Fixed
+
+- Fixed clipped text in the README monorepo Mermaid flowchart.
+- Kept graph layouts stable between renders so large dependency views no longer reshuffle unnecessarily.
+
 ## 3.2.0 - 22/07/2026
 
 ### Added

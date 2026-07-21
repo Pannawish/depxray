@@ -1,6 +1,6 @@
 {
   "name": "@depxray/web-ui",
-  "version": "3.2.0",
+  "version": "3.3.0",
   "private": true,
   "type": "module",
   "description": "Interactive browser UI for depxray dependency graphs, codebase health dashboard, heatmap overlays, impact analysis, architecture violations, cleanup findings, metrics, and live scans.",
@@ -13,7 +13,7 @@
     "test:e2e": "playwright test"
   },
   "dependencies": {
-    "@depxray/core": "3.2.0",
+    "@depxray/core": "3.3.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-force-graph-2d": "^1.29.1"

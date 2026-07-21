@@ -11,7 +11,7 @@
 ## What It Does
 
 - Browse a repo as a compact collapsible file tree
-- Explore dependencies in an interactive force-directed graph
+- Explore dependencies in an interactive graph with focused layouts and drill-down scopes
 - Review a codebase health dashboard with an explainable A-F score, issue counts, complexity hotspots, and dependency hubs
 - Color graph nodes by extension, complexity, file size, or instability
 - Inspect outgoing imports and incoming dependents for a file
@@ -99,7 +99,7 @@ depxray scan
 The default `scan` command starts a local server and opens a browser UI with three working areas:
 
 - Left: file tree with expand/collapse, search, circular-only filtering, orphan-only filtering, and unused-export filtering
-- Center: interactive graph view by default, with Health Dashboard and Miller-column dependency tracing views available from the toolbar
+- Center: interactive graph view by default, with Miller-column dependency tracing and Health Dashboard views available from the prominent Center view switch
 - Right: code viewer and file or folder details
 
 Current UI and graph-data capabilities include:
@@ -600,7 +600,7 @@ It supports:
 - dependency impact and refactor blast-radius analysis
 - per-file LOC, cyclomatic complexity, export count, and instability metrics
 - project health scoring with complexity hotspots and dependency hubs
-- interactive force-directed dependency and structure graph visualization
+- interactive dependency and structure graph visualization with deterministic scoped layouts, presets, semantic labels, and folder aggregation
 - browser health dashboard and graph heatmap overlays
 - watch mode with live browser UI updates
 

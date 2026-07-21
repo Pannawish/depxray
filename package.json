@@ -1,7 +1,7 @@
 {
   "name": "depxray-root",
   "private": true,
-  "version": "3.2.0",
+  "version": "3.3.0",
   "description": "Codebase intelligence for JavaScript and TypeScript with dependency graphs, health scoring, impact analysis, cleanup automation, CI checks, MCP tools, and AI-agent context.",
   "workspaces": [
     "packages/core",
