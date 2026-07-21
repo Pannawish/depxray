@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import * as graphContract from '@depxray/core/graph-contract';
 import { sampleGraphData, sampleGraphSet } from '../mockData.js';
 import type { ExplorerGraphData, ExplorerGraphSet } from '../types.js';
 
@@ -11,7 +12,7 @@ interface GraphDataState {
 
 interface LiveGraphSetMessage {
   type: 'graph-set';
-  graphSet: ExplorerGraphSet;
+  graphSet: unknown;
 }
 
 function toGraphSet(data: ExplorerGraphData): ExplorerGraphSet {
@@ -26,6 +27,16 @@ function toGraphSet(data: ExplorerGraphData): ExplorerGraphSet {
       [data.mode]: data,
     },
   };
+}
+
+function isLiveGraphSetMessage(value: unknown): value is LiveGraphSetMessage {
+  return (
+    typeof value === 'object'
+    && value !== null
+    && 'type' in value
+    && value.type === 'graph-set'
+    && 'graphSet' in value
+  );
 }
 
 export function useGraphData(): GraphDataState {
@@ -50,10 +61,11 @@ export function useGraphData(): GraphDataState {
 
       socket.addEventListener('message', (event) => {
         try {
-          const message = JSON.parse(event.data as string) as LiveGraphSetMessage;
-          if (message.type !== 'graph-set' || cancelled) {
+          const message: unknown = JSON.parse(event.data as string);
+          if (!isLiveGraphSetMessage(message) || cancelled) {
             return;
           }
+          graphContract.assertExplorerGraphSet(message.graphSet);
 
           setState({
             dataSet: message.graphSet,
@@ -61,8 +73,15 @@ export function useGraphData(): GraphDataState {
             error: null,
             source: 'live',
           });
-        } catch {
-          // Ignore malformed live messages; the last valid graph remains visible.
+        } catch (error) {
+          if (!cancelled) {
+            setState((current) => ({
+              ...current,
+              error: error instanceof Error
+                ? `Ignored invalid live data: ${error.message}`
+                : 'Ignored invalid live data.',
+            }));
+          }
         }
       });
 
@@ -77,31 +96,33 @@ export function useGraphData(): GraphDataState {
     }
 
     async function loadGraphData() {
-      if (window.__GRAPH_DATA_SET__) {
-        if (!cancelled) {
-          setState({
-            dataSet: window.__GRAPH_DATA_SET__,
-            loading: false,
-            error: null,
-            source: 'window',
-          });
-        }
-        return;
-      }
-
-      if (window.__GRAPH_DATA__) {
-        if (!cancelled) {
-          setState({
-            dataSet: toGraphSet(window.__GRAPH_DATA__),
-            loading: false,
-            error: null,
-            source: 'window',
-          });
-        }
-        return;
-      }
-
       try {
+        if (window.__GRAPH_DATA_SET__) {
+          graphContract.assertExplorerGraphSet(window.__GRAPH_DATA_SET__);
+          if (!cancelled) {
+            setState({
+              dataSet: window.__GRAPH_DATA_SET__,
+              loading: false,
+              error: null,
+              source: 'window',
+            });
+          }
+          return;
+        }
+
+        if (window.__GRAPH_DATA__) {
+          graphContract.assertExplorerGraphData(window.__GRAPH_DATA__);
+          if (!cancelled) {
+            setState({
+              dataSet: toGraphSet(window.__GRAPH_DATA__),
+              loading: false,
+              error: null,
+              source: 'window',
+            });
+          }
+          return;
+        }
+
         const response = await fetch('/api/graph-set');
         if (!response.ok) {
           const legacyResponse = await fetch('/api/graph-data');
@@ -109,7 +130,8 @@ export function useGraphData(): GraphDataState {
             throw new Error(`Request failed with status ${response.status}`);
           }
 
-          const legacyData = await legacyResponse.json() as ExplorerGraphData;
+          const legacyData: unknown = await legacyResponse.json();
+          graphContract.assertExplorerGraphData(legacyData);
           if (!cancelled) {
             setState({
               dataSet: toGraphSet(legacyData),
@@ -122,7 +144,8 @@ export function useGraphData(): GraphDataState {
           return;
         }
 
-        const data = await response.json() as ExplorerGraphSet;
+        const data: unknown = await response.json();
+        graphContract.assertExplorerGraphSet(data);
         if (!cancelled) {
           setState({
             dataSet: data,

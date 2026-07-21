@@ -13,84 +13,29 @@ import { formatAsMermaid } from '../formatters/mermaid.js';
 import { loadPlugins } from '../plugins.js';
 import {
   buildStructureGraph,
-  computeHealthScore,
+  createDependencyGraphPayload,
+  createStructureGraphPayload,
   DEFAULT_IGNORE_PATTERNS,
+  GRAPH_PAYLOAD_SCHEMA_VERSION,
   loadConfig,
   matchesAnyPattern,
+  ProjectScanSession,
   scanFileTree,
   scanProject,
   type DepxrayConfig,
   type DepxrayPlugin,
+  type ExplorerGraphData,
+  type ExplorerGraphMode,
+  type ExplorerGraphSet,
   type FileTreeNode,
-  type HealthScoreResult,
   type RuleValidationResult,
-  type ScanError,
   type ScanResult,
+  type ScanOptions,
   type StructureGraph,
-  type StructureGraphEdge,
-  type StructureGraphNode,
 } from '@depxray/core';
 
-type GraphMode = 'structure' | 'dependencies';
+type GraphMode = ExplorerGraphMode;
 type ScanOutputFormat = 'json' | 'mermaid' | 'dot' | 'sarif';
-
-interface ExplorerGraphNode extends StructureGraphNode {
-  inDegree?: number;
-  outDegree?: number;
-  isCircular?: boolean;
-  isOrphan?: boolean;
-  componentName?: string;
-  workspace?: string;
-  metrics?: ScanResult['graph']['nodes'][number]['metrics'];
-  unusedExports?: ScanResult['graph']['nodes'][number]['unusedExports'];
-  unresolvedImports?: ScanResult['graph']['nodes'][number]['unresolvedImports'];
-  pluginData?: Record<string, unknown>;
-}
-
-interface ExplorerGraphEdge extends StructureGraphEdge {
-  kind: GraphMode;
-  importSpecifier?: string;
-  importedNames?: string[];
-  isTypeOnly?: boolean;
-  isDynamic?: boolean;
-  isCrossPackage?: boolean;
-  ruleViolations?: ScanResult['graph']['edges'][number]['ruleViolations'];
-  pluginData?: Record<string, unknown>;
-}
-
-interface ExplorerGraphData {
-  schemaVersion: string;
-  mode: GraphMode;
-  projectRoot: string;
-  scannedAt: string;
-  totalFiles: number;
-  totalDirs: number;
-  totalImports: number;
-  circularCount: number;
-  circularDependencies: ScanResult['graph']['circularDependencies'];
-  orphanFiles: string[];
-  unresolvedImports: ScanResult['unresolvedImports'];
-  dependencyIssues?: ScanResult['dependencyIssues'];
-  ruleValidation?: ScanResult['ruleValidation'];
-  devDepsInProd?: ScanResult['devDepsInProd'];
-  importConventionViolations?: ScanResult['importConventionViolations'];
-  healthScore?: HealthScoreResult;
-  pluginData?: Record<string, unknown>;
-  generatedBy: string;
-  errors: ScanError[];
-  nodes: ExplorerGraphNode[];
-  edges: ExplorerGraphEdge[];
-}
-
-interface ExplorerGraphSet {
-  schemaVersion: string;
-  generatedBy: string;
-  projectRoot: string;
-  scannedAt: string;
-  availableModes: GraphMode[];
-  defaultMode: GraphMode;
-  graphs: Partial<Record<GraphMode, ExplorerGraphData>>;
-}
 
 interface ScanCommandOptions {
   json?: boolean;
@@ -125,11 +70,11 @@ interface ScanCommandOptions {
 
 type OptionSourceReader = (name: string) => string | undefined;
 
-const EXPORT_SCHEMA_VERSION = '1.0.0';
+const EXPORT_SCHEMA_VERSION = GRAPH_PAYLOAD_SCHEMA_VERSION;
 const MAX_PORT_SEARCH_ATTEMPTS = 10;
 const WATCH_DEBOUNCE_MS = 150;
 
-interface GraphServerHandle {
+export interface GraphServerHandle {
   port: number;
   updateData(nextData: { tree: FileTreeNode; graphSet: ExplorerGraphSet }): void;
   close(): Promise<void>;
@@ -303,99 +248,11 @@ function getGeneratedBy(): string {
 }
 
 function toStructureGraphData(graph: StructureGraph): ExplorerGraphData {
-  const scannedAt = new Date().toISOString();
-  const totalFiles = graph.nodes.filter((node) => node.kind === 'file').length;
-  const totalDirs = graph.nodes.filter((node) => node.kind === 'directory').length;
-
-  return {
-    schemaVersion: EXPORT_SCHEMA_VERSION,
-    mode: 'structure',
-    projectRoot: graph.rootDir,
-    scannedAt,
-    totalFiles,
-    totalDirs,
-    totalImports: 0,
-    circularCount: 0,
-    circularDependencies: [],
-    orphanFiles: [],
-    unresolvedImports: [],
-    dependencyIssues: undefined,
-    ruleValidation: undefined,
-    devDepsInProd: undefined,
-    importConventionViolations: undefined,
-    generatedBy: getGeneratedBy(),
-    errors: [],
-    nodes: graph.nodes,
-    edges: graph.edges.map((edge) => ({
-      ...edge,
-      kind: 'structure',
-    })),
-  };
+  return createStructureGraphPayload(graph, { generatedBy: getGeneratedBy() });
 }
 
 function toDependencyGraphData(result: ScanResult): ExplorerGraphData {
-  const orphanFileSet = new Set(result.orphanFiles);
-  const nodes: ExplorerGraphNode[] = result.graph.nodes.map((node) => ({
-    id: node.id,
-    label: path.basename(node.relativePath),
-    relativePath: node.relativePath,
-    absolutePath: node.id,
-    kind: 'file',
-    extension: node.extension,
-    depth: Math.max(1, node.relativePath.split('/').filter(Boolean).length),
-    collapsed: false,
-    hidden: false,
-    childCount: node.outDegree,
-    descendantCount: Math.max(node.inDegree, node.outDegree),
-    inDegree: node.inDegree,
-    outDegree: node.outDegree,
-    isCircular: node.isCircular,
-    isOrphan: orphanFileSet.has(node.relativePath),
-    ...(node.workspace ? { workspace: node.workspace } : {}),
-    ...(node.metrics ? { metrics: node.metrics } : {}),
-    ...(node.componentName ? { componentName: node.componentName } : {}),
-    ...(node.unusedExports ? { unusedExports: node.unusedExports } : {}),
-    ...(node.unresolvedImports ? { unresolvedImports: node.unresolvedImports } : {}),
-    ...(node.pluginData ? { pluginData: node.pluginData } : {}),
-  }));
-
-  const edges: ExplorerGraphEdge[] = result.graph.edges.map((edge, index) => ({
-    id: `${edge.source}->${edge.target}-${index}`,
-    source: edge.source,
-    target: edge.target,
-    kind: 'dependencies',
-    importSpecifier: edge.importSpecifier,
-    importedNames: edge.importedNames,
-    isTypeOnly: edge.isTypeOnly,
-    isDynamic: edge.isDynamic,
-    ...(edge.isCrossPackage ? { isCrossPackage: edge.isCrossPackage } : {}),
-    ...(edge.ruleViolations ? { ruleViolations: edge.ruleViolations } : {}),
-    ...(edge.pluginData ? { pluginData: edge.pluginData } : {}),
-  }));
-
-  return {
-    schemaVersion: EXPORT_SCHEMA_VERSION,
-    mode: 'dependencies',
-    projectRoot: result.graph.rootDir,
-    scannedAt: result.graph.metadata.scannedAt,
-    totalFiles: result.totalFiles,
-    totalDirs: 0,
-    totalImports: result.totalImports,
-    circularCount: result.circularCount,
-    circularDependencies: result.graph.circularDependencies,
-    orphanFiles: result.orphanFiles,
-    unresolvedImports: result.unresolvedImports,
-    ...(result.dependencyIssues ? { dependencyIssues: result.dependencyIssues } : {}),
-    ...(result.ruleValidation ? { ruleValidation: result.ruleValidation } : {}),
-    ...(result.devDepsInProd ? { devDepsInProd: result.devDepsInProd } : {}),
-    ...(result.importConventionViolations ? { importConventionViolations: result.importConventionViolations } : {}),
-    healthScore: computeHealthScore(result),
-    ...(result.pluginData ? { pluginData: result.pluginData } : {}),
-    generatedBy: getGeneratedBy(),
-    errors: result.errors,
-    nodes,
-    edges,
-  };
+  return createDependencyGraphPayload(result, { generatedBy: getGeneratedBy() });
 }
 
 function serializeGraphData(data: ExplorerGraphData): string {
@@ -1007,7 +864,7 @@ async function readStaticAsset(
   };
 }
 
-async function startGraphServer(
+export async function startGraphServer(
   rootDir: string,
   tree: FileTreeNode,
   graphSet: ExplorerGraphSet,
@@ -1240,12 +1097,14 @@ async function startWatchMode(
   rootDir: string,
   options: ScanCommandOptions,
   serverHandle: GraphServerHandle,
+  scanSession: ProjectScanSession,
 ): Promise<FileWatcher> {
   const { watch: watchFiles } = await import('chokidar');
   const scheduleRebuild = createWatchScheduler(async (eventName, filePath) => {
     const relativePath = path.relative(rootDir, filePath);
     try {
-      const nextData = await buildGraphSet(rootDir, options);
+      scanSession.invalidate(filePath);
+      const nextData = await buildGraphSet(rootDir, options, scanSession);
       serverHandle.updateData(nextData);
       process.stderr.write(`Updated graph after ${eventName}: ${relativePath}\n`);
     } catch (error) {
@@ -1276,6 +1135,27 @@ async function startWatchMode(
   return watcher;
 }
 
+function createDependencyScanOptions(
+  rootDir: string,
+  options: ScanCommandOptions,
+): ScanOptions {
+  return {
+    rootDir,
+    ignorePatterns: options.ignore,
+    detectCircular: options.circular !== false,
+    resolveAliases: options.aliases !== false,
+    extensions: options.extensions,
+    entryPointPatterns: options.entryPoints,
+    detectUnusedDeps: options.deps,
+    rules: options.rules,
+    prodEntryPoints: options.prodEntryPoints,
+    devEntryPoints: options.devEntryPoints,
+    ignoreTypeImports: options.ignoreTypeImports,
+    importConventions: options.importConventions,
+    plugins: options.plugins,
+  };
+}
+
 async function buildSelectedGraphData(
   rootDir: string,
   options: ScanCommandOptions,
@@ -1290,21 +1170,7 @@ async function buildSelectedGraphData(
     return toStructureGraphData(structureGraph);
   }
 
-  const result = await scanProject({
-    rootDir,
-    ignorePatterns: options.ignore,
-    detectCircular: options.circular !== false,
-    resolveAliases: options.aliases !== false,
-    extensions: options.extensions,
-    entryPointPatterns: options.entryPoints,
-    detectUnusedDeps: options.deps,
-    rules: options.rules,
-    prodEntryPoints: options.prodEntryPoints,
-    devEntryPoints: options.devEntryPoints,
-    ignoreTypeImports: options.ignoreTypeImports,
-    importConventions: options.importConventions,
-    plugins: options.plugins,
-  });
+  const result = await scanProject(createDependencyScanOptions(rootDir, options));
 
   return toDependencyGraphData(result);
 }
@@ -1312,47 +1178,24 @@ async function buildSelectedGraphData(
 async function buildDependencyScanResult(
   rootDir: string,
   options: ScanCommandOptions,
+  scanSession?: ProjectScanSession,
 ): Promise<ScanResult> {
-  return scanProject({
-    rootDir,
-    ignorePatterns: options.ignore,
-    detectCircular: options.circular !== false,
-    resolveAliases: options.aliases !== false,
-    extensions: options.extensions,
-    entryPointPatterns: options.entryPoints,
-    detectUnusedDeps: options.deps,
-    rules: options.rules,
-    prodEntryPoints: options.prodEntryPoints,
-    devEntryPoints: options.devEntryPoints,
-    ignoreTypeImports: options.ignoreTypeImports,
-    importConventions: options.importConventions,
-    plugins: options.plugins,
-  });
+  if (scanSession) {
+    return scanSession.scan();
+  }
+  return scanProject(createDependencyScanOptions(rootDir, options));
 }
 
 async function buildGraphSet(
   rootDir: string,
   options: ScanCommandOptions,
+  scanSession?: ProjectScanSession,
 ): Promise<{ tree: FileTreeNode; graphSet: ExplorerGraphSet }> {
   const tree = await scanFileTree(rootDir, {
     ignorePatterns: options.ignore,
   });
   const structureGraph = buildStructureGraph(tree);
-  const dependencyResult = await scanProject({
-    rootDir,
-    ignorePatterns: options.ignore,
-    detectCircular: options.circular !== false,
-    resolveAliases: options.aliases !== false,
-    extensions: options.extensions,
-    entryPointPatterns: options.entryPoints,
-    detectUnusedDeps: options.deps,
-    rules: options.rules,
-    prodEntryPoints: options.prodEntryPoints,
-    devEntryPoints: options.devEntryPoints,
-    ignoreTypeImports: options.ignoreTypeImports,
-    importConventions: options.importConventions,
-    plugins: options.plugins,
-  });
+  const dependencyResult = await buildDependencyScanResult(rootDir, options, scanSession);
 
   const structureData = toStructureGraphData(structureGraph);
   const dependencyData = toDependencyGraphData(dependencyResult);
@@ -1566,7 +1409,10 @@ export function createScanCommand(): Command {
           return;
         }
 
-        const { tree, graphSet } = await buildGraphSet(rootDir, options);
+        const scanSession = options.watch
+          ? new ProjectScanSession(createDependencyScanOptions(rootDir, options))
+          : undefined;
+        const { tree, graphSet } = await buildGraphSet(rootDir, options, scanSession);
         if (options.orphans) {
           printOrphanFiles(graphSet.graphs.dependencies?.orphanFiles ?? []);
         }
@@ -1588,7 +1434,7 @@ export function createScanCommand(): Command {
         }
         const serverHandle = await startGraphServer(rootDir, tree, graphSet, port, initialDepth);
         const watcher = options.watch
-          ? await startWatchMode(rootDir, options, serverHandle)
+          ? await startWatchMode(rootDir, options, serverHandle, scanSession!)
           : null;
         const resolvedPort = serverHandle.port;
         if (options.open !== false) {

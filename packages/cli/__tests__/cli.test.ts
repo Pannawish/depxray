@@ -985,6 +985,54 @@ describe('CLI Integration Tests', () => {
         expect(JSON.parse(err.stdout).summary.unresolvedImports).toBe(1);
       }
     });
+
+    it('should fail only for findings introduced after a Git baseline', async () => {
+      const repoDir = path.join(TEMP_DIR, 'baseline-repo');
+      await fs.mkdir(path.join(repoDir, 'src'), { recursive: true });
+      await fs.writeFile(
+        path.join(repoDir, 'src/index.ts'),
+        "import './existing-missing';\nexport const value = 1;\n",
+        'utf-8',
+      );
+      await execa('git', ['init'], { cwd: repoDir });
+      await execa('git', ['add', '.'], { cwd: repoDir });
+      await execa('git', [
+        '-c', 'user.name=depxray-test',
+        '-c', 'user.email=depxray@example.com',
+        'commit',
+        '-m',
+        'baseline',
+      ], { cwd: repoDir });
+
+      const inherited = await execa('node', [
+        CLI_PATH,
+        'check',
+        repoDir,
+        '--base',
+        'HEAD',
+        '--json',
+      ]);
+      expect(inherited.exitCode).toBe(0);
+      expect(JSON.parse(inherited.stdout).baseline.newIssueCount).toBe(0);
+
+      await fs.appendFile(path.join(repoDir, 'src/index.ts'), "import './new-missing';\n");
+      try {
+        await execa('node', [
+          CLI_PATH,
+          'check',
+          repoDir,
+          '--base',
+          'HEAD',
+          '--json',
+        ]);
+        expect.fail('Should have failed for the newly introduced import.');
+      } catch (error: any) {
+        expect(error.exitCode).toBe(1);
+        const output = JSON.parse(error.stdout);
+        expect(output.baseline.newIssueCount).toBe(1);
+        expect(output.baseline.newIssues.unresolvedImports).toHaveLength(1);
+      }
+    });
   });
 
   describe('error cases and help', () => {

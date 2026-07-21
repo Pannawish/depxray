@@ -3,6 +3,13 @@ import * as path from 'node:path';
 import { Command } from 'commander';
 import { loadPlugins } from '../plugins.js';
 import {
+  buildCheckSummary,
+  CHECK_ISSUE_TYPES,
+  compareCheckResults,
+} from '../checkBaseline.js';
+import { withGitSnapshot } from '../gitSnapshot.js';
+import {
+  computeHealthScore,
   loadConfig,
   scanProject,
   type DepxrayConfig,
@@ -24,6 +31,8 @@ interface CheckOptions {
   devEntryPoints?: string[];
   importConventions?: DepxrayConfig['importConventions'];
   plugins?: DepxrayPlugin[];
+  base?: string;
+  maxHealthDrop?: string;
 }
 
 type OptionSourceReader = (name: string) => string | undefined;
@@ -86,26 +95,13 @@ async function verifyDirectory(rootDir: string): Promise<void> {
   }
 }
 
-function countUnusedExports(result: ScanResult): number {
-  return result.graph.nodes.reduce((total, node) => total + (node.unusedExports?.length ?? 0), 0);
-}
-
-function buildCheckSummary(result: ScanResult) {
-  const architectureErrors = result.ruleValidation?.errorCount ?? 0;
-  const summary = {
-    circularDependencies: result.circularCount,
-    orphanFiles: result.orphanFiles.length,
-    unusedExports: countUnusedExports(result),
-    unresolvedImports: result.unresolvedImports.length,
-    architectureErrors,
-    devDepsInProd: result.devDepsInProd?.length ?? 0,
-    importConventionViolations: result.importConventionViolations?.length ?? 0,
-  };
-
-  return {
-    clean: Object.values(summary).every((value) => value === 0),
-    summary,
-  };
+function parseNonNegativeNumber(value: string | undefined, optionName: string): number | undefined {
+  if (value === undefined) return undefined;
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed < 0) {
+    throw new Error(`${optionName} must be a non-negative number.`);
+  }
+  return parsed;
 }
 
 export function createCheckCommand(): Command {
@@ -114,6 +110,8 @@ export function createCheckCommand(): Command {
     .argument('[dir]', 'Project directory to scan', '.')
     .option('--format <format>', 'Output format: text | json', 'text')
     .option('--json', 'Print machine-readable JSON')
+    .option('--base <ref>', 'Compare with a Git ref and fail only on new findings')
+    .option('--max-health-drop <points>', 'Maximum allowed health-score drop from --base')
     .option('--ignore <patterns...>', 'Additional patterns to ignore')
     .option('--extensions <exts...>', 'File extensions to scan')
     .option('--entry-points <patterns...>', 'Entry point patterns to exclude from orphan detection')
@@ -130,7 +128,11 @@ export function createCheckCommand(): Command {
         const options = mergeOptionsWithConfig(rawOptions, config, (name) => cmd.getOptionValueSource(name));
         options.plugins = await loadPlugins(config.plugins, rootDir);
         const format = rawOptions.json ? 'json' : parseFormat(options.format);
-        const result = await scanProject({
+        const maxHealthDrop = parseNonNegativeNumber(options.maxHealthDrop, '--max-health-drop');
+        if (maxHealthDrop !== undefined && !options.base) {
+          throw new Error('--max-health-drop requires --base.');
+        }
+        const scanOptions = {
           rootDir,
           ignorePatterns: options.ignore,
           extensions: options.extensions,
@@ -143,15 +145,54 @@ export function createCheckCommand(): Command {
           ignoreTypeImports: options.ignoreTypeImports,
           importConventions: options.importConventions,
           plugins: options.plugins,
-        });
+        };
+        const result = await scanProject(scanOptions);
         const check = buildCheckSummary(result);
+        let baseline;
+
+        if (options.base) {
+          const baselineResult = await withGitSnapshot(rootDir, options.base, (snapshotRoot) => (
+            scanProject({ ...scanOptions, rootDir: snapshotRoot })
+          ));
+          const comparison = compareCheckResults(baselineResult, result);
+          const currentHealth = computeHealthScore(result).score;
+          const baselineHealth = computeHealthScore(baselineResult).score;
+          const healthDrop = Math.max(0, baselineHealth - currentHealth);
+          const healthPassed = maxHealthDrop === undefined || healthDrop <= maxHealthDrop;
+          baseline = {
+            ref: options.base,
+            summary: buildCheckSummary(baselineResult).summary,
+            ...comparison,
+            health: {
+              baseline: baselineHealth,
+              current: currentHealth,
+              drop: healthDrop,
+              allowedDrop: maxHealthDrop,
+              passed: healthPassed,
+            },
+          };
+          check.clean = comparison.newIssueCount === 0 && healthPassed;
+        }
 
         if (format === 'json') {
-          process.stdout.write(JSON.stringify({ ...check, result }, null, 2) + '\n');
+          process.stdout.write(JSON.stringify({ ...check, ...(baseline ? { baseline } : {}), result }, null, 2) + '\n');
         } else {
           process.stdout.write(check.clean ? 'depxray check passed.\n' : 'depxray check failed.\n');
           for (const [key, value] of Object.entries(check.summary)) {
             process.stdout.write(`  ${key}: ${value}\n`);
+          }
+          if (baseline) {
+            process.stdout.write(`  baseline: ${baseline.ref}\n`);
+            process.stdout.write(`  new issues: ${baseline.newIssueCount}\n`);
+            process.stdout.write(`  resolved issues: ${baseline.resolvedIssueCount}\n`);
+            for (const type of CHECK_ISSUE_TYPES) {
+              for (const issue of baseline.newIssues[type]) {
+                process.stdout.write(`    + ${type}: ${issue}\n`);
+              }
+            }
+            if (maxHealthDrop !== undefined) {
+              process.stdout.write(`  health score drop: ${baseline.health.drop} (allowed ${maxHealthDrop})\n`);
+            }
           }
         }
 

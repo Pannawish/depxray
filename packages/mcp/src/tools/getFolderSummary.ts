@@ -1,13 +1,13 @@
 import * as path from 'node:path';
 import {
   scanFileTree,
-  scanProject,
 } from '@depxray/core';
 import {
   assertPathInsideRoot,
   flattenTree,
   resolveProjectPath,
   resolveRootDir,
+  scanProject,
 } from './shared.js';
 
 export interface GetFolderSummaryInput {

@@ -1,8 +1,7 @@
 import {
   computeHealthScore,
-  scanProject,
 } from '@depxray/core';
-import { resolveRootDir } from './shared.js';
+import { resolveRootDir, scanProject } from './shared.js';
 
 export interface CheckHealthInput {
   rootDir: string;

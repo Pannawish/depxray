@@ -1,22 +1,25 @@
 import type {
-  GraphEdge as DependencyGraphEdge,
-  GraphNode as DependencyGraphNode,
+  ExplorerGraphData as CoreExplorerGraphData,
+  ExplorerGraphEdge as CoreExplorerGraphEdge,
+  ExplorerGraphMode,
+  ExplorerGraphNode as CoreExplorerGraphNode,
+  ExplorerGraphSet as CoreExplorerGraphSet,
+  GraphEdge,
+  GraphNode,
   StructureGraphEdge,
   StructureGraphNode,
-  UnresolvedImport,
-  RuleValidationResult,
-  HealthScoreResult,
 } from '@depxray/core';
 
 export type {
-  DependencyGraphEdge,
-  DependencyGraphNode,
   StructureGraphEdge,
   StructureGraphNode,
 } from '@depxray/core';
 
+export type DependencyGraphEdge = GraphEdge;
+export type DependencyGraphNode = GraphNode;
+
 export type DepthFilter = 1 | 2 | 3 | 4 | 'all';
-export type GraphMode = 'structure' | 'dependencies';
+export type GraphMode = ExplorerGraphMode;
 export type GraphScopeMode = 'project' | 'folder' | 'file';
 export type FileNeighborhoodDepth = 1 | 2 | 'all';
 export type FolderBoundaryMode = 'all' | 'internal' | 'incoming' | 'outgoing';
@@ -31,85 +34,25 @@ export type GraphScopeNodeRole =
   | 'external-both';
 export type GraphScopeEdgeRole = 'dependency' | 'internal' | 'incoming' | 'outgoing' | 'membership';
 
-export interface ExplorerGraphNode extends StructureGraphNode {
-  inDegree?: number;
-  outDegree?: number;
-  isCircular?: boolean;
-  isOrphan?: boolean;
-  componentName?: string;
-  workspace?: DependencyGraphNode['workspace'];
-  metrics?: DependencyGraphNode['metrics'];
-  unusedExports?: DependencyGraphNode['unusedExports'];
-  unresolvedImports?: DependencyGraphNode['unresolvedImports'];
-  pluginData?: DependencyGraphNode['pluginData'];
+export interface ExplorerGraphNode extends CoreExplorerGraphNode {
   scopeRole?: GraphScopeNodeRole;
   memberNodeIds?: string[];
   memberCount?: number;
   internalEdgeCount?: number;
 }
 
-export interface ExplorerGraphEdge extends StructureGraphEdge {
-  kind: GraphMode;
-  importSpecifier?: string;
-  importedNames?: string[];
-  isTypeOnly?: boolean;
-  isDynamic?: boolean;
-  isCrossPackage?: DependencyGraphEdge['isCrossPackage'];
-  ruleViolations?: DependencyGraphEdge['ruleViolations'];
-  pluginData?: DependencyGraphEdge['pluginData'];
+export interface ExplorerGraphEdge extends CoreExplorerGraphEdge {
   scopeRole?: GraphScopeEdgeRole;
   aggregateCount?: number;
   memberEdgeIds?: string[];
 }
 
-export interface ExplorerGraphData {
-  schemaVersion: string;
-  mode: GraphMode;
-  projectRoot: string;
-  scannedAt: string;
-  totalFiles: number;
-  totalDirs: number;
-  totalImports: number;
-  circularCount: number;
-  circularDependencies: Array<{ chain: string[]; description: string }>;
-  orphanFiles: string[];
-  unresolvedImports: UnresolvedImport[];
-  dependencyIssues?: {
-    unused: string[];
-    unlisted: string[];
-  };
-  ruleValidation?: RuleValidationResult;
-  devDepsInProd?: Array<{
-    file: string;
-    module: string;
-    importSpecifier: string;
-    line: number;
-    entryPoint: string;
-    isTypeOnly: boolean;
-  }>;
-  importConventionViolations?: Array<{
-    file: string;
-    target: string;
-    importSpecifier: string;
-    suggestedSpecifier: string;
-    expected: 'relative' | 'absolute';
-    line: number;
-  }>;
-  healthScore?: HealthScoreResult;
-  pluginData?: Record<string, unknown>;
-  generatedBy: string;
-  errors: Array<{ filePath: string; error: string }>;
+export interface ExplorerGraphData extends Omit<CoreExplorerGraphData, 'nodes' | 'edges'> {
   nodes: ExplorerGraphNode[];
   edges: ExplorerGraphEdge[];
 }
 
-export interface ExplorerGraphSet {
-  schemaVersion: string;
-  generatedBy: string;
-  projectRoot: string;
-  scannedAt: string;
-  availableModes: GraphMode[];
-  defaultMode: GraphMode;
+export interface ExplorerGraphSet extends Omit<CoreExplorerGraphSet, 'graphs'> {
   graphs: Partial<Record<GraphMode, ExplorerGraphData>>;
 }
 

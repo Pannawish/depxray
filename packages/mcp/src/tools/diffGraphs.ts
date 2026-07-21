@@ -4,9 +4,8 @@ import * as os from 'node:os';
 import * as path from 'node:path';
 import {
   diffGraphs,
-  scanProject,
 } from '@depxray/core';
-import { resolveRootDir } from './shared.js';
+import { resolveRootDir, scanProject } from './shared.js';
 
 export interface DiffGraphsInput {
   rootDir: string;

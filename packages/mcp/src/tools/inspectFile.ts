@@ -1,10 +1,10 @@
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
-import { scanProject } from '@depxray/core';
 import {
   assertPathInsideRoot,
   resolveProjectPath,
   resolveRootDir,
+  scanProject,
 } from './shared.js';
 
 export interface InspectFileInput {

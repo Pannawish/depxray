@@ -45,13 +45,14 @@ export function FileCodeViewer({
       return;
     }
 
+    const fileNode = node;
     let active = true;
     async function fetchFileContent() {
       setLoading(true);
       setError(null);
       setCode('');
       try {
-        const response = await fetch(`/api/file?path=${encodeURIComponent(node.relativePath)}`);
+        const response = await fetch(`/api/file?path=${encodeURIComponent(fileNode.relativePath)}`);
         if (!response.ok) {
           throw new Error(response.status === 404 ? 'File not found on disk' : `Server responded with ${response.status}`);
         }

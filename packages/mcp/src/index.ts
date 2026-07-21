@@ -86,7 +86,7 @@ export function createDepxrayMcpServer(): McpServer {
     'suggest_cleanup',
     {
       title: 'Suggest cleanup actions',
-      description: 'Return a prioritized list of cleanup suggestions: orphan files, unused exports, unresolved imports, unused dependencies, and circular dependencies.',
+      description: 'Return confidence-rated cleanup suggestions with evidence and false-positive caveats for orphan files, unused exports, unresolved imports, unused dependencies, and circular dependencies.',
       inputSchema: {
         rootDir: rootDirSchema,
         maxSuggestions: z.number().int().positive().optional().describe('Maximum number of suggestions to return. Default 10.'),

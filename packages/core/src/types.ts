@@ -570,6 +570,25 @@ export interface ScanOptions {
 
   /** Resolved plugins that can extend graph and scan results */
   plugins?: DepxrayPlugin[];
+
+  /** Optional reusable cache for parsed file analysis */
+  analysisCache?: ScanAnalysisCache;
+}
+
+/** Cache entry for syntax analysis that is independent of graph resolution. */
+export interface ScanAnalysisCacheEntry {
+  signature: string;
+  rawImports: RawImportInfo[];
+  rawExports: RawExportInfo[];
+  metrics: Omit<FileMetrics, 'instability'>;
+}
+
+/** Pluggable cache used to avoid reparsing unchanged source files. */
+export interface ScanAnalysisCache {
+  get(filePath: string, signature: string): ScanAnalysisCacheEntry | undefined;
+  set(filePath: string, entry: ScanAnalysisCacheEntry): void;
+  delete(filePath: string): void;
+  retain(filePaths: ReadonlySet<string>): void;
 }
 
 /**

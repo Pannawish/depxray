@@ -110,7 +110,7 @@ This gives the agent a clearer view of dependency impact, ownership, and file he
 | `find_unused_exports` | The agent needs to find dead exports for cleanup. | `{ "rootDir": "/path/to/project", "filePath": "src/util.ts" }` |
 | `explain_dependency_chain` | The agent needs to explain why one file depends on another file. | `{ "rootDir": "/path/to/project", "from": "src/App.tsx", "to": "src/utils/format.ts" }` |
 | `find_related_files` | The agent needs imports, dependents, siblings, and co-located files around a target file. | `{ "rootDir": "/path/to/project", "filePath": "src/components/Button.tsx" }` |
-| `suggest_cleanup` | The agent needs prioritized cleanup actions with safe, review, and risky impact labels. | `{ "rootDir": "/path/to/project", "maxSuggestions": 10 }` |
+| `suggest_cleanup` | The agent needs confidence-rated cleanup actions with evidence and caveats. | `{ "rootDir": "/path/to/project", "maxSuggestions": 10 }` |
 | `diff_graphs` | The agent needs to compare the current dependency graph with a git base ref before a PR. | `{ "rootDir": "/path/to/project", "baseRef": "main" }` |
 | `find_circular` | The agent should detect dependency cycles before a refactor. | `{ "rootDir": "/path/to/project" }` |
 | `find_orphans` | The agent should find files with no incoming references. | `{ "rootDir": "/path/to/project" }` |
@@ -143,7 +143,7 @@ Optional dependency-mode inputs:
 - complexity hotspots for files that may need review before editing
 - dependency hubs with high incoming import counts
 
-`suggest_cleanup` returns safe, review, and risky cleanup candidates in priority order, including orphan files, unused exports, unresolved imports, unused dependencies, and circular chains.
+`suggest_cleanup` returns impact, confidence, evidence, and false-positive caveats for orphan files, unused exports, unresolved imports, unused dependencies, and circular chains. Potential deletions and package removals require review rather than being labeled automatically safe.
 
 `diff_graphs` scans the current working tree and a git base ref, then returns added and removed files, dependency edges, and circular dependency changes for PR review workflows.
 

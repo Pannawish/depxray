@@ -4,11 +4,22 @@
   "description": "Static analysis engine for JavaScript and TypeScript dependency graphs, health scoring, dependency-chain explanations, unused exports, unresolved imports, impact analysis, architecture rules, and AI-agent tooling.",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./graph-contract": {
+      "types": "./dist/graphContract.d.ts",
+      "default": "./dist/graphContract.js"
+    }
+  },
   "files": [
     "dist"
   ],
   "scripts": {
     "build": "tsc",
+    "typecheck": "tsc --noEmit",
     "dev": "tsc --watch",
     "test": "vitest run",
     "test:watch": "vitest",

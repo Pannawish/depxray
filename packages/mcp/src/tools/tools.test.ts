@@ -184,8 +184,12 @@ describe('MCP tool handlers', () => {
       expect(suggestion).toHaveProperty('action');
       expect(suggestion).toHaveProperty('file');
       expect(suggestion).toHaveProperty('impact');
+      expect(suggestion).toHaveProperty('confidence');
       expect(suggestion).toHaveProperty('reason');
+      expect(suggestion.evidence.length).toBeGreaterThan(0);
+      expect(suggestion.caveats.length).toBeGreaterThan(0);
       expect(['safe', 'review', 'risky']).toContain(suggestion.impact);
+      expect(['high', 'medium', 'low']).toContain(suggestion.confidence);
     }
 
     const impacts = result.suggestions.map((suggestion) => suggestion.impact);

@@ -106,23 +106,25 @@ export function useTreeState(
     };
   }
 
+  const graphData = data;
+
   const parentById = new Map<string, string>();
   if (mode === 'structure') {
-    for (const edge of data.edges) {
+    for (const edge of graphData.edges) {
       parentById.set(edge.target, edge.source);
     }
   }
 
   const filteredEdges = mode === 'dependencies'
-    ? data.edges.filter((edge) => (
+    ? graphData.edges.filter((edge) => (
       (dependencyFilters.showTypeOnlyEdges || !edge.isTypeOnly) &&
       (dependencyFilters.showDynamicEdges || !edge.isDynamic)
     ))
-    : data.edges;
+    : graphData.edges;
 
   const matchedNodeIds = normalizedSearch
     ? new Set(
-      data.nodes
+      graphData.nodes
         .filter((node) => (
           node.label.toLowerCase().includes(normalizedSearch) ||
           node.relativePath.toLowerCase().includes(normalizedSearch)
@@ -147,20 +149,20 @@ export function useTreeState(
 
   const circularNodeIds = mode === 'dependencies'
     ? new Set(
-      data.nodes
+      graphData.nodes
         .filter((node) => node.isCircular)
         .map((node) => node.id),
     )
     : new Set<string>();
   const orphanNodeIds = mode === 'dependencies'
     ? new Set(
-      data.nodes
+      graphData.nodes
         .filter((node) => node.isOrphan)
         .map((node) => node.id),
     )
     : new Set<string>();
 
-  const visibleNodes = data.nodes
+  const visibleNodes = graphData.nodes
     .filter((node) => (
       node.depth <= maxDepth &&
       (mode === 'structure'
@@ -221,14 +223,14 @@ export function useTreeState(
     }
 
     setCollapsedIds(new Set(
-      data.nodes
+      graphData.nodes
         .filter((node) => node.kind === 'directory' && node.childCount > 0 && node.depth > 0)
         .map((node) => node.id),
     ));
   }
 
   function resetCollapsed() {
-    setCollapsedIds(buildDefaultCollapsedIds(data, mode));
+    setCollapsedIds(buildDefaultCollapsedIds(graphData, mode));
   }
 
   return {

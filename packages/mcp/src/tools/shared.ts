@@ -1,69 +1,49 @@
 import * as path from 'node:path';
 import { createRequire } from 'node:module';
-import { computeHealthScore } from '@depxray/core';
+import {
+  createDependencyGraphPayload,
+  createStructureGraphPayload,
+  ProjectScanSession,
+} from '@depxray/core';
 import type {
+  ExplorerGraphData,
+  ExplorerGraphMode,
   FileTreeNode,
-  HealthScoreResult,
-  ScanError,
   ScanResult,
+  ScanOptions,
   StructureGraph,
-  StructureGraphEdge,
-  StructureGraphNode,
 } from '@depxray/core';
 
 const require = createRequire(import.meta.url);
 const packageJson = require('../../package.json') as { version: string };
+const MAX_SCAN_SESSIONS = 8;
+const scanSessions = new Map<string, ProjectScanSession>();
 
-export type GraphMode = 'structure' | 'dependencies';
+export type GraphMode = ExplorerGraphMode;
 
-export interface ExplorerGraphNode extends StructureGraphNode {
-  inDegree?: number;
-  outDegree?: number;
-  isCircular?: boolean;
-  isOrphan?: boolean;
-  componentName?: string;
-  workspace?: string;
-  metrics?: ScanResult['graph']['nodes'][number]['metrics'];
-  unusedExports?: ScanResult['graph']['nodes'][number]['unusedExports'];
-  unresolvedImports?: ScanResult['graph']['nodes'][number]['unresolvedImports'];
-  pluginData?: Record<string, unknown>;
+export function scanProject(options: ScanOptions): Promise<ScanResult> {
+  const rootDir = path.resolve(options.rootDir);
+  let session = scanSessions.get(rootDir);
+  if (!session) {
+    session = new ProjectScanSession({ rootDir });
+  } else {
+    scanSessions.delete(rootDir);
+  }
+  scanSessions.set(rootDir, session);
+
+  while (scanSessions.size > MAX_SCAN_SESSIONS) {
+    const oldestRoot = scanSessions.keys().next().value as string | undefined;
+    if (!oldestRoot) break;
+    scanSessions.delete(oldestRoot);
+  }
+
+  const {
+    rootDir: _rootDir,
+    analysisCache: _analysisCache,
+    ...overrides
+  } = options;
+  return session.scan(overrides);
 }
-
-export interface ExplorerGraphEdge extends StructureGraphEdge {
-  kind: GraphMode;
-  importSpecifier?: string;
-  importedNames?: string[];
-  isTypeOnly?: boolean;
-  isDynamic?: boolean;
-  isCrossPackage?: boolean;
-  ruleViolations?: ScanResult['graph']['edges'][number]['ruleViolations'];
-  pluginData?: Record<string, unknown>;
-}
-
-export interface ExplorerGraphData {
-  schemaVersion: string;
-  mode: GraphMode;
-  projectRoot: string;
-  scannedAt: string;
-  totalFiles: number;
-  totalDirs: number;
-  totalImports: number;
-  circularCount: number;
-  circularDependencies: ScanResult['graph']['circularDependencies'];
-  orphanFiles: string[];
-  unresolvedImports: ScanResult['unresolvedImports'];
-  ruleValidation?: ScanResult['ruleValidation'];
-  devDepsInProd?: ScanResult['devDepsInProd'];
-  importConventionViolations?: ScanResult['importConventionViolations'];
-  healthScore?: HealthScoreResult;
-  pluginData?: Record<string, unknown>;
-  generatedBy: string;
-  errors: ScanError[];
-  nodes: ExplorerGraphNode[];
-  edges: ExplorerGraphEdge[];
-}
-
-const EXPORT_SCHEMA_VERSION = '1.0.0';
 
 export function resolveRootDir(rootDir: string): string {
   return path.resolve(rootDir);
@@ -98,97 +78,11 @@ function getGeneratedBy(): string {
 }
 
 export function toStructureGraphData(graph: StructureGraph): ExplorerGraphData {
-  const scannedAt = new Date().toISOString();
-  const totalFiles = graph.nodes.filter((node) => node.kind === 'file').length;
-  const totalDirs = graph.nodes.filter((node) => node.kind === 'directory').length;
-
-  return {
-    schemaVersion: EXPORT_SCHEMA_VERSION,
-    mode: 'structure',
-    projectRoot: graph.rootDir,
-    scannedAt,
-    totalFiles,
-    totalDirs,
-    totalImports: 0,
-    circularCount: 0,
-    circularDependencies: [],
-    orphanFiles: [],
-    unresolvedImports: [],
-    devDepsInProd: undefined,
-    importConventionViolations: undefined,
-    healthScore: undefined,
-    generatedBy: getGeneratedBy(),
-    errors: [],
-    nodes: graph.nodes,
-    edges: graph.edges.map((edge) => ({
-      ...edge,
-      kind: 'structure',
-    })),
-  };
+  return createStructureGraphPayload(graph, { generatedBy: getGeneratedBy() });
 }
 
 export function toDependencyGraphData(result: ScanResult): ExplorerGraphData {
-  const orphanFileSet = new Set(result.orphanFiles);
-  const nodes: ExplorerGraphNode[] = result.graph.nodes.map((node) => ({
-    id: node.id,
-    label: path.basename(node.relativePath),
-    relativePath: node.relativePath,
-    absolutePath: node.id,
-    kind: 'file',
-    extension: node.extension,
-    depth: Math.max(1, node.relativePath.split(/[/\\]/).filter(Boolean).length),
-    collapsed: false,
-    hidden: false,
-    childCount: node.outDegree,
-    descendantCount: Math.max(node.inDegree, node.outDegree),
-    inDegree: node.inDegree,
-    outDegree: node.outDegree,
-    isCircular: node.isCircular,
-    isOrphan: orphanFileSet.has(node.relativePath),
-    ...(node.workspace ? { workspace: node.workspace } : {}),
-    ...(node.metrics ? { metrics: node.metrics } : {}),
-    ...(node.componentName ? { componentName: node.componentName } : {}),
-    ...(node.unusedExports ? { unusedExports: node.unusedExports } : {}),
-    ...(node.unresolvedImports ? { unresolvedImports: node.unresolvedImports } : {}),
-    ...(node.pluginData ? { pluginData: node.pluginData } : {}),
-  }));
-
-  const edges: ExplorerGraphEdge[] = result.graph.edges.map((edge, index) => ({
-    id: `${edge.source}->${edge.target}-${index}`,
-    source: edge.source,
-    target: edge.target,
-    kind: 'dependencies',
-    importSpecifier: edge.importSpecifier,
-    importedNames: edge.importedNames,
-    isTypeOnly: edge.isTypeOnly,
-    isDynamic: edge.isDynamic,
-    ...(edge.isCrossPackage ? { isCrossPackage: edge.isCrossPackage } : {}),
-    ...(edge.ruleViolations ? { ruleViolations: edge.ruleViolations } : {}),
-    ...(edge.pluginData ? { pluginData: edge.pluginData } : {}),
-  }));
-
-  return {
-    schemaVersion: EXPORT_SCHEMA_VERSION,
-    mode: 'dependencies',
-    projectRoot: result.graph.rootDir,
-    scannedAt: result.graph.metadata.scannedAt,
-    totalFiles: result.totalFiles,
-    totalDirs: 0,
-    totalImports: result.totalImports,
-    circularCount: result.circularCount,
-    circularDependencies: result.graph.circularDependencies,
-    orphanFiles: result.orphanFiles,
-    unresolvedImports: result.unresolvedImports,
-    ...(result.ruleValidation ? { ruleValidation: result.ruleValidation } : {}),
-    ...(result.devDepsInProd ? { devDepsInProd: result.devDepsInProd } : {}),
-    ...(result.importConventionViolations ? { importConventionViolations: result.importConventionViolations } : {}),
-    healthScore: computeHealthScore(result),
-    ...(result.pluginData ? { pluginData: result.pluginData } : {}),
-    generatedBy: getGeneratedBy(),
-    errors: result.errors,
-    nodes,
-    edges,
-  };
+  return createDependencyGraphPayload(result, { generatedBy: getGeneratedBy() });
 }
 
 export function flattenTree(rootNode: FileTreeNode): FileTreeNode[] {

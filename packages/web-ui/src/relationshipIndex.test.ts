@@ -370,6 +370,7 @@ describe('relationship index', () => {
       showTypeOnlyEdges: false,
       showDynamicEdges: false,
       circularOnly: false,
+      orphanOnly: false,
     });
 
     expect(filtered.map((edge) => edge.id)).toEqual(['app-header']);

@@ -1,11 +1,11 @@
 import {
   analyzeImpact,
-  scanProject,
 } from '@depxray/core';
 import {
   assertPathInsideRoot,
   resolveProjectPath,
   resolveRootDir,
+  scanProject,
 } from './shared.js';
 
 export interface AnalyzeImpactInput {

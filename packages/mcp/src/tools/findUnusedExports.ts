@@ -1,11 +1,11 @@
 import {
-  scanProject,
   type UnusedExport,
 } from '@depxray/core';
 import {
   assertPathInsideRoot,
   resolveProjectPath,
   resolveRootDir,
+  scanProject,
 } from './shared.js';
 
 export interface FindUnusedExportsInput {

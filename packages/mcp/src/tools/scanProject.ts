@@ -1,11 +1,11 @@
 import {
   buildStructureGraph,
   scanFileTree,
-  scanProject,
 } from '@depxray/core';
 import type { GraphMode } from './shared.js';
 import {
   resolveRootDir,
+  scanProject,
   toDependencyGraphData,
   toStructureGraphData,
 } from './shared.js';

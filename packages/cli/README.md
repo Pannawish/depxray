@@ -411,7 +411,10 @@ Examples:
 ```bash
 depxray check /path/to/project
 depxray check /path/to/project --json
+depxray check /path/to/project --base origin/main --max-health-drop 3
 ```
+
+Use `--base <git-ref>` to keep inherited findings visible while failing CI only for new issues. `--max-health-drop <points>` optionally caps health-score regression from that baseline.
 
 ### `entry-points`, `trace`, and `tree`
 

@@ -12,6 +12,7 @@
   ],
   "scripts": {
     "build": "rm -rf dist && tsc --emitDeclarationOnly && node ./scripts/build-cli.mjs && node ./scripts/bundle-web-ui.mjs && node ./scripts/strip-dist-maps.mjs",
+    "typecheck": "tsc --noEmit",
     "build:types": "tsc --emitDeclarationOnly",
     "build:js": "node ./scripts/build-cli.mjs",
     "bundle:web-ui": "node ./scripts/bundle-web-ui.mjs",

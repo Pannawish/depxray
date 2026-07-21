@@ -263,6 +263,8 @@ depxray impact <file> [dir] [options]
 Options:
 
 - `--json`: print machine-readable JSON
+- `--base <ref>`: compare with a Git ref and fail only for newly introduced findings
+- `--max-health-drop <points>`: also fail when the health score drops more than the allowed amount
 - `--format <format>`: `text` or `json`, default `text`
 - `--complexity-threshold <number>`: complexity score considered high
 - `--impact-threshold <number>`: transitive dependent count considered high-impact
@@ -325,7 +327,10 @@ Examples:
 ```bash
 npx depxray check /path/to/project
 npx depxray check /path/to/project --json
+npx depxray check /path/to/project --base origin/main --max-health-drop 3
 ```
+
+Without `--base`, all findings fail the check. With `--base`, existing findings remain visible in the output, but only new findings (or an excessive configured health-score drop) fail CI.
 
 ### `entry-points`, `trace`, and `tree`
 
@@ -463,6 +468,8 @@ Supported fields:
 - `ignoreTypeImports`: ignores type-only imports when checking devDependency usage
 - `importConventions`: internal import style enforcement; `scan --fix` can rewrite safe violations
 - `plugins`: plugin module specifiers or inline plugin objects with `afterBuildGraph`, `afterScan`, or `onReport` hooks
+
+When `entryPoints` is omitted, depxray also recognizes package-declared entry files and common Next.js, Remix, SvelteKit, Astro, Gatsby, Nuxt, and Storybook conventions. Explicit `entryPoints` continue to override automatic detection.
 
 Example plugin module:
 

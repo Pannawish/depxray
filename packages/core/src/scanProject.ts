@@ -28,6 +28,7 @@ import type {
   ResolvedImport,
   FileMetrics,
   RawExportInfo,
+  RawImportInfo,
   UnresolvedImport,
   DevDependencyInProd,
   ImportConventionViolation,
@@ -51,6 +52,7 @@ import { loadAliases } from './configLoader.js';
 import { computeFileMetrics } from './computeMetrics.js';
 import { detectUnusedDeps, normalizePackageName } from './detectUnusedDeps.js';
 import { detectUnusedExports } from './detectUnusedExports.js';
+import { detectProjectEntryPointPatterns } from './detectProjectEntryPoints.js';
 import {
   createWorkspaceAliases,
   detectWorkspaces,
@@ -456,6 +458,7 @@ export async function scanProject(options: ScanOptions): Promise<ScanResult> {
     ignoreTypeImports = false,
     importConventions,
     plugins = [],
+    analysisCache,
   } = options;
 
   // Validate rootDir
@@ -483,6 +486,13 @@ export async function scanProject(options: ScanOptions): Promise<ScanResult> {
   const aliases = resolveAliases
     ? [...loadAliases(resolvedRoot), ...createWorkspaceAliases(workspaces)]
     : createWorkspaceAliases(workspaces);
+  const detectedEntryPointPatterns = entryPointPatterns === undefined
+    ? await detectProjectEntryPointPatterns(resolvedRoot, workspaces)
+    : [];
+  const effectiveEntryPointPatterns = entryPointPatterns ?? [
+    ...DEFAULT_ENTRY_POINT_PATTERNS,
+    ...detectedEntryPointPatterns,
+  ];
 
   // ── Step 2: Discover all scannable files ─────────────────────────────
   const filePaths = await discoverFiles(
@@ -536,6 +546,7 @@ export async function scanProject(options: ScanOptions): Promise<ScanResult> {
   const fileMetricsMap = new Map<string, Omit<FileMetrics, 'instability'>>();
   const unresolvedImports: UnresolvedImport[] = [];
   const unresolvedImportsByFile = new Map<string, UnresolvedImport[]>();
+  analysisCache?.retain(new Set(filePaths));
 
   // Process files concurrently for performance, but limit concurrency
   // to avoid opening too many file handles at once
@@ -546,14 +557,29 @@ export async function scanProject(options: ScanOptions): Promise<ScanResult> {
     await Promise.all(
       batch.map(async (filePath) => {
         try {
-          // Read the file content
-          const sourceCode = await fs.readFile(filePath, 'utf-8');
+          const fileStat = await fs.stat(filePath);
+          const signature = `${fileStat.mtimeMs}:${fileStat.ctimeMs}:${fileStat.size}`;
+          const cachedAnalysis = analysisCache?.get(filePath, signature);
+          let rawImports: RawImportInfo[];
 
-          fileMetricsMap.set(filePath, computeFileMetrics(sourceCode, filePath));
-          fileExportsMap.set(filePath, parseExports(sourceCode, filePath));
-
-          // Parse imports from the AST
-          let rawImports = parseImports(sourceCode, filePath);
+          if (cachedAnalysis) {
+            rawImports = cachedAnalysis.rawImports;
+            fileMetricsMap.set(filePath, cachedAnalysis.metrics);
+            fileExportsMap.set(filePath, cachedAnalysis.rawExports);
+          } else {
+            const sourceCode = await fs.readFile(filePath, 'utf-8');
+            const metrics = computeFileMetrics(sourceCode, filePath);
+            const rawExports = parseExports(sourceCode, filePath);
+            rawImports = parseImports(sourceCode, filePath);
+            fileMetricsMap.set(filePath, metrics);
+            fileExportsMap.set(filePath, rawExports);
+            analysisCache?.set(filePath, {
+              signature,
+              rawImports,
+              rawExports,
+              metrics,
+            });
+          }
 
           // Filter based on options
           if (!includeTypeImports) {
@@ -590,6 +616,7 @@ export async function scanProject(options: ScanOptions): Promise<ScanResult> {
           unresolvedImports.push(...fileUnresolvedImports);
           unresolvedImportsByFile.set(filePath, fileUnresolvedImports);
         } catch (err) {
+          analysisCache?.delete(filePath);
           errors.push({
             filePath,
             error: (err as Error).message,
@@ -674,8 +701,7 @@ export async function scanProject(options: ScanOptions): Promise<ScanResult> {
   }
 
   // ── Step 7: Detect orphan files ─────────────────────────────────────
-  const orphanFiles = detectOrphanFiles(graph, { entryPointPatterns });
-  const effectiveEntryPointPatterns = entryPointPatterns ?? DEFAULT_ENTRY_POINT_PATTERNS;
+  const orphanFiles = detectOrphanFiles(graph, { entryPointPatterns: effectiveEntryPointPatterns });
   const entryPointFiles = new Set(
     graph.nodes
       .filter((node) => matchesAnyPattern(node.relativePath, effectiveEntryPointPatterns))
