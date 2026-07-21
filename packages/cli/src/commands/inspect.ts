@@ -16,15 +16,9 @@ import { scanProject } from '@depxray/core';
 
 export function createInspectCommand(): Command {
   const cmd = new Command('inspect')
-    .description(
-      "Inspect a single file's dependencies — shows what it imports and what imports it",
-    )
+    .description("Inspect a single file's dependencies — shows what it imports and what imports it")
     .argument('<file>', 'File to inspect (relative or absolute path)')
-    .option(
-      '-d, --dir <dir>',
-      'Project root directory (default: current directory)',
-      '.',
-    )
+    .option('-d, --dir <dir>', 'Project root directory (default: current directory)', '.')
     .option('-f, --format <format>', 'Output format: text | json', 'text')
     .action(async (file: string, opts) => {
       try {
@@ -92,9 +86,7 @@ export function createInspectCommand(): Command {
           const lines: string[] = [];
 
           lines.push('');
-          lines.push(
-            `  📄 ${node.relativePath}${node.isCircular ? ' 🔴 CIRCULAR' : ''}`,
-          );
+          lines.push(`  📄 ${node.relativePath}${node.isCircular ? ' 🔴 CIRCULAR' : ''}`);
           lines.push(`     Extension: ${node.extension}`);
           lines.push(`     Imports:   ${node.outDegree} files`);
           lines.push(`     Used by:   ${node.inDegree} files`);
@@ -128,14 +120,12 @@ export function createInspectCommand(): Command {
             lines.push('  📥 This file imports:');
             for (const edge of imports) {
               const rel = path.relative(rootDir, edge.target);
-              const names = edge.importedNames.length > 0
-                ? ` { ${edge.importedNames.join(', ')} }`
-                : '';
+              const names =
+                edge.importedNames.length > 0 ? ` { ${edge.importedNames.join(', ')} }` : '';
               const flags: string[] = [];
               if (edge.isTypeOnly) flags.push('type-only');
               if (edge.isDynamic) flags.push('dynamic');
-              const flagStr =
-                flags.length > 0 ? ` (${flags.join(', ')})` : '';
+              const flagStr = flags.length > 0 ? ` (${flags.join(', ')})` : '';
               lines.push(`     → ${rel}${names}${flagStr}`);
             }
           }
@@ -145,9 +135,8 @@ export function createInspectCommand(): Command {
             lines.push('  📤 Imported by:');
             for (const edge of importedBy) {
               const rel = path.relative(rootDir, edge.source);
-              const names = edge.importedNames.length > 0
-                ? ` { ${edge.importedNames.join(', ')} }`
-                : '';
+              const names =
+                edge.importedNames.length > 0 ? ` { ${edge.importedNames.join(', ')} }` : '';
               lines.push(`     ← ${rel}${names}`);
             }
           }

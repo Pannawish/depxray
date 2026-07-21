@@ -1,9 +1,5 @@
 import type { GraphBreadcrumb, DependencyPathResult } from '../graphScope.js';
-import type {
-  FileNeighborhoodDepth,
-  FolderBoundaryMode,
-  GraphScopeMode,
-} from '../types.js';
+import type { FileNeighborhoodDepth, FolderBoundaryMode, GraphScopeMode } from '../types.js';
 
 interface GraphContextBarProps {
   scopeMode: GraphScopeMode;
@@ -71,7 +67,7 @@ export function GraphContextBar({
             value={neighborhoodDepth}
             onChange={(event) => {
               const value = event.target.value;
-              onNeighborhoodDepthChange(value === 'all' ? 'all' : Number(value) as 1 | 2);
+              onNeighborhoodDepthChange(value === 'all' ? 'all' : (Number(value) as 1 | 2));
             }}
           >
             <option value="1">Direct</option>
@@ -104,7 +100,9 @@ export function GraphContextBar({
             {index > 0 ? <span className="graph-breadcrumb-separator">/</span> : null}
             <button
               onClick={() => onBreadcrumbSelect(breadcrumb.id)}
-              title={breadcrumb.kind === 'directory' ? 'Open folder scope' : 'Open file neighborhood'}
+              title={
+                breadcrumb.kind === 'directory' ? 'Open folder scope' : 'Open file neighborhood'
+              }
               type="button"
             >
               {breadcrumb.label}
@@ -114,9 +112,15 @@ export function GraphContextBar({
       </nav>
 
       {pathResult && pathLabel ? (
-        <div className={pathResult.connected ? 'graph-path-notice connected' : 'graph-path-notice disconnected'}>
+        <div
+          className={
+            pathResult.connected ? 'graph-path-notice connected' : 'graph-path-notice disconnected'
+          }
+        >
           <span>{pathLabel}</span>
-          <button onClick={onClearPath} title="Clear dependency path" type="button">×</button>
+          <button onClick={onClearPath} title="Clear dependency path" type="button">
+            ×
+          </button>
         </div>
       ) : null}
     </div>

@@ -1,7 +1,4 @@
-import {
-  buildStructureGraph,
-  scanFileTree,
-} from '@depxray/core';
+import { buildStructureGraph, scanFileTree } from '@depxray/core';
 import type { GraphMode } from './shared.js';
 import {
   resolveRootDir,

@@ -10,7 +10,7 @@ export const CHECK_ISSUE_TYPES = [
   'importConventionViolations',
 ] as const;
 
-export type CheckIssueType = typeof CHECK_ISSUE_TYPES[number];
+export type CheckIssueType = (typeof CHECK_ISSUE_TYPES)[number];
 export type CheckSummary = Record<CheckIssueType, number>;
 export type CheckIssueDetails = Record<CheckIssueType, string[]>;
 
@@ -32,27 +32,38 @@ function sorted(values: Iterable<string>): string[] {
 
 export function collectCheckIssues(result: ScanResult): CheckIssueDetails {
   return {
-    circularDependencies: sorted(result.graph.circularDependencies.map((cycle) => (
-      cycle.chain.slice(0, -1).sort().join(' ↔ ')
-    ))),
+    circularDependencies: sorted(
+      result.graph.circularDependencies.map((cycle) =>
+        cycle.chain.slice(0, -1).sort().join(' ↔ '),
+      ),
+    ),
     orphanFiles: sorted(result.orphanFiles),
-    unusedExports: sorted(result.graph.nodes.flatMap((node) => (
-      (node.unusedExports ?? []).map((item) => `${node.relativePath}:${item.line}:${item.name}`)
-    ))),
-    unresolvedImports: sorted(result.unresolvedImports.map((item) => (
-      `${item.file}:${item.line}:${item.importSpecifier}`
-    ))),
-    architectureErrors: sorted((result.ruleValidation?.violations ?? [])
-      .filter((item) => item.severity === 'error')
-      .map((item) => (
-        `${item.source} -> ${item.target}:${item.importSpecifier}${item.entryPoint ? ` [${item.entryPoint}]` : ''}`
-      ))),
-    devDepsInProd: sorted((result.devDepsInProd ?? []).map((item) => (
-      `${item.file}:${item.line}:${item.module} [${item.entryPoint}]`
-    ))),
-    importConventionViolations: sorted((result.importConventionViolations ?? []).map((item) => (
-      `${item.file}:${item.line}:${item.importSpecifier} -> ${item.suggestedSpecifier}`
-    ))),
+    unusedExports: sorted(
+      result.graph.nodes.flatMap((node) =>
+        (node.unusedExports ?? []).map((item) => `${node.relativePath}:${item.line}:${item.name}`),
+      ),
+    ),
+    unresolvedImports: sorted(
+      result.unresolvedImports.map((item) => `${item.file}:${item.line}:${item.importSpecifier}`),
+    ),
+    architectureErrors: sorted(
+      (result.ruleValidation?.violations ?? [])
+        .filter((item) => item.severity === 'error')
+        .map(
+          (item) =>
+            `${item.source} -> ${item.target}:${item.importSpecifier}${item.entryPoint ? ` [${item.entryPoint}]` : ''}`,
+        ),
+    ),
+    devDepsInProd: sorted(
+      (result.devDepsInProd ?? []).map(
+        (item) => `${item.file}:${item.line}:${item.module} [${item.entryPoint}]`,
+      ),
+    ),
+    importConventionViolations: sorted(
+      (result.importConventionViolations ?? []).map(
+        (item) => `${item.file}:${item.line}:${item.importSpecifier} -> ${item.suggestedSpecifier}`,
+      ),
+    ),
   };
 }
 
@@ -68,10 +79,7 @@ export function buildCheckSummary(result: ScanResult): CheckResultSummary {
   };
 }
 
-export function compareCheckResults(
-  baseline: ScanResult,
-  current: ScanResult,
-): BaselineComparison {
+export function compareCheckResults(baseline: ScanResult, current: ScanResult): BaselineComparison {
   const baselineIssues = collectCheckIssues(baseline);
   const currentIssues = collectCheckIssues(current);
   const newIssues = {} as CheckIssueDetails;
@@ -88,6 +96,9 @@ export function compareCheckResults(
     newIssues,
     resolvedIssues,
     newIssueCount: CHECK_ISSUE_TYPES.reduce((total, type) => total + newIssues[type].length, 0),
-    resolvedIssueCount: CHECK_ISSUE_TYPES.reduce((total, type) => total + resolvedIssues[type].length, 0),
+    resolvedIssueCount: CHECK_ISSUE_TYPES.reduce(
+      (total, type) => total + resolvedIssues[type].length,
+      0,
+    ),
   };
 }

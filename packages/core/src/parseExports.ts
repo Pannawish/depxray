@@ -1,6 +1,6 @@
 import { parse, type ParserPlugin } from '@babel/parser';
 import traverse from '@babel/traverse';
-import type { ExportSpecifier, Identifier, ObjectPattern, ArrayPattern, AssignmentPattern, RestElement, LVal } from '@babel/types';
+import type { ExportSpecifier, Identifier, LVal } from '@babel/types';
 import type { RawExportInfo } from './types.js';
 
 function getParserPlugins(filePath: string): ParserPlugin[] {
@@ -129,15 +129,16 @@ export function parseExports(sourceCode: string, filePath: string): RawExportInf
       const line = path.node.loc?.start.line ?? 0;
       const declaration = path.node.declaration;
       if (declaration) {
-        const names = declarationNames(declaration as {
-          type: string;
-          declarations?: Array<{ id: LVal }>;
-          id?: Identifier | null;
-        });
-        const isTypeOnly = (
-          declaration.type === 'TSTypeAliasDeclaration' ||
-          declaration.type === 'TSInterfaceDeclaration'
+        const names = declarationNames(
+          declaration as {
+            type: string;
+            declarations?: Array<{ id: LVal }>;
+            id?: Identifier | null;
+          },
         );
+        const isTypeOnly =
+          declaration.type === 'TSTypeAliasDeclaration' ||
+          declaration.type === 'TSInterfaceDeclaration';
 
         for (const name of names) {
           exports.push({

@@ -11,14 +11,14 @@
     },
     "./graph-contract": {
       "types": "./dist/graphContract.d.ts",
-      "default": "./dist/graphContract.js"
+      "default": "./dist/graphContract.mjs"
     }
   },
   "files": [
     "dist"
   ],
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && node ./scripts/build-graph-contract.mjs",
     "typecheck": "tsc --noEmit",
     "dev": "tsc --watch",
     "test": "vitest run",
@@ -32,9 +32,10 @@
   },
   "devDependencies": {
     "typescript": "^5.4.0",
-    "vitest": "^1.6.0",
+    "vitest": "^3.2.6",
     "@types/babel__traverse": "^7.20.0",
-    "@types/node": "^20.0.0"
+    "@types/node": "^20.0.0",
+    "esbuild": "^0.25.12"
   },
   "keywords": [
     "dependency-graph",

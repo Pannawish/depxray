@@ -34,9 +34,7 @@ describe('loadAliases', () => {
 
   it('should return empty array when no paths are configured', () => {
     // The circular-project fixture has no tsconfig
-    const aliases = loadAliases(
-      path.join(FIXTURES_DIR, 'circular-project'),
-    );
+    const aliases = loadAliases(path.join(FIXTURES_DIR, 'circular-project'));
     expect(aliases).toEqual([]);
   });
 

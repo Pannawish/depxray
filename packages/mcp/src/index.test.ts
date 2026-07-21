@@ -12,10 +12,7 @@ describe('Depxray MCP server', () => {
       version: '1.0.0',
     });
 
-    await Promise.all([
-      server.connect(serverTransport),
-      client.connect(clientTransport),
-    ]);
+    await Promise.all([server.connect(serverTransport), client.connect(clientTransport)]);
 
     try {
       const result = await client.listTools();

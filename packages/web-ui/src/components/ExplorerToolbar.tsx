@@ -63,9 +63,9 @@ export function ExplorerToolbar({
             value={searchTerm}
           />
           {searchTerm && (
-            <button 
-              className="search-clear-btn" 
-              onClick={() => onSearchChange('')} 
+            <button
+              className="search-clear-btn"
+              onClick={() => onSearchChange('')}
               title="Clear search"
               type="button"
             >
@@ -152,7 +152,10 @@ export function ExplorerToolbar({
             <span className="label">Imports</span>
             <span className="val">{totalImports}</span>
           </div>
-          <div className="stat-pill highlight" title="Currently visible nodes in the Project Explorer">
+          <div
+            className="stat-pill highlight"
+            title="Currently visible nodes in the Project Explorer"
+          >
             <span className="label">Visible</span>
             <span className="val">{visibleRows}</span>
           </div>

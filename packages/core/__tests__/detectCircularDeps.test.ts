@@ -31,9 +31,7 @@ function makeResolved(source: string, resolvedPath: string): ResolvedImport {
   };
 }
 
-function buildTestGraph(
-  edges: Array<[string, string]>,
-): DependencyGraph {
+function buildTestGraph(edges: Array<[string, string]>): DependencyGraph {
   const fileImports = new Map<string, ResolvedImport[]>();
   const allFiles = new Set<string>();
 
@@ -43,9 +41,7 @@ function buildTestGraph(
   }
 
   for (const file of allFiles) {
-    const imports = edges
-      .filter(([from]) => from === file)
-      .map(([, to]) => makeResolved(to, to));
+    const imports = edges.filter(([from]) => from === file).map(([, to]) => makeResolved(to, to));
     fileImports.set(file, imports);
   }
 
@@ -143,12 +139,6 @@ describe('detectCircularDeps', () => {
     const B = `${ROOT_DIR}/src/B.ts`;
     const standalone = `${ROOT_DIR}/src/standalone.ts`;
 
-    const graph = buildTestGraph([
-      [A, B],
-      [B, A],
-      // standalone has no edges at all
-    ]);
-
     // Manually add standalone as a file with no imports
     const fileImports = new Map<string, ResolvedImport[]>();
     fileImports.set(A, [makeResolved('./B', B)]);
@@ -158,9 +148,7 @@ describe('detectCircularDeps', () => {
 
     detectCircularDeps(fullGraph);
 
-    const standaloneNode = fullGraph.nodes.find(
-      (n) => n.id === standalone,
-    )!;
+    const standaloneNode = fullGraph.nodes.find((n) => n.id === standalone)!;
     expect(standaloneNode.isCircular).toBe(false);
   });
 

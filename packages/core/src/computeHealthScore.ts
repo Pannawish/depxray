@@ -57,9 +57,10 @@ export function computeHealthScore(result: ScanResult): HealthScoreResult {
   const complexityValues = result.graph.nodes
     .map((node) => node.metrics?.cyclomaticComplexity ?? 0)
     .filter((complexity) => complexity > 0);
-  const averageComplexity = complexityValues.length === 0
-    ? 0
-    : complexityValues.reduce((sum, value) => sum + value, 0) / complexityValues.length;
+  const averageComplexity =
+    complexityValues.length === 0
+      ? 0
+      : complexityValues.reduce((sum, value) => sum + value, 0) / complexityValues.length;
   let score = 100;
 
   score -= Math.min(25, issues.circularChains * 5);
@@ -78,11 +79,12 @@ export function computeHealthScore(result: ScanResult): HealthScoreResult {
   const finalScore = clampScore(score);
   const hotspots = [...result.graph.nodes]
     .filter((node) => node.metrics)
-    .sort((a, b) => (
-      (b.metrics?.cyclomaticComplexity ?? 0) - (a.metrics?.cyclomaticComplexity ?? 0)
-      || (b.metrics?.loc ?? 0) - (a.metrics?.loc ?? 0)
-      || a.relativePath.localeCompare(b.relativePath)
-    ))
+    .sort(
+      (a, b) =>
+        (b.metrics?.cyclomaticComplexity ?? 0) - (a.metrics?.cyclomaticComplexity ?? 0) ||
+        (b.metrics?.loc ?? 0) - (a.metrics?.loc ?? 0) ||
+        a.relativePath.localeCompare(b.relativePath),
+    )
     .slice(0, 5)
     .map((node) => ({
       file: node.relativePath,
@@ -90,11 +92,12 @@ export function computeHealthScore(result: ScanResult): HealthScoreResult {
       loc: node.metrics?.loc ?? 0,
     }));
   const hubs = [...result.graph.nodes]
-    .sort((a, b) => (
-      b.inDegree - a.inDegree
-      || b.outDegree - a.outDegree
-      || a.relativePath.localeCompare(b.relativePath)
-    ))
+    .sort(
+      (a, b) =>
+        b.inDegree - a.inDegree ||
+        b.outDegree - a.outDegree ||
+        a.relativePath.localeCompare(b.relativePath),
+    )
     .slice(0, 5)
     .map((node) => ({
       file: node.relativePath,

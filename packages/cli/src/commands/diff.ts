@@ -66,7 +66,9 @@ async function gitOutput(args: string[], cwd: string): Promise<Buffer> {
 }
 
 async function createSnapshotFromGitRef(rootDir: string, ref: string): Promise<string> {
-  const gitRoot = (await gitOutput(['rev-parse', '--show-toplevel'], rootDir)).toString('utf-8').trim();
+  const gitRoot = (await gitOutput(['rev-parse', '--show-toplevel'], rootDir))
+    .toString('utf-8')
+    .trim();
   const relativeRoot = path.relative(gitRoot, rootDir).replaceAll('\\', '/');
   const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'depxray-diff-'));
   const treeArgs = ['ls-tree', '-r', '--name-only', ref];
@@ -74,16 +76,11 @@ async function createSnapshotFromGitRef(rootDir: string, ref: string): Promise<s
     treeArgs.push('--', relativeRoot);
   }
 
-  const files = (await gitOutput(treeArgs, gitRoot))
-    .toString('utf-8')
-    .split('\n')
-    .filter(Boolean);
+  const files = (await gitOutput(treeArgs, gitRoot)).toString('utf-8').split('\n').filter(Boolean);
 
   for (const file of files) {
     const content = await gitOutput(['show', `${ref}:${file}`], gitRoot);
-    const outputRelativePath = relativeRoot
-      ? path.relative(relativeRoot, file)
-      : file;
+    const outputRelativePath = relativeRoot ? path.relative(relativeRoot, file) : file;
     const outputPath = path.join(tempDir, outputRelativePath);
     await fs.mkdir(path.dirname(outputPath), { recursive: true });
     await fs.writeFile(outputPath, content);
@@ -105,40 +102,46 @@ export function createDiffCommand(): Command {
     .option('--json', 'Print machine-readable diff JSON')
     .option('--base <ref>', 'Compare the current working tree against a git ref')
     .option('-d, --dir <dir>', 'Project directory for --base comparison', '.')
-    .action(async (before: string | undefined, after: string | undefined, options: DiffCommandOptions) => {
-      let tempDir: string | null = null;
+    .action(
+      async (
+        before: string | undefined,
+        after: string | undefined,
+        options: DiffCommandOptions,
+      ) => {
+        let tempDir: string | null = null;
 
-      try {
-        let beforeSnapshot: unknown;
-        let afterSnapshot: unknown;
+        try {
+          let beforeSnapshot: unknown;
+          let afterSnapshot: unknown;
 
-        if (options.base) {
-          const rootDir = path.resolve(options.dir ?? '.');
-          tempDir = await createSnapshotFromGitRef(rootDir, options.base);
-          beforeSnapshot = await scanSnapshot(tempDir);
-          afterSnapshot = await scanSnapshot(rootDir);
-        } else {
-          if (!before || !after) {
-            throw new Error('Provide two graph JSON files, or use --base <ref>.');
+          if (options.base) {
+            const rootDir = path.resolve(options.dir ?? '.');
+            tempDir = await createSnapshotFromGitRef(rootDir, options.base);
+            beforeSnapshot = await scanSnapshot(tempDir);
+            afterSnapshot = await scanSnapshot(rootDir);
+          } else {
+            if (!before || !after) {
+              throw new Error('Provide two graph JSON files, or use --base <ref>.');
+            }
+
+            beforeSnapshot = await readJsonFile(before);
+            afterSnapshot = await readJsonFile(after);
           }
 
-          beforeSnapshot = await readJsonFile(before);
-          afterSnapshot = await readJsonFile(after);
+          const diff = diffGraphs(beforeSnapshot as any, afterSnapshot as any);
+          process.stdout.write(
+            options.json ? `${JSON.stringify(diff, null, 2)}\n` : formatDiffText(diff),
+          );
+        } catch (err) {
+          console.error(`Diff failed: ${(err as Error).message}`);
+          process.exit(1);
+        } finally {
+          if (tempDir) {
+            await fs.rm(tempDir, { recursive: true, force: true });
+          }
         }
-
-        const diff = diffGraphs(beforeSnapshot as any, afterSnapshot as any);
-        process.stdout.write(options.json
-          ? `${JSON.stringify(diff, null, 2)}\n`
-          : formatDiffText(diff));
-      } catch (err) {
-        console.error(`Diff failed: ${(err as Error).message}`);
-        process.exit(1);
-      } finally {
-        if (tempDir) {
-          await fs.rm(tempDir, { recursive: true, force: true });
-        }
-      }
-    });
+      },
+    );
 
   return cmd;
 }

@@ -1,8 +1,4 @@
-import type {
-  RawExportInfo,
-  ResolvedImport,
-  UnusedExport,
-} from './types.js';
+import type { RawExportInfo, ResolvedImport, UnusedExport } from './types.js';
 
 interface DetectUnusedExportsOptions {
   entryPointFiles?: Set<string>;
@@ -24,10 +20,7 @@ function pushMapValue<TKey, TValue>(
   return true;
 }
 
-function markAllUsed(
-  filePath: string,
-  allUsedFiles: Set<string>,
-): boolean {
+function markAllUsed(filePath: string, allUsedFiles: Set<string>): boolean {
   if (allUsedFiles.has(filePath)) {
     return false;
   }
@@ -49,9 +42,11 @@ export function detectUnusedExports(
   for (const [filePath, exports] of fileExportsMap.entries()) {
     directExportNamesByFile.set(
       filePath,
-      new Set(exports
-        .filter((exportInfo) => exportInfo.kind !== 'export_all')
-        .map((exportInfo) => exportInfo.name)),
+      new Set(
+        exports
+          .filter((exportInfo) => exportInfo.kind !== 'export_all')
+          .map((exportInfo) => exportInfo.name),
+      ),
     );
   }
 
@@ -94,13 +89,14 @@ export function detectUnusedExports(
             continue;
           }
 
-          const targetFile = fileImportsMap.get(filePath)
-            ?.find((resolvedImport) => (
-              resolvedImport.raw.line === exportInfo.line &&
-              resolvedImport.raw.source === exportInfo.source &&
-              resolvedImport.resolvedPath
-            ))
-            ?.resolvedPath;
+          const targetFile = fileImportsMap
+            .get(filePath)
+            ?.find(
+              (resolvedImport) =>
+                resolvedImport.raw.line === exportInfo.line &&
+                resolvedImport.raw.source === exportInfo.source &&
+                resolvedImport.resolvedPath,
+            )?.resolvedPath;
           if (!targetFile) {
             continue;
           }
@@ -110,11 +106,12 @@ export function detectUnusedExports(
             continue;
           }
 
-          changed = pushMapValue(
-            directUsedNamesByFile,
-            targetFile,
-            exportInfo.sourceExportName ?? exportInfo.name,
-          ) || changed;
+          changed =
+            pushMapValue(
+              directUsedNamesByFile,
+              targetFile,
+              exportInfo.sourceExportName ?? exportInfo.name,
+            ) || changed;
         }
       }
 
@@ -123,13 +120,14 @@ export function detectUnusedExports(
           continue;
         }
 
-        const targetFile = fileImportsMap.get(filePath)
-          ?.find((resolvedImport) => (
-            resolvedImport.raw.line === exportInfo.line &&
-            resolvedImport.raw.source === exportInfo.source &&
-            resolvedImport.resolvedPath
-          ))
-          ?.resolvedPath;
+        const targetFile = fileImportsMap
+          .get(filePath)
+          ?.find(
+            (resolvedImport) =>
+              resolvedImport.raw.line === exportInfo.line &&
+              resolvedImport.raw.source === exportInfo.source &&
+              resolvedImport.resolvedPath,
+          )?.resolvedPath;
         if (!targetFile) {
           continue;
         }
@@ -145,11 +143,12 @@ export function detectUnusedExports(
         }
 
         if (usedNames.has(exportInfo.name)) {
-          changed = pushMapValue(
-            directUsedNamesByFile,
-            targetFile,
-            exportInfo.sourceExportName ?? exportInfo.name,
-          ) || changed;
+          changed =
+            pushMapValue(
+              directUsedNamesByFile,
+              targetFile,
+              exportInfo.sourceExportName ?? exportInfo.name,
+            ) || changed;
         }
       }
     }
@@ -169,7 +168,12 @@ export function detectUnusedExports(
       .filter((exportInfo) => !markAll && !usedNames.has(exportInfo.name))
       .map<UnusedExport>((exportInfo) => ({
         name: exportInfo.name,
-        kind: exportInfo.kind === 'default' ? 'default' : exportInfo.kind === 'reexport' ? 'reexport' : 'named',
+        kind:
+          exportInfo.kind === 'default'
+            ? 'default'
+            : exportInfo.kind === 'reexport'
+              ? 'reexport'
+              : 'named',
         isTypeOnly: exportInfo.isTypeOnly,
         line: exportInfo.line,
       }))

@@ -6,14 +6,9 @@ import type {
   ExplorerGraphSet as CoreExplorerGraphSet,
   GraphEdge,
   GraphNode,
-  StructureGraphEdge,
-  StructureGraphNode,
 } from '@depxray/core';
 
-export type {
-  StructureGraphEdge,
-  StructureGraphNode,
-} from '@depxray/core';
+export type { StructureGraphEdge, StructureGraphNode } from '@depxray/core';
 
 export type DependencyGraphEdge = GraphEdge;
 export type DependencyGraphNode = GraphNode;

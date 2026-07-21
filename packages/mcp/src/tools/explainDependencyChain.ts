@@ -1,12 +1,5 @@
-import {
-  findDependencyChain,
-} from '@depxray/core';
-import {
-  assertPathInsideRoot,
-  resolveProjectPath,
-  resolveRootDir,
-  scanProject,
-} from './shared.js';
+import { findDependencyChain } from '@depxray/core';
+import { assertPathInsideRoot, resolveProjectPath, resolveRootDir, scanProject } from './shared.js';
 
 export interface ExplainDependencyChainInput {
   rootDir?: string;

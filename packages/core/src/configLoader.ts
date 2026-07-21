@@ -44,9 +44,7 @@ function stripJsonComments(jsonString: string): string {
  * Read and parse a JSON config file, handling comments and trailing commas
  * (which are allowed in tsconfig.json but not standard JSON).
  */
-function readJsonConfig(
-  configPath: string,
-): Record<string, unknown> | null {
+function readJsonConfig(configPath: string): Record<string, unknown> | null {
   try {
     const raw = fs.readFileSync(configPath, 'utf-8');
     const cleaned = stripJsonComments(raw);
@@ -111,8 +109,8 @@ function resolveExtendsChain(
       ...parentConfig,
       ...config,
       compilerOptions: {
-        ...(parentConfig.compilerOptions as Record<string, unknown> || {}),
-        ...(config.compilerOptions as Record<string, unknown> || {}),
+        ...((parentConfig.compilerOptions as Record<string, unknown>) || {}),
+        ...((config.compilerOptions as Record<string, unknown>) || {}),
       },
     };
   }
@@ -163,16 +161,12 @@ export function loadAliases(rootDir: string): AliasMapping[] {
 
     const absoluteBaseUrl = path.resolve(rootDir, baseUrl);
 
-    const aliases: AliasMapping[] = Object.entries(paths).map(
-      ([pattern, targets]) => ({
-        // Remove the wildcard: '@/*' → '@/'
-        prefix: pattern.replace(/\*$/, ''),
-        // Resolve each target to an absolute path, remove wildcard
-        paths: targets.map((t) =>
-          path.resolve(absoluteBaseUrl, t.replace(/\*$/, '')),
-        ),
-      }),
-    );
+    const aliases: AliasMapping[] = Object.entries(paths).map(([pattern, targets]) => ({
+      // Remove the wildcard: '@/*' → '@/'
+      prefix: pattern.replace(/\*$/, ''),
+      // Resolve each target to an absolute path, remove wildcard
+      paths: targets.map((t) => path.resolve(absoluteBaseUrl, t.replace(/\*$/, ''))),
+    }));
 
     return aliases;
   }

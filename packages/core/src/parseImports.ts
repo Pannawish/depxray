@@ -80,10 +80,7 @@ function getParserPlugins(filePath: string): ParserPlugin[] {
  * // ]
  * ```
  */
-export function parseImports(
-  sourceCode: string,
-  filePath: string,
-): RawImportInfo[] {
+export function parseImports(sourceCode: string, filePath: string): RawImportInfo[] {
   const plugins = getParserPlugins(filePath);
 
   // Parse the source code into an AST.
@@ -156,9 +153,7 @@ export function parseImports(
         const specifiers = path.node.specifiers.map((s) => {
           if (s.type === 'ExportSpecifier') {
             const exported = s.exported;
-            return exported.type === 'Identifier'
-              ? exported.name
-              : exported.value;
+            return exported.type === 'Identifier' ? exported.name : exported.value;
           }
           return '';
         });
@@ -167,18 +162,17 @@ export function parseImports(
           source: path.node.source.value,
           specifiers: specifiers.filter(Boolean),
           referencedExports: path.node.specifiers
-            .filter((specifier): specifier is typeof specifier & { type: 'ExportSpecifier' } => (
-              specifier.type === 'ExportSpecifier'
-            ))
-            .map((specifier) => (
+            .filter(
+              (specifier): specifier is typeof specifier & { type: 'ExportSpecifier' } =>
+                specifier.type === 'ExportSpecifier',
+            )
+            .map((specifier) =>
               'name' in specifier.local
                 ? specifier.local.name
-                : (
-                  specifier.exported.type === 'Identifier'
-                    ? specifier.exported.name
-                    : specifier.exported.value
-                )
-            )),
+                : specifier.exported.type === 'Identifier'
+                  ? specifier.exported.name
+                  : specifier.exported.value,
+            ),
           isTypeOnly: path.node.exportKind === 'type',
           isDynamic: false,
           line: path.node.loc?.start.line ?? 0,

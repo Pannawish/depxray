@@ -45,14 +45,16 @@ function createResult(): ScanResult {
     totalImports: 0,
     circularCount: 1,
     orphanFiles: ['src/index.ts'],
-    unresolvedImports: [{
-      file: 'src/index.ts',
-      absoluteFilePath: '/project/src/index.ts',
-      importSpecifier: './missing',
-      line: 1,
-      isTypeOnly: false,
-      isDynamic: false,
-    }],
+    unresolvedImports: [
+      {
+        file: 'src/index.ts',
+        absoluteFilePath: '/project/src/index.ts',
+        importSpecifier: './missing',
+        line: 1,
+        isTypeOnly: false,
+        isDynamic: false,
+      },
+    ],
     errors: [],
     durationMs: 1,
   };

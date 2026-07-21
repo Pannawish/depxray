@@ -7,10 +7,7 @@ import type {
 import { filterTreeByDepth } from './filterTreeByDepth.js';
 
 function countDescendants(node: FileTreeNode): number {
-  return node.children.reduce(
-    (count, child) => count + 1 + countDescendants(child),
-    0,
-  );
+  return node.children.reduce((count, child) => count + 1 + countDescendants(child), 0);
 }
 
 export function buildStructureGraph(

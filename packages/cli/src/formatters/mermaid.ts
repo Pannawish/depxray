@@ -41,11 +41,7 @@ export function formatAsMermaid(result: ScanResult): string {
     }
 
     const arrow = edge.isTypeOnly || edge.isCrossPackage ? '-.->' : '-->';
-    const label = edge.isDynamic
-      ? '|dynamic|'
-      : edge.isCrossPackage
-        ? '|cross-package|'
-        : '';
+    const label = edge.isDynamic ? '|dynamic|' : edge.isCrossPackage ? '|cross-package|' : '';
     lines.push(`  ${sourceId} ${arrow}${label} ${targetId}`);
   }
 

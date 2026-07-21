@@ -29,3 +29,6 @@ Thumbs.db
 *.log
 *.tgz
 .react-dependency-graph/
+.depxray/
+playwright-report/
+test-results/

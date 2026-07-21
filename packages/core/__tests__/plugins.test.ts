@@ -106,7 +106,7 @@ describe('plugin hooks', () => {
   });
 
   it('formats dependency diffs with the built-in GitHub PR plugin', async () => {
-    const result = await runReportHooks(
+    const result = (await runReportHooks(
       {
         addedFiles: ['src/new.ts'],
         removedFiles: [],
@@ -117,7 +117,7 @@ describe('plugin hooks', () => {
       },
       [BUILT_IN_PLUGINS['@depxray/plugin-github-pr']],
       { rootDir: '/project' },
-    ) as { markdownComment?: string };
+    )) as { markdownComment?: string };
 
     expect(result.markdownComment).toContain('depxray Dependency Report');
     expect(result.markdownComment).toContain('Added files');

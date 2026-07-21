@@ -6,10 +6,7 @@ import {
   assertExplorerGraphSet,
   GRAPH_PAYLOAD_SCHEMA_VERSION,
 } from '../src/graphContract.js';
-import {
-  createDependencyGraphPayload,
-  createStructureGraphPayload,
-} from '../src/graphPayload.js';
+import { createDependencyGraphPayload, createStructureGraphPayload } from '../src/graphPayload.js';
 import { scanFileTree } from '../src/scanFileTree.js';
 import { scanProject } from '../src/scanProject.js';
 
@@ -47,20 +44,24 @@ describe('graph payload contract', () => {
   });
 
   it('rejects incompatible graph data before consumers render it', () => {
-    expect(() => assertExplorerGraphData({
-      schemaVersion: '2.0.0',
-      mode: 'dependencies',
-      nodes: [],
-      edges: [],
-    })).toThrow(/Unsupported depxray graph schema/);
+    expect(() =>
+      assertExplorerGraphData({
+        schemaVersion: '2.0.0',
+        mode: 'dependencies',
+        nodes: [],
+        edges: [],
+      }),
+    ).toThrow(/Unsupported depxray graph schema/);
 
-    expect(() => assertExplorerGraphSet({
-      schemaVersion: GRAPH_PAYLOAD_SCHEMA_VERSION,
-      availableModes: ['dependencies'],
-      defaultMode: 'dependencies',
-      graphs: {
-        dependencies: { schemaVersion: '0.1.0' },
-      },
-    })).toThrow(/Unsupported depxray graph schema/);
+    expect(() =>
+      assertExplorerGraphSet({
+        schemaVersion: GRAPH_PAYLOAD_SCHEMA_VERSION,
+        availableModes: ['dependencies'],
+        defaultMode: 'dependencies',
+        graphs: {
+          dependencies: { schemaVersion: '0.1.0' },
+        },
+      }),
+    ).toThrow(/Unsupported depxray graph schema/);
   });
 });

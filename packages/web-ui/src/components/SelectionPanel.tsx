@@ -1,8 +1,4 @@
-import type {
-  FileRelationshipIndex,
-  FolderSummary,
-  ImpactSummary,
-} from '../relationshipIndex.js';
+import type { FileRelationshipIndex, FolderSummary, ImpactSummary } from '../relationshipIndex.js';
 import type { ExplorerGraphNode } from '../types.js';
 
 interface SelectionPanelProps {
@@ -74,11 +70,11 @@ export function SelectionPanel({
   if (!node) {
     return (
       <section className="details-panel">
-        <div 
-          className="panel-header draggable" 
+        <div
+          className="panel-header draggable"
           draggable
           onDragStart={onDragStart}
-          onDragOver={(e) => e.preventDefault()} 
+          onDragOver={(e) => e.preventDefault()}
           onDrop={onDrop}
           style={{ cursor: 'grab' }}
         >
@@ -90,7 +86,7 @@ export function SelectionPanel({
             </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <button 
+            <button
               className="swap-layout-btn"
               onClick={onSwapVertical}
               title="Swap vertical layout with Code Viewer"
@@ -98,7 +94,7 @@ export function SelectionPanel({
             >
               ⇅
             </button>
-            <button 
+            <button
               className="swap-layout-btn"
               onClick={onSwapHorizontal}
               title="Swap horizontal column with Project Tree"
@@ -128,11 +124,11 @@ export function SelectionPanel({
 
   return (
     <section className="details-panel">
-      <div 
-        className="panel-header draggable" 
+      <div
+        className="panel-header draggable"
         draggable
         onDragStart={onDragStart}
-        onDragOver={(e) => e.preventDefault()} 
+        onDragOver={(e) => e.preventDefault()}
         onDrop={onDrop}
         style={{ cursor: 'grab' }}
       >
@@ -143,7 +139,7 @@ export function SelectionPanel({
             <h2>{node.label}</h2>
           </div>
         </div>
-        
+
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           {!isDirectory && (
             <span className="code-viewer-stats">
@@ -151,7 +147,7 @@ export function SelectionPanel({
             </span>
           )}
           {hasCircular && (
-            <span 
+            <span
               style={{
                 fontSize: '0.72rem',
                 fontWeight: 'bold',
@@ -163,7 +159,7 @@ export function SelectionPanel({
                 border: '1px solid rgba(179, 58, 50, 0.2)',
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: '4px'
+                gap: '4px',
               }}
             >
               ⚠️ Circular
@@ -182,28 +178,22 @@ export function SelectionPanel({
                 border: '1px solid rgba(154, 91, 20, 0.2)',
                 display: 'inline-flex',
                 alignItems: 'center',
-                gap: '4px'
+                gap: '4px',
               }}
             >
               Orphan
             </span>
           )}
           {unusedExports.length > 0 && (
-            <span className="issue-chip unused">
-              Unused exports {unusedExports.length}
-            </span>
+            <span className="issue-chip unused">Unused exports {unusedExports.length}</span>
           )}
           {unresolvedImports.length > 0 && (
-            <span className="issue-chip unresolved">
-              Warning {unresolvedImports.length}
-            </span>
+            <span className="issue-chip unresolved">Warning {unresolvedImports.length}</span>
           )}
           {impact && impact.affectedCount > 0 ? (
-            <span className="issue-chip impact">
-              Impact {impact.affectedCount}
-            </span>
+            <span className="issue-chip impact">Impact {impact.affectedCount}</span>
           ) : null}
-          <button 
+          <button
             className="swap-layout-btn"
             onClick={onSwapVertical}
             title="Swap vertical layout with Code Viewer"
@@ -211,7 +201,7 @@ export function SelectionPanel({
           >
             ⇅
           </button>
-          <button 
+          <button
             className="swap-layout-btn"
             onClick={onSwapHorizontal}
             title="Swap horizontal column with Project Tree"
@@ -228,9 +218,15 @@ export function SelectionPanel({
         {node.extension ? <span>{node.extension}</span> : null}
         {node.isCircular ? <span className="danger">circular</span> : null}
         {node.isOrphan ? <span className="warning">orphan</span> : null}
-        {impact ? <span className={impact.risk === 'high' ? 'danger' : 'info'}>impact {impact.risk}</span> : null}
-        {unusedExports.length > 0 ? <span className="info">unused exports {unusedExports.length}</span> : null}
-        {unresolvedImports.length > 0 ? <span className="warning">unresolved imports {unresolvedImports.length}</span> : null}
+        {impact ? (
+          <span className={impact.risk === 'high' ? 'danger' : 'info'}>impact {impact.risk}</span>
+        ) : null}
+        {unusedExports.length > 0 ? (
+          <span className="info">unused exports {unusedExports.length}</span>
+        ) : null}
+        {unresolvedImports.length > 0 ? (
+          <span className="warning">unresolved imports {unresolvedImports.length}</span>
+        ) : null}
       </div>
 
       <dl className="detail-list">
@@ -244,8 +240,14 @@ export function SelectionPanel({
             <DetailRow label="Descendants" value={folderSummary.descendants} />
             <DetailRow label="Files under folder" value={folderSummary.totalFiles} />
             <DetailRow label="Internal imports" value={folderSummary.internalImports.length} />
-            <DetailRow label="Incoming external refs" value={folderSummary.incomingExternal.length} />
-            <DetailRow label="Outgoing external refs" value={folderSummary.outgoingExternal.length} />
+            <DetailRow
+              label="Incoming external refs"
+              value={folderSummary.incomingExternal.length}
+            />
+            <DetailRow
+              label="Outgoing external refs"
+              value={folderSummary.outgoingExternal.length}
+            />
             <DetailRow label="Circular files" value={folderSummary.circularFiles.length} />
             <DetailRow label="Orphan files" value={folderSummary.orphanFiles.length} />
           </>
@@ -261,7 +263,10 @@ export function SelectionPanel({
                 <DetailRow label="Lines of code" value={node.metrics.loc} />
                 <DetailRow label="Complexity" value={node.metrics.cyclomaticComplexity} />
                 <DetailRow label="Exports" value={node.metrics.exportCount} />
-                <DetailRow label="Instability" value={formatInstability(node.metrics.instability)} />
+                <DetailRow
+                  label="Instability"
+                  value={formatInstability(node.metrics.instability)}
+                />
               </>
             ) : null}
             <DetailRow label="Unused exports" value={unusedExports.length} />
@@ -272,7 +277,10 @@ export function SelectionPanel({
                 <DetailRow label="Affected dependents" value={impact.affectedCount} />
                 <DetailRow label="Direct dependents" value={impact.directDependentCount} />
                 <DetailRow label="Max impact depth" value={impact.maxDistance} />
-                <DetailRow label="High impact complex" value={impact.highImpactComplexFiles.length} />
+                <DetailRow
+                  label="High impact complex"
+                  value={impact.highImpactComplexFiles.length}
+                />
               </>
             ) : null}
             {node.componentName ? <DetailRow label="Component" value={node.componentName} /> : null}
@@ -292,9 +300,7 @@ export function SelectionPanel({
                 <strong>{formatExportLabel(unusedExport.kind, unusedExport.name)}</strong>
                 <span>
                   {unusedExport.kind}
-                  {unusedExport.isTypeOnly ? ' type-only' : ''}
-                  {' '}
-                  line {unusedExport.line}
+                  {unusedExport.isTypeOnly ? ' type-only' : ''} line {unusedExport.line}
                 </span>
               </div>
             ))}
@@ -332,21 +338,19 @@ export function SelectionPanel({
             <span>{impact.affectedCount}</span>
           </div>
           <div className="issue-list">
-            {impact.highImpactComplexFiles.length > 0 ? (
-              impact.highImpactComplexFiles.slice(0, 3).map((file) => (
-                <div className="issue-item impact" key={`impact-hot-${file.node.id}`}>
-                  <strong>{file.node.relativePath}</strong>
-                  <span>{formatRiskFactors(file.riskFactors)}</span>
-                </div>
-              ))
-            ) : null}
+            {impact.highImpactComplexFiles.length > 0
+              ? impact.highImpactComplexFiles.slice(0, 3).map((file) => (
+                  <div className="issue-item impact" key={`impact-hot-${file.node.id}`}>
+                    <strong>{file.node.relativePath}</strong>
+                    <span>{formatRiskFactors(file.riskFactors)}</span>
+                  </div>
+                ))
+              : null}
             {impact.affectedFiles.slice(0, 6).map((file) => (
               <div className="issue-item impact" key={`impact-${file.node.id}`}>
                 <strong>{file.node.relativePath}</strong>
                 <span>
-                  distance {file.distance}
-                  {' '}
-                  · risk {file.risk}
+                  distance {file.distance} · risk {file.risk}
                 </span>
               </div>
             ))}

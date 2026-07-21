@@ -33,11 +33,15 @@ describe('discoverFiles', () => {
   it('should ignore directories matching ignore patterns', async () => {
     // Create a node_modules dir in the fixture wouldn't be practical,
     // so we test that the default patterns don't cause errors
-    const files = await discoverFiles(SIMPLE_PROJECT, ['.ts', '.tsx'], [
-      'node_modules',
-      'dist',
-      'pages', // Ignore pages dir — should exclude Dashboard.tsx
-    ]);
+    const files = await discoverFiles(
+      SIMPLE_PROJECT,
+      ['.ts', '.tsx'],
+      [
+        'node_modules',
+        'dist',
+        'pages', // Ignore pages dir — should exclude Dashboard.tsx
+      ],
+    );
 
     // Should find everything except Dashboard.tsx (6 files)
     expect(files.length).toBe(6);

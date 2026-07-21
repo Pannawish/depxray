@@ -90,15 +90,9 @@ export function detectCircularDeps(graph: DependencyGraph): DependencyGraph {
 
           // Avoid duplicate cycle reports (same cycle can be found from
           // different starting nodes)
-          const key = [...relativeChain]
-            .slice(0, -1)
-            .sort()
-            .join('|');
+          const key = [...relativeChain].slice(0, -1).sort().join('|');
           const isDuplicate = cycles.some((c) => {
-            const existingKey = [...c.chain]
-              .slice(0, -1)
-              .sort()
-              .join('|');
+            const existingKey = [...c.chain].slice(0, -1).sort().join('|');
             return existingKey === key;
           });
 

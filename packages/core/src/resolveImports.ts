@@ -22,10 +22,7 @@ import { DEFAULT_EXTENSIONS } from './types.js';
  * - Not starting with '.' or '..'
  * - Not matching any configured alias prefix
  */
-function isExternalImport(
-  specifier: string,
-  aliases: AliasMapping[],
-): boolean {
+function isExternalImport(specifier: string, aliases: AliasMapping[]): boolean {
   // Relative imports are always local
   if (specifier.startsWith('.')) {
     return false;
@@ -55,13 +52,28 @@ function isExternalImport(
  *
  * @returns The resolved absolute path, or null if not found
  */
-function tryResolveFile(
-  basePath: string,
-  extensions: string[],
-): string | null {
+function tryResolveFile(basePath: string, extensions: string[]): string | null {
   // 1. Try exact match (e.g., importing a .json or .css file with extension)
   if (fs.existsSync(basePath) && fs.statSync(basePath).isFile()) {
     return basePath;
+  }
+
+  // TypeScript projects commonly preserve Node-style `.js` specifiers in
+  // source even though the file on disk is `.ts`/`.tsx` before compilation.
+  const sourceExtensionFallbacks: Record<string, string[]> = {
+    '.js': ['.ts', '.tsx'],
+    '.jsx': ['.tsx'],
+    '.mjs': ['.mts'],
+    '.cjs': ['.cts'],
+  };
+  const requestedExtension = path.extname(basePath).toLowerCase();
+  const sourceBasePath = basePath.slice(0, -requestedExtension.length);
+  for (const extension of sourceExtensionFallbacks[requestedExtension] ?? []) {
+    if (!extensions.includes(extension)) continue;
+    const sourcePath = `${sourceBasePath}${extension}`;
+    if (fs.existsSync(sourcePath) && fs.statSync(sourcePath).isFile()) {
+      return sourcePath;
+    }
   }
 
   // 2. Try appending each extension
@@ -192,7 +204,5 @@ export function resolveImports(
   aliases: AliasMapping[],
   extensions: string[] = DEFAULT_EXTENSIONS,
 ): ResolvedImport[] {
-  return imports.map((imp) =>
-    resolveImport(imp, importingFile, aliases, extensions),
-  );
+  return imports.map((imp) => resolveImport(imp, importingFile, aliases, extensions));
 }

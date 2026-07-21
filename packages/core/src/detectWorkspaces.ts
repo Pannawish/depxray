@@ -6,9 +6,11 @@ import { matchesAnyPattern } from './detectOrphanFiles.js';
 
 type PackageJsonWithWorkspaces = {
   name?: string;
-  workspaces?: string[] | {
-    packages?: string[];
-  };
+  workspaces?:
+    | string[]
+    | {
+        packages?: string[];
+      };
   exports?: unknown;
   imports?: unknown;
 };
@@ -75,7 +77,9 @@ function matchesWorkspacePattern(relativeDir: string, patterns: string[]): boole
   const normalizedDir = normalizeRelativePath(relativeDir);
   return patterns.some((pattern) => {
     const normalizedPattern = normalizeRelativePath(pattern);
-    return normalizedDir === normalizedPattern || matchesAnyPattern(normalizedDir, [normalizedPattern]);
+    return (
+      normalizedDir === normalizedPattern || matchesAnyPattern(normalizedDir, [normalizedPattern])
+    );
   });
 }
 
@@ -135,11 +139,11 @@ export function createWorkspaceAliases(workspaces: WorkspaceInfo[]): AliasMappin
       ...createPackageMapAliases(workspace),
       {
         prefix: workspace.name,
-        paths: [workspace.absolutePath, sourceDir],
+        paths: [sourceDir, workspace.absolutePath],
       },
       {
         prefix: `${workspace.name}/`,
-        paths: [workspace.absolutePath, sourceDir],
+        paths: [sourceDir, workspace.absolutePath],
       },
     ];
 
@@ -171,10 +175,22 @@ function targetPathWithoutWildcard(workspace: WorkspaceInfo, target: string): st
   return path.resolve(workspace.absolutePath, target.replace(/\/?\*.*$/, ''));
 }
 
+function exportedTargetPaths(workspace: WorkspaceInfo, target: string): string[] {
+  const compiledTarget = path.resolve(workspace.absolutePath, target);
+  if (!/^\.\/dist\//.test(target)) return [compiledTarget];
+
+  const sourceTarget = target.replace(/^\.\/dist\//, './src/').replace(/\.(?:mjs|cjs|js)$/, '.ts');
+  return [path.resolve(workspace.absolutePath, sourceTarget), compiledTarget];
+}
+
 function createPackageMapAliases(workspace: WorkspaceInfo): AliasMapping[] {
   const aliases: AliasMapping[] = [];
 
-  if (workspace.exports && typeof workspace.exports === 'object' && !Array.isArray(workspace.exports)) {
+  if (
+    workspace.exports &&
+    typeof workspace.exports === 'object' &&
+    !Array.isArray(workspace.exports)
+  ) {
     for (const [subpath, value] of Object.entries(workspace.exports as Record<string, unknown>)) {
       const target = selectExportTarget(value);
       if (!target) {
@@ -184,7 +200,7 @@ function createPackageMapAliases(workspace: WorkspaceInfo): AliasMapping[] {
       if (subpath === '.') {
         aliases.push({
           prefix: workspace.name,
-          paths: [path.resolve(workspace.absolutePath, target)],
+          paths: exportedTargetPaths(workspace, target),
         });
         continue;
       }
@@ -198,13 +214,17 @@ function createPackageMapAliases(workspace: WorkspaceInfo): AliasMapping[] {
       } else {
         aliases.push({
           prefix: `${workspace.name}/${publicSubpath}`,
-          paths: [path.resolve(workspace.absolutePath, target)],
+          paths: exportedTargetPaths(workspace, target),
         });
       }
     }
   }
 
-  if (workspace.imports && typeof workspace.imports === 'object' && !Array.isArray(workspace.imports)) {
+  if (
+    workspace.imports &&
+    typeof workspace.imports === 'object' &&
+    !Array.isArray(workspace.imports)
+  ) {
     for (const [specifier, value] of Object.entries(workspace.imports as Record<string, unknown>)) {
       const target = selectExportTarget(value);
       if (!target) {

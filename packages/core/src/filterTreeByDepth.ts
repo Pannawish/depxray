@@ -1,9 +1,6 @@
 import type { FileTreeNode } from './types.js';
 
-export function filterTreeByDepth(
-  rootNode: FileTreeNode,
-  maxDepth: number,
-): FileTreeNode {
+export function filterTreeByDepth(rootNode: FileTreeNode, maxDepth: number): FileTreeNode {
   if (!Number.isFinite(maxDepth)) {
     return structuredClone(rootNode);
   }

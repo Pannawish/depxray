@@ -16,8 +16,7 @@ import type { ScanResult } from '@depxray/core';
  * Format a ScanResult as a human-readable text report.
  */
 export function formatAsText(result: ScanResult): string {
-  const { graph, totalFiles, totalImports, circularCount, durationMs, errors } =
-    result;
+  const { graph, totalFiles, totalImports, circularCount, durationMs, errors } = result;
   const lines: string[] = [];
 
   // ── Header ─────────────────────────────────────────────────────────
@@ -47,9 +46,7 @@ export function formatAsText(result: ScanResult): string {
     lines.push('  📊 Most Imported Files:');
     for (const node of topImported) {
       const marker = node.isCircular ? ' 🔴' : '';
-      lines.push(
-        `     ${node.inDegree.toString().padStart(3)}x  ${node.relativePath}${marker}`,
-      );
+      lines.push(`     ${node.inDegree.toString().padStart(3)}x  ${node.relativePath}${marker}`);
     }
   }
 
@@ -64,9 +61,7 @@ export function formatAsText(result: ScanResult): string {
     lines.push('  📊 Files with Most Imports:');
     for (const node of topImporting) {
       const marker = node.isCircular ? ' 🔴' : '';
-      lines.push(
-        `     ${node.outDegree.toString().padStart(3)}→  ${node.relativePath}${marker}`,
-      );
+      lines.push(`     ${node.outDegree.toString().padStart(3)}→  ${node.relativePath}${marker}`);
     }
   }
 
@@ -80,9 +75,7 @@ export function formatAsText(result: ScanResult): string {
   }
 
   // ── Orphan files (no imports and not imported) ─────────────────────
-  const orphans = graph.nodes.filter(
-    (n) => n.inDegree === 0 && n.outDegree === 0,
-  );
+  const orphans = graph.nodes.filter((n) => n.inDegree === 0 && n.outDegree === 0);
   if (orphans.length > 0) {
     lines.push('');
     lines.push(`  🏝️  Orphan Files (${orphans.length}):`);

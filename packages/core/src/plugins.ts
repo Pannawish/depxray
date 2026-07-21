@@ -1,9 +1,4 @@
-import type {
-  DependencyGraph,
-  DepxrayPlugin,
-  DepxrayPluginContext,
-  ScanResult,
-} from './types.js';
+import type { DependencyGraph, DepxrayPlugin, DepxrayPluginContext, ScanResult } from './types.js';
 import type { GraphDiffResult } from './diffGraphs.js';
 
 function pluginName(plugin: DepxrayPlugin, index: number): string {
@@ -31,16 +26,18 @@ export const complexityPlugin: DepxrayPlugin = {
     const totalLoc = nodes.reduce((sum, node) => sum + (node.metrics?.loc ?? 0), 0);
     const complexityValues = nodes.map((node) => node.metrics?.cyclomaticComplexity ?? 0);
     const maxComplexity = Math.max(0, ...complexityValues);
-    const averageComplexity = nodes.length === 0
-      ? 0
-      : complexityValues.reduce((sum, value) => sum + value, 0) / nodes.length;
+    const averageComplexity =
+      nodes.length === 0
+        ? 0
+        : complexityValues.reduce((sum, value) => sum + value, 0) / nodes.length;
     const hotspots = [...nodes]
       .filter((node) => (node.metrics?.cyclomaticComplexity ?? 0) > 1)
-      .sort((a, b) => (
-        (b.metrics?.cyclomaticComplexity ?? 0) - (a.metrics?.cyclomaticComplexity ?? 0)
-        || (b.metrics?.loc ?? 0) - (a.metrics?.loc ?? 0)
-        || a.relativePath.localeCompare(b.relativePath)
-      ))
+      .sort(
+        (a, b) =>
+          (b.metrics?.cyclomaticComplexity ?? 0) - (a.metrics?.cyclomaticComplexity ?? 0) ||
+          (b.metrics?.loc ?? 0) - (a.metrics?.loc ?? 0) ||
+          a.relativePath.localeCompare(b.relativePath),
+      )
       .slice(0, 10)
       .map((node) => ({
         file: node.relativePath,
@@ -171,7 +168,9 @@ export async function runAfterBuildGraphHooks(
     try {
       nextGraph = (await plugin.afterBuildGraph(nextGraph, context)) ?? nextGraph;
     } catch (error) {
-      throw new Error(`${pluginName(plugin, index)} afterBuildGraph failed: ${(error as Error).message}`);
+      throw new Error(
+        `${pluginName(plugin, index)} afterBuildGraph failed: ${(error as Error).message}`,
+      );
     }
   }
 

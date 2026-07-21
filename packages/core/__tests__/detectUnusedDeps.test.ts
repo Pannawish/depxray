@@ -49,14 +49,10 @@ describe('detectUnusedDeps', () => {
   });
 
   it('ignores package self imports', () => {
-    const result = detectUnusedDeps(
-      '/project',
-      [{ importSpecifier: 'my-package/utils' }],
-      {
-        name: 'my-package',
-        dependencies: {},
-      },
-    );
+    const result = detectUnusedDeps('/project', [{ importSpecifier: 'my-package/utils' }], {
+      name: 'my-package',
+      dependencies: {},
+    });
 
     expect(result).toEqual({
       unused: [],

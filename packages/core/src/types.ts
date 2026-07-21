@@ -6,111 +6,46 @@
 // (MCP server, Antigravity, Codex).
 // ============================================================================
 
+import type { RawExportInfo, RawImportInfo } from './analysisTypes.js';
+import type {
+  ArchitectureRule,
+  DevDependencyInProd,
+  ImportConventionConfig,
+  ImportConventionViolation,
+  RuleValidationResult,
+  RuleViolation,
+  UnresolvedImport,
+  UnusedExport,
+} from './diagnosticTypes.js';
+export type {
+  AliasMapping,
+  RawExportInfo,
+  RawImportInfo,
+  ResolvedImport,
+} from './analysisTypes.js';
+export {
+  DEFAULT_ENTRY_POINT_PATTERNS,
+  DEFAULT_EXTENSIONS,
+  DEFAULT_IGNORE_PATTERNS,
+} from './analysisTypes.js';
+export type {
+  FileTreeNode,
+  StructureGraph,
+  StructureGraphEdge,
+  StructureGraphNode,
+} from './structureTypes.js';
+export type {
+  ArchitectureRule,
+  DevDependencyInProd,
+  ImportConventionConfig,
+  ImportConventionViolation,
+  RuleValidationResult,
+  RuleViolation,
+  UnresolvedImport,
+  UnusedExport,
+} from './diagnosticTypes.js';
+
 // ─── Graph Data Structures ─────────────────────────────────────────────────
-
-/**
- * A single node in the scanned folder/file tree.
- *
- * This structure is the source of truth for the project structure graph MVP.
- * Unlike dependency graph nodes, directories and files are both represented.
- */
-export interface FileTreeNode {
-  /** Unique identifier — the absolute path */
-  id: string;
-
-  /** Short display name (last path segment only) */
-  name: string;
-
-  /** Path relative to the scanned project root */
-  relativePath: string;
-
-  /** Absolute path on disk */
-  absolutePath: string;
-
-  /** Whether this node is a file or directory */
-  kind: 'file' | 'directory';
-
-  /** File extension for files, otherwise null */
-  extension: string | null;
-
-  /** Nesting depth from the root node */
-  depth: number;
-
-  /** Child nodes, only populated for directories */
-  children: FileTreeNode[];
-
-  /** File size in bytes, only populated for files */
-  sizeBytes?: number;
-}
-
-/**
- * A node in the structure graph used by the browser UI.
- */
-export interface StructureGraphNode {
-  /** Unique identifier — the absolute path */
-  id: string;
-
-  /** Short label for display */
-  label: string;
-
-  /** Path relative to the scanned project root */
-  relativePath: string;
-
-  /** Absolute path on disk */
-  absolutePath: string;
-
-  /** Whether this node is a file or directory */
-  kind: 'file' | 'directory';
-
-  /** File extension for files, otherwise null */
-  extension: string | null;
-
-  /** Nesting depth from the root node */
-  depth: number;
-
-  /** Whether this directory is currently collapsed */
-  collapsed: boolean;
-
-  /** Whether this node is hidden because an ancestor is collapsed */
-  hidden: boolean;
-
-  /** Number of direct children */
-  childCount: number;
-
-  /** Total recursive descendant count */
-  descendantCount: number;
-
-  /** File size in bytes, only populated for files */
-  sizeBytes?: number;
-}
-
-/**
- * A directed edge from a parent node to its child in the file tree.
- */
-export interface StructureGraphEdge {
-  /** Stable edge identifier */
-  id: string;
-
-  /** Parent node absolute path */
-  source: string;
-
-  /** Child node absolute path */
-  target: string;
-}
-
-/**
- * The structure graph payload produced from a file tree.
- */
-export interface StructureGraph {
-  /** Root project directory */
-  rootDir: string;
-
-  /** Graph nodes for directories and files */
-  nodes: StructureGraphNode[];
-
-  /** Parent-to-child edges */
-  edges: StructureGraphEdge[];
-}
 
 /**
  * A single file node in the dependency graph.
@@ -336,158 +271,6 @@ export interface WorkspaceInfo {
   imports?: unknown;
 }
 
-/**
- * Lightweight architecture import rule.
- *
- * A rule is treated as a forbidden import when a source path matching `from`
- * imports a target path matching `to`.
- */
-export interface ArchitectureRule {
-  /** Glob-like source path pattern */
-  from?: string;
-
-  /** Glob-like target path pattern */
-  to?: string;
-
-  /** Entry point patterns whose transitive dependency tree scopes this rule */
-  entryPoints?: string[];
-
-  /** Restricted files or modules for entry-point scoped rules */
-  deny?: {
-    files?: string[];
-    modules?: string[];
-  };
-
-  /** Severity used by CLI validation and UI highlighting */
-  severity?: 'error' | 'warning';
-
-  /** Optional message shown when the rule is violated */
-  message?: string;
-}
-
-/**
- * A dependency edge that violates an architecture rule.
- */
-export interface RuleViolation {
-  /** Source relative file path */
-  source: string;
-
-  /** Target relative file path */
-  target: string;
-
-  /** Original import specifier */
-  importSpecifier: string;
-
-  /** Rule source pattern */
-  from: string;
-
-  /** Rule target pattern */
-  to: string;
-
-  /** Entry point that scoped this rule, when applicable */
-  entryPoint?: string;
-
-  /** Violation severity */
-  severity: 'error' | 'warning';
-
-  /** Human-readable violation message */
-  message: string;
-}
-
-export interface RuleValidationResult {
-  violations: RuleViolation[];
-  errorCount: number;
-  warningCount: number;
-}
-
-export interface DevDependencyInProd {
-  /** Production source file importing the devDependency */
-  file: string;
-
-  /** Imported devDependency package name */
-  module: string;
-
-  /** Original import specifier */
-  importSpecifier: string;
-
-  /** 1-based line number */
-  line: number;
-
-  /** Production entry point that reaches this file */
-  entryPoint: string;
-
-  /** Whether the import is type-only */
-  isTypeOnly: boolean;
-}
-
-export interface ImportConventionConfig {
-  /** Preferred style for internal source imports */
-  prefer?: 'relative' | 'absolute';
-
-  /** Alias prefix used when prefer is absolute */
-  aliasPrefix?: string;
-
-  /** Source-root path relative to project root for alias suggestions */
-  root?: string;
-}
-
-export interface ImportConventionViolation {
-  /** Source file containing the import */
-  file: string;
-
-  /** Target file if the import resolves internally */
-  target: string;
-
-  /** Original import specifier */
-  importSpecifier: string;
-
-  /** Suggested replacement import specifier */
-  suggestedSpecifier: string;
-
-  /** Expected convention */
-  expected: 'relative' | 'absolute';
-
-  /** 1-based line number */
-  line: number;
-}
-
-export interface UnusedExport {
-  /** Export name, or "default" for default exports */
-  name: string;
-
-  /** Export classification */
-  kind: 'named' | 'default' | 'reexport';
-
-  /** Whether this is a type-only export */
-  isTypeOnly: boolean;
-
-  /** 1-based source line number */
-  line: number;
-}
-
-export interface UnresolvedImport {
-  /** File relative path containing the unresolved import */
-  file: string;
-
-  /** Absolute source file path */
-  absoluteFilePath: string;
-
-  /** Import specifier as written in source */
-  importSpecifier: string;
-
-  /** 1-based source line number */
-  line: number;
-
-  /** Whether this import is type-only */
-  isTypeOnly: boolean;
-
-  /** Whether this import is dynamic */
-  isDynamic: boolean;
-
-  /** Optional resolution error details */
-  error?: string;
-}
-
 // ─── Scan Configuration ────────────────────────────────────────────────────
 
 /**
@@ -696,10 +479,7 @@ export interface DepxrayPlugin {
   ) => MaybePromise<ScanResult | void>;
 
   /** Called by report-producing integrations with their report data */
-  onReport?: (
-    data: unknown,
-    context: DepxrayPluginContext,
-  ) => MaybePromise<unknown | void>;
+  onReport?: (data: unknown, context: DepxrayPluginContext) => MaybePromise<unknown | void>;
 }
 
 export type DepxrayPluginReference = string | DepxrayPlugin;
@@ -789,117 +569,3 @@ export interface ScanMetadata {
   /** Version of @depxray/core that produced this graph */
   depxrayVersion: string;
 }
-
-// ─── Internal Types (used within core, but exported for extensibility) ─────
-
-/**
- * Raw import information extracted from a single file's AST.
- * This is an intermediate representation before path resolution.
- */
-export interface RawImportInfo {
-  /** The import specifier as written in source, e.g., './Button' or '@/utils' */
-  source: string;
-
-  /** Named imports: ['Button', 'ButtonProps'] */
-  specifiers: string[];
-
-  /** Export names referenced from the target module */
-  referencedExports?: string[];
-
-  /** Whether this is `import type { ... }` */
-  isTypeOnly: boolean;
-
-  /** Whether this is a dynamic `import('...')` */
-  isDynamic: boolean;
-
-  /** Line number in the source file */
-  line: number;
-
-  /** AST construct that created this dependency */
-  originKind?: 'import' | 'reexport_named' | 'reexport_all' | 'dynamic' | 'require';
-}
-
-export interface RawExportInfo {
-  /** Export name visible from this module */
-  name: string;
-
-  /** Export classification */
-  kind: 'named' | 'default' | 'reexport' | 'export_all';
-
-  /** Whether this is a type-only export */
-  isTypeOnly: boolean;
-
-  /** 1-based source line number */
-  line: number;
-
-  /** Re-export source specifier if this export comes from another module */
-  source?: string;
-
-  /** Original export name from the source module for re-exports */
-  sourceExportName?: string;
-}
-
-/**
- * A resolved import — the raw import after path resolution.
- */
-export interface ResolvedImport {
-  /** The original raw import info */
-  raw: RawImportInfo;
-
-  /** The resolved absolute file path, or null if unresolvable */
-  resolvedPath: string | null;
-
-  /** Why the import couldn't be resolved (if resolvedPath is null) */
-  error?: string;
-}
-
-/**
- * A path alias mapping loaded from tsconfig.json or jsconfig.json.
- *
- * Example: `"@/*": ["./src/*"]` becomes:
- *   { prefix: '@/', paths: ['/abs/path/to/src/'] }
- */
-export interface AliasMapping {
-  /** The alias prefix (without the wildcard `*`), e.g., '@/' */
-  prefix: string;
-
-  /** Absolute directory paths this alias maps to */
-  paths: string[];
-}
-
-/**
- * Default directories and patterns to ignore during file discovery.
- */
-export const DEFAULT_IGNORE_PATTERNS: string[] = [
-  'node_modules',
-  'dist',
-  'build',
-  'out',
-  '.next',
-  'coverage',
-  '.git',
-  '.cache',
-  '.turbo',
-  '.depxray',
-  '__mocks__',
-];
-
-/**
- * Default file extensions to scan.
- */
-export const DEFAULT_EXTENSIONS: string[] = ['.js', '.jsx', '.ts', '.tsx'];
-
-/**
- * Default entry points excluded from orphan detection.
- */
-export const DEFAULT_ENTRY_POINT_PATTERNS: string[] = [
-  '**/index.*',
-  '**/main.*',
-  '**/app.*',
-  '**/App.*',
-  '**/*.test.*',
-  '**/*.spec.*',
-  '**/*.config.*',
-  '**/vite.config.*',
-  '**/next.config.*',
-];

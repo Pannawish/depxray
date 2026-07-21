@@ -70,10 +70,7 @@ export function buildGraph(
 
   // ── Build nodes ──────────────────────────────────────────────────────
   // Collect all unique file paths (from both source files and import targets)
-  const allFiles = new Set<string>([
-    ...fileImportsMap.keys(),
-    ...edges.map((e) => e.target),
-  ]);
+  const allFiles = new Set<string>([...fileImportsMap.keys(), ...edges.map((e) => e.target)]);
 
   const nodes: GraphNode[] = Array.from(allFiles).map((filePath) => ({
     id: filePath,

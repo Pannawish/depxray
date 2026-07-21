@@ -77,7 +77,9 @@ export class ProjectScanSession {
     this.baseOptions = { ...options, rootDir: this.rootDir };
   }
 
-  scan(overrides: Partial<Omit<ScanOptions, 'rootDir' | 'analysisCache'>> = {}): Promise<ScanResult> {
+  scan(
+    overrides: Partial<Omit<ScanOptions, 'rootDir' | 'analysisCache'>> = {},
+  ): Promise<ScanResult> {
     return scanProject({
       ...this.baseOptions,
       ...overrides,

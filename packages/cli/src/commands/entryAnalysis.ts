@@ -46,16 +46,16 @@ function mergeOptionsWithConfig<TOptions extends BaseOptions>(
     ...rawOptions,
     ignore: cliOptionWasProvided(getOptionSource, 'ignore')
       ? rawOptions.ignore
-      : config.ignore ?? rawOptions.ignore,
+      : (config.ignore ?? rawOptions.ignore),
     aliases: cliOptionWasProvided(getOptionSource, 'aliases')
       ? rawOptions.aliases
-      : config.aliases ?? rawOptions.aliases,
+      : (config.aliases ?? rawOptions.aliases),
     circular: cliOptionWasProvided(getOptionSource, 'circular')
       ? rawOptions.circular
-      : config.circular ?? rawOptions.circular,
+      : (config.circular ?? rawOptions.circular),
     extensions: cliOptionWasProvided(getOptionSource, 'extensions')
       ? rawOptions.extensions
-      : config.extensions ?? rawOptions.extensions,
+      : (config.extensions ?? rawOptions.extensions),
     plugins: rawOptions.plugins,
   };
 }
@@ -114,10 +114,6 @@ function resolveProjectFile(rootDir: string, file: string): string {
   return path.isAbsolute(file) ? path.resolve(file) : path.resolve(rootDir, file);
 }
 
-function pathToRelative(rootDir: string, filePath: string): string {
-  return path.relative(rootDir, filePath).replaceAll('\\', '/');
-}
-
 async function scan(rootDir: string, options: BaseOptions) {
   return scanProject({
     rootDir,
@@ -145,15 +141,19 @@ export function createEntryPointsCommand(): Command {
         const rootDir = path.resolve(dir);
         await verifyDirectory(rootDir);
         const config = await loadConfig(rootDir);
-        const options = mergeOptionsWithConfig(rawOptions, config, (name) => cmd.getOptionValueSource(name));
+        const options = mergeOptionsWithConfig(rawOptions, config, (name) =>
+          cmd.getOptionValueSource(name),
+        );
         options.plugins = await loadPlugins(config.plugins, rootDir);
         const format = rawOptions.json ? 'json' : parseFormat(options.format);
         const result = await scan(rootDir, options);
-        const entryPoints = findEntryPointNodes(result.graph.nodes, options.exclude).map((node) => ({
-          file: node.relativePath,
-          inDegree: node.inDegree,
-          outDegree: node.outDegree,
-        }));
+        const entryPoints = findEntryPointNodes(result.graph.nodes, options.exclude).map(
+          (node) => ({
+            file: node.relativePath,
+            inDegree: node.inDegree,
+            outDegree: node.outDegree,
+          }),
+        );
 
         if (format === 'json') {
           process.stdout.write(JSON.stringify({ entryPoints }, null, 2) + '\n');
@@ -194,7 +194,9 @@ export function createTraceCommand(): Command {
         const rootDir = path.resolve(dir);
         await verifyDirectory(rootDir);
         const config = await loadConfig(rootDir);
-        const options = mergeOptionsWithConfig(rawOptions, config, (name) => cmd.getOptionValueSource(name));
+        const options = mergeOptionsWithConfig(rawOptions, config, (name) =>
+          cmd.getOptionValueSource(name),
+        );
         options.plugins = await loadPlugins(config.plugins, rootDir);
         const format = rawOptions.json ? 'json' : parseFormat(options.format);
         const result = await scan(rootDir, options);
@@ -207,7 +209,9 @@ export function createTraceCommand(): Command {
         const reverse = reverseAdjacency(result.graph.edges);
         const entries = new Set(findEntryPointNodes(result.graph.nodes).map((node) => node.id));
         const paths: string[][] = [];
-        const stack: Array<{ nodeId: string; path: string[] }> = [{ nodeId: target.id, path: [target.relativePath] }];
+        const stack: Array<{ nodeId: string; path: string[] }> = [
+          { nodeId: target.id, path: [target.relativePath] },
+        ];
 
         while (stack.length > 0 && paths.length < 100) {
           const current = stack.pop()!;
@@ -227,11 +231,15 @@ export function createTraceCommand(): Command {
 
         const entryPoints = [...new Set(paths.map((item) => item[0]))].sort();
         if (format === 'json') {
-          process.stdout.write(JSON.stringify({ file: target.relativePath, entryPoints, paths }, null, 2) + '\n');
+          process.stdout.write(
+            JSON.stringify({ file: target.relativePath, entryPoints, paths }, null, 2) + '\n',
+          );
           return;
         }
 
-        process.stdout.write(`${target.relativePath} is reached by ${entryPoints.length} entry point(s).\n`);
+        process.stdout.write(
+          `${target.relativePath} is reached by ${entryPoints.length} entry point(s).\n`,
+        );
         if (options.compact) {
           for (const entryPoint of entryPoints) {
             process.stdout.write(`  ${entryPoint}\n`);
@@ -255,7 +263,13 @@ interface TreeNode {
   imports: TreeNode[];
 }
 
-function buildImportTree(rootDir: string, node: GraphNode, nodesById: Map<string, GraphNode>, edgesBySource: Map<string, GraphEdge[]>, visited = new Set<string>()): TreeNode {
+function buildImportTree(
+  rootDir: string,
+  node: GraphNode,
+  nodesById: Map<string, GraphNode>,
+  edgesBySource: Map<string, GraphEdge[]>,
+  visited = new Set<string>(),
+): TreeNode {
   if (visited.has(node.id)) {
     return { file: node.relativePath, imports: [] };
   }
@@ -293,7 +307,9 @@ export function createTreeCommand(): Command {
         const rootDir = path.resolve(dir);
         await verifyDirectory(rootDir);
         const config = await loadConfig(rootDir);
-        const options = mergeOptionsWithConfig(rawOptions, config, (name) => cmd.getOptionValueSource(name));
+        const options = mergeOptionsWithConfig(rawOptions, config, (name) =>
+          cmd.getOptionValueSource(name),
+        );
         options.plugins = await loadPlugins(config.plugins, rootDir);
         const format = rawOptions.json ? 'json' : parseFormat(options.format);
         const result = await scan(rootDir, options);

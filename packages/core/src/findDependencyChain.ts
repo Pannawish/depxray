@@ -18,11 +18,12 @@ function resolveNode(graph: DependencyGraph, filePath: string): GraphNode {
   const absoluteInput = path.isAbsolute(filePath)
     ? path.resolve(filePath)
     : path.resolve(graph.rootDir, filePath);
-  const node = graph.nodes.find((item) => (
-    item.id === absoluteInput ||
-    path.resolve(graph.rootDir, item.relativePath) === absoluteInput ||
-    normalizeRelative(item.relativePath) === normalizedInput
-  ));
+  const node = graph.nodes.find(
+    (item) =>
+      item.id === absoluteInput ||
+      path.resolve(graph.rootDir, item.relativePath) === absoluteInput ||
+      normalizeRelative(item.relativePath) === normalizedInput,
+  );
 
   if (!node) {
     throw new Error(`File not found in dependency graph: ${filePath}`);
@@ -41,9 +42,9 @@ function buildChains(
   }
 
   const parents = predecessors.get(current) ?? [];
-  return parents.flatMap((parent) => (
-    buildChains(parent, start, predecessors).map((chain) => [...chain, current])
-  ));
+  return parents.flatMap((parent) =>
+    buildChains(parent, start, predecessors).map((chain) => [...chain, current]),
+  );
 }
 
 export function findDependencyChain(
@@ -118,9 +119,13 @@ export function findDependencyChain(
     };
   }
 
-  const chains = buildChains(toNode.id, fromNode.id, predecessors)
-    .map((chain) => chain
-      .map((nodeId) => nodesById.get(nodeId)?.relativePath ?? path.relative(graph.rootDir, nodeId).replaceAll('\\', '/')));
+  const chains = buildChains(toNode.id, fromNode.id, predecessors).map((chain) =>
+    chain.map(
+      (nodeId) =>
+        nodesById.get(nodeId)?.relativePath ??
+        path.relative(graph.rootDir, nodeId).replaceAll('\\', '/'),
+    ),
+  );
 
   return {
     connected: true,

@@ -2,11 +2,7 @@ import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import { Command } from 'commander';
 import { loadPlugins } from '../plugins.js';
-import {
-  buildCheckSummary,
-  CHECK_ISSUE_TYPES,
-  compareCheckResults,
-} from '../checkBaseline.js';
+import { buildCheckSummary, CHECK_ISSUE_TYPES, compareCheckResults } from '../checkBaseline.js';
 import { withGitSnapshot } from '../gitSnapshot.js';
 import {
   computeHealthScore,
@@ -14,7 +10,6 @@ import {
   scanProject,
   type DepxrayConfig,
   type DepxrayPlugin,
-  type ScanResult,
 } from '@depxray/core';
 
 interface CheckOptions {
@@ -50,29 +45,29 @@ function mergeOptionsWithConfig(
     ...rawOptions,
     ignore: cliOptionWasProvided(getOptionSource, 'ignore')
       ? rawOptions.ignore
-      : config.ignore ?? rawOptions.ignore,
+      : (config.ignore ?? rawOptions.ignore),
     extensions: cliOptionWasProvided(getOptionSource, 'extensions')
       ? rawOptions.extensions
-      : config.extensions ?? rawOptions.extensions,
+      : (config.extensions ?? rawOptions.extensions),
     circular: cliOptionWasProvided(getOptionSource, 'circular')
       ? rawOptions.circular
-      : config.circular ?? rawOptions.circular,
+      : (config.circular ?? rawOptions.circular),
     aliases: cliOptionWasProvided(getOptionSource, 'aliases')
       ? rawOptions.aliases
-      : config.aliases ?? rawOptions.aliases,
+      : (config.aliases ?? rawOptions.aliases),
     entryPoints: cliOptionWasProvided(getOptionSource, 'entryPoints')
       ? rawOptions.entryPoints
-      : config.entryPoints ?? rawOptions.entryPoints,
+      : (config.entryPoints ?? rawOptions.entryPoints),
     ignoreTypeImports: cliOptionWasProvided(getOptionSource, 'ignoreTypeImports')
       ? rawOptions.ignoreTypeImports
-      : config.ignoreTypeImports ?? rawOptions.ignoreTypeImports,
+      : (config.ignoreTypeImports ?? rawOptions.ignoreTypeImports),
     rules: config.rules ?? rawOptions.rules,
     prodEntryPoints: cliOptionWasProvided(getOptionSource, 'prodEntryPoints')
       ? rawOptions.prodEntryPoints
-      : config.prodEntryPoints ?? rawOptions.prodEntryPoints,
+      : (config.prodEntryPoints ?? rawOptions.prodEntryPoints),
     devEntryPoints: cliOptionWasProvided(getOptionSource, 'devEntryPoints')
       ? rawOptions.devEntryPoints
-      : config.devEntryPoints ?? rawOptions.devEntryPoints,
+      : (config.devEntryPoints ?? rawOptions.devEntryPoints),
     importConventions: config.importConventions ?? rawOptions.importConventions,
     plugins: rawOptions.plugins,
   };
@@ -115,8 +110,14 @@ export function createCheckCommand(): Command {
     .option('--ignore <patterns...>', 'Additional patterns to ignore')
     .option('--extensions <exts...>', 'File extensions to scan')
     .option('--entry-points <patterns...>', 'Entry point patterns to exclude from orphan detection')
-    .option('--prod-entry-points <patterns...>', 'Production entry point patterns for devDependency checks')
-    .option('--dev-entry-points <patterns...>', 'Development-only entry point patterns for devDependency checks')
+    .option(
+      '--prod-entry-points <patterns...>',
+      'Production entry point patterns for devDependency checks',
+    )
+    .option(
+      '--dev-entry-points <patterns...>',
+      'Development-only entry point patterns for devDependency checks',
+    )
     .option('--ignore-type-imports', 'Ignore type-only imports for devDependency production checks')
     .option('--no-circular', 'Skip circular dependency detection')
     .option('--no-aliases', 'Skip tsconfig/jsconfig path alias resolution')
@@ -125,7 +126,9 @@ export function createCheckCommand(): Command {
         const rootDir = path.resolve(dir);
         await verifyDirectory(rootDir);
         const config = await loadConfig(rootDir);
-        const options = mergeOptionsWithConfig(rawOptions, config, (name) => cmd.getOptionValueSource(name));
+        const options = mergeOptionsWithConfig(rawOptions, config, (name) =>
+          cmd.getOptionValueSource(name),
+        );
         options.plugins = await loadPlugins(config.plugins, rootDir);
         const format = rawOptions.json ? 'json' : parseFormat(options.format);
         const maxHealthDrop = parseNonNegativeNumber(options.maxHealthDrop, '--max-health-drop');
@@ -151,9 +154,9 @@ export function createCheckCommand(): Command {
         let baseline;
 
         if (options.base) {
-          const baselineResult = await withGitSnapshot(rootDir, options.base, (snapshotRoot) => (
-            scanProject({ ...scanOptions, rootDir: snapshotRoot })
-          ));
+          const baselineResult = await withGitSnapshot(rootDir, options.base, (snapshotRoot) =>
+            scanProject({ ...scanOptions, rootDir: snapshotRoot }),
+          );
           const comparison = compareCheckResults(baselineResult, result);
           const currentHealth = computeHealthScore(result).score;
           const baselineHealth = computeHealthScore(baselineResult).score;
@@ -175,7 +178,9 @@ export function createCheckCommand(): Command {
         }
 
         if (format === 'json') {
-          process.stdout.write(JSON.stringify({ ...check, ...(baseline ? { baseline } : {}), result }, null, 2) + '\n');
+          process.stdout.write(
+            JSON.stringify({ ...check, ...(baseline ? { baseline } : {}), result }, null, 2) + '\n',
+          );
         } else {
           process.stdout.write(check.clean ? 'depxray check passed.\n' : 'depxray check failed.\n');
           for (const [key, value] of Object.entries(check.summary)) {
@@ -191,7 +196,9 @@ export function createCheckCommand(): Command {
               }
             }
             if (maxHealthDrop !== undefined) {
-              process.stdout.write(`  health score drop: ${baseline.health.drop} (allowed ${maxHealthDrop})\n`);
+              process.stdout.write(
+                `  health score drop: ${baseline.health.drop} (allowed ${maxHealthDrop})\n`,
+              );
             }
           }
         }

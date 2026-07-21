@@ -55,7 +55,9 @@ export function formatAsDot(result: ScanResult): string {
   lines.push('  // Graph settings');
   lines.push('  rankdir=LR;');
   lines.push('  bgcolor="#1a1a2e";');
-  lines.push('  node [shape=box, style="filled,rounded", fontname="Inter, Helvetica, Arial", fontsize=10, fontcolor="white", margin="0.15,0.08"];');
+  lines.push(
+    '  node [shape=box, style="filled,rounded", fontname="Inter, Helvetica, Arial", fontsize=10, fontcolor="white", margin="0.15,0.08"];',
+  );
   lines.push('  edge [color="#555577", arrowsize=0.7];');
   lines.push('');
 
@@ -82,14 +84,14 @@ export function formatAsDot(result: ScanResult): string {
         ? '#FFaa00'
         : edge.isCrossPackage
           ? '#94A3B8'
-        : '#555577';
+          : '#555577';
     const style = edge.isTypeOnly
       ? 'dashed'
       : edge.isDynamic
         ? 'dotted'
         : edge.isCrossPackage
           ? 'dashed'
-        : 'solid';
+          : 'solid';
     const penwidth = edge.isCrossPackage ? '2.0' : '1.0';
 
     lines.push(

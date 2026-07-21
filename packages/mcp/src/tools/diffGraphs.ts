@@ -2,9 +2,7 @@ import { execFileSync } from 'node:child_process';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
-import {
-  diffGraphs,
-} from '@depxray/core';
+import { diffGraphs } from '@depxray/core';
 import { resolveRootDir, scanProject } from './shared.js';
 
 export interface DiffGraphsInput {
@@ -21,9 +19,13 @@ export async function diffGraphsTool(input: DiffGraphsInput) {
 
   try {
     fs.mkdirSync(checkoutDir);
-    execFileSync('git', ['-C', rootDir, 'archive', '--format=tar', '--output', archivePath, input.baseRef], {
-      stdio: 'pipe',
-    });
+    execFileSync(
+      'git',
+      ['-C', rootDir, 'archive', '--format=tar', '--output', archivePath, input.baseRef],
+      {
+        stdio: 'pipe',
+      },
+    );
     execFileSync('tar', ['-xf', archivePath, '-C', checkoutDir], {
       stdio: 'pipe',
     });

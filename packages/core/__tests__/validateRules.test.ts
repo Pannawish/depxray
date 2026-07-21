@@ -69,9 +69,7 @@ describe('validateRules', () => {
 
   it('attaches violations to matching graph edges', () => {
     const graph = makeGraph();
-    const validation = validateRules(graph, [
-      { from: 'src/ui/**', to: 'src/db/**' },
-    ]);
+    const validation = validateRules(graph, [{ from: 'src/ui/**', to: 'src/db/**' }]);
     const nextGraph = attachRuleViolations(graph, validation);
 
     expect(nextGraph.edges[0].ruleViolations?.[0].message).toBe(

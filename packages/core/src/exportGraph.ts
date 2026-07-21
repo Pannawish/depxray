@@ -17,11 +17,10 @@ import type { DependencyGraph, UnresolvedImport } from './types.js';
  * @param pretty - Whether to format with indentation (default: true)
  * @returns JSON string representation of the graph
  */
-export function exportGraphJSON(
-  graph: DependencyGraph,
-  pretty: boolean = true,
-): string {
-  const unresolvedImports: UnresolvedImport[] = graph.nodes.flatMap((node) => node.unresolvedImports ?? []);
+export function exportGraphJSON(graph: DependencyGraph, pretty: boolean = true): string {
+  const unresolvedImports: UnresolvedImport[] = graph.nodes.flatMap(
+    (node) => node.unresolvedImports ?? [],
+  );
 
   // Create a clean export object with relative paths for portability
   const exportData = {

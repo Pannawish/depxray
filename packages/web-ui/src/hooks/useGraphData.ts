@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import * as graphContract from '@depxray/core/graph-contract';
-import { sampleGraphData, sampleGraphSet } from '../mockData.js';
+import { sampleGraphSet } from '../mockData.js';
 import type { ExplorerGraphData, ExplorerGraphSet } from '../types.js';
 
 interface GraphDataState {
@@ -31,11 +31,11 @@ function toGraphSet(data: ExplorerGraphData): ExplorerGraphSet {
 
 function isLiveGraphSetMessage(value: unknown): value is LiveGraphSetMessage {
   return (
-    typeof value === 'object'
-    && value !== null
-    && 'type' in value
-    && value.type === 'graph-set'
-    && 'graphSet' in value
+    typeof value === 'object' &&
+    value !== null &&
+    'type' in value &&
+    value.type === 'graph-set' &&
+    'graphSet' in value
   );
 }
 
@@ -77,9 +77,10 @@ export function useGraphData(): GraphDataState {
           if (!cancelled) {
             setState((current) => ({
               ...current,
-              error: error instanceof Error
-                ? `Ignored invalid live data: ${error.message}`
-                : 'Ignored invalid live data.',
+              error:
+                error instanceof Error
+                  ? `Ignored invalid live data: ${error.message}`
+                  : 'Ignored invalid live data.',
             }));
           }
         }

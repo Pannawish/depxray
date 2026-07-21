@@ -39,16 +39,16 @@ function mergeOptionsWithConfig(
     ...rawOptions,
     ignore: cliOptionWasProvided(getOptionSource, 'ignore')
       ? rawOptions.ignore
-      : config.ignore ?? rawOptions.ignore,
+      : (config.ignore ?? rawOptions.ignore),
     aliases: cliOptionWasProvided(getOptionSource, 'aliases')
       ? rawOptions.aliases
-      : config.aliases ?? rawOptions.aliases,
+      : (config.aliases ?? rawOptions.aliases),
     circular: cliOptionWasProvided(getOptionSource, 'circular')
       ? rawOptions.circular
-      : config.circular ?? rawOptions.circular,
+      : (config.circular ?? rawOptions.circular),
     extensions: cliOptionWasProvided(getOptionSource, 'extensions')
       ? rawOptions.extensions
-      : config.extensions ?? rawOptions.extensions,
+      : (config.extensions ?? rawOptions.extensions),
     plugins: rawOptions.plugins,
   };
 }
@@ -131,15 +131,29 @@ export function createImpactCommand(): Command {
     .option('--extensions <exts...>', 'File extensions to scan')
     .option('--no-circular', 'Skip circular dependency detection')
     .option('--no-aliases', 'Skip tsconfig/jsconfig path alias resolution')
-    .option('--complexity-threshold <number>', 'Complexity score considered high', parsePositiveInteger)
-    .option('--impact-threshold <number>', 'Transitive dependent count considered high-impact', parsePositiveInteger)
-    .option('--inbound-threshold <number>', 'Incoming import count considered high-impact', parsePositiveInteger)
+    .option(
+      '--complexity-threshold <number>',
+      'Complexity score considered high',
+      parsePositiveInteger,
+    )
+    .option(
+      '--impact-threshold <number>',
+      'Transitive dependent count considered high-impact',
+      parsePositiveInteger,
+    )
+    .option(
+      '--inbound-threshold <number>',
+      'Incoming import count considered high-impact',
+      parsePositiveInteger,
+    )
     .action(async (file: string, dir: string, rawOptions: ImpactCommandOptions) => {
       try {
         const rootDir = path.resolve(dir);
         await verifyDirectory(rootDir);
         const config = await loadConfig(rootDir);
-        const options = mergeOptionsWithConfig(rawOptions, config, (name) => cmd.getOptionValueSource(name));
+        const options = mergeOptionsWithConfig(rawOptions, config, (name) =>
+          cmd.getOptionValueSource(name),
+        );
         options.plugins = await loadPlugins(config.plugins, rootDir);
         const format = rawOptions.json ? 'json' : parseFormat(options.format);
         const result = await scanProject({

@@ -8,9 +8,11 @@ import { compareCheckResults } from '../src/checkBaseline.js';
 const temporaryDirectories: string[] = [];
 
 afterEach(async () => {
-  await Promise.all(temporaryDirectories.splice(0).map((directory) => (
-    fs.rm(directory, { recursive: true, force: true })
-  )));
+  await Promise.all(
+    temporaryDirectories
+      .splice(0)
+      .map((directory) => fs.rm(directory, { recursive: true, force: true })),
+  );
 });
 
 async function createProject(source: string): Promise<string> {
@@ -23,8 +25,12 @@ async function createProject(source: string): Promise<string> {
 
 describe('check baseline comparison', () => {
   it('separates inherited findings from newly introduced findings', async () => {
-    const baselineRoot = await createProject("import './existing-missing';\nexport const value = 1;\n");
-    const currentRoot = await createProject("import './existing-missing';\nimport './new-missing';\nexport const value = 1;\n");
+    const baselineRoot = await createProject(
+      "import './existing-missing';\nexport const value = 1;\n",
+    );
+    const currentRoot = await createProject(
+      "import './existing-missing';\nimport './new-missing';\nexport const value = 1;\n",
+    );
     const [baseline, current] = await Promise.all([
       scanProject({ rootDir: baselineRoot }),
       scanProject({ rootDir: currentRoot }),
@@ -32,9 +38,7 @@ describe('check baseline comparison', () => {
 
     const comparison = compareCheckResults(baseline, current);
     expect(comparison.newIssueCount).toBe(1);
-    expect(comparison.newIssues.unresolvedImports).toEqual([
-      'src/index.ts:2:./new-missing',
-    ]);
+    expect(comparison.newIssues.unresolvedImports).toEqual(['src/index.ts:2:./new-missing']);
     expect(comparison.resolvedIssueCount).toBe(0);
   });
 });

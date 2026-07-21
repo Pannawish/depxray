@@ -412,12 +412,9 @@ describe('relationship index', () => {
     expect(summary?.affectedFiles.map((item) => item.node.id)).toEqual([app, header, external]);
     expect(summary?.impactNodeIds.has(types)).toBe(true);
     expect(summary?.impactEdgeIds.has('app-types')).toBe(true);
-    expect(summary?.affectedFiles.find((item) => item.node.id === external)?.path.map((node) => node.id)).toEqual([
-      external,
-      header,
-      app,
-      types,
-    ]);
+    expect(
+      summary?.affectedFiles.find((item) => item.node.id === external)?.path.map((node) => node.id),
+    ).toEqual([external, header, app, types]);
   });
 
   it('builds direct and two-level file dependency neighborhoods', () => {
@@ -433,13 +430,7 @@ describe('relationship index', () => {
       'app-header',
       'header-app',
     ]);
-    expect(twoLevels.nodes.map((node) => node.id)).toEqual([
-      external,
-      app,
-      header,
-      lazy,
-      types,
-    ]);
+    expect(twoLevels.nodes.map((node) => node.id)).toEqual([external, app, header, lazy, types]);
   });
 
   it('builds folder boundary graphs with collapsed child folders and aggregated edges', () => {
@@ -475,21 +466,21 @@ describe('relationship index', () => {
     expect(componentCluster?.memberNodeIds).toEqual([header]);
     expect(componentCluster?.memberCount).toBe(1);
     expect(graph.nodes.find((node) => node.id === external)?.scopeRole).toBe('external-incoming');
-    expect(graph.edges.find((edge) => edge.id === `scope:incoming:${external}->${components}`)).toMatchObject({
+    expect(
+      graph.edges.find((edge) => edge.id === `scope:incoming:${external}->${components}`),
+    ).toMatchObject({
       aggregateCount: 1,
       memberEdgeIds: ['external-header'],
     });
-    expect(graph.edges.some((edge) => edge.scopeRole === 'membership' && edge.target === components)).toBe(true);
+    expect(
+      graph.edges.some((edge) => edge.scopeRole === 'membership' && edge.target === components),
+    ).toBe(true);
   });
 
   it('returns graph breadcrumbs and the shortest dependency path in either direction', () => {
     const index = buildRelationshipIndex(makeDataSet());
 
-    expect(getGraphBreadcrumbs(header, index).map((item) => item.id)).toEqual([
-      root,
-      src,
-      header,
-    ]);
+    expect(getGraphBreadcrumbs(header, index).map((item) => item.id)).toEqual([root, src, header]);
     expect(getShortestDependencyPath(header, types, index)).toEqual({
       connected: true,
       direction: 'forward',

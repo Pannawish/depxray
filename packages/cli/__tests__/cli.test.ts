@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import * as path from 'path';
 import * as fs from 'fs/promises';
 import { execa } from 'execa';
@@ -14,31 +14,43 @@ describe('CLI Integration Tests', () => {
     // Ensure the output file doesn't exist before each test
     try {
       await fs.rm(path.join(__dirname, 'test-output.json'), { force: true });
-    } catch {}
+    } catch {
+      // Cleanup is best effort.
+    }
     try {
       await fs.rm(path.join(SIMPLE_PROJECT, '.depxray'), {
         recursive: true,
         force: true,
       });
-    } catch {}
+    } catch {
+      // Cleanup is best effort.
+    }
     try {
       await fs.rm(TEMP_DIR, { recursive: true, force: true });
-    } catch {}
+    } catch {
+      // Cleanup is best effort.
+    }
   });
 
   afterEach(async () => {
     try {
       await fs.rm(path.join(__dirname, 'test-output.json'), { force: true });
-    } catch {}
+    } catch {
+      // Cleanup is best effort.
+    }
     try {
       await fs.rm(path.join(SIMPLE_PROJECT, '.depxray'), {
         recursive: true,
         force: true,
       });
-    } catch {}
+    } catch {
+      // Cleanup is best effort.
+    }
     try {
       await fs.rm(TEMP_DIR, { recursive: true, force: true });
-    } catch {}
+    } catch {
+      // Cleanup is best effort.
+    }
   });
 
   describe('scan command', () => {
@@ -49,8 +61,13 @@ describe('CLI Integration Tests', () => {
     });
 
     it('should output structure JSON with --json', async () => {
-      const { stdout, stderr, exitCode } = await execa('node', [CLI_PATH, 'scan', SIMPLE_PROJECT, '--json']);
-      
+      const { stdout, stderr, exitCode } = await execa('node', [
+        CLI_PATH,
+        'scan',
+        SIMPLE_PROJECT,
+        '--json',
+      ]);
+
       expect(exitCode).toBe(0);
       const parsed = JSON.parse(stdout);
       expect(parsed.schemaVersion).toBe('1.0.0');
@@ -65,12 +82,19 @@ describe('CLI Integration Tests', () => {
 
     it('should write JSON to file when --json --output is passed', async () => {
       const outputPath = path.join(__dirname, 'test-output.json');
-      const { stdout, stderr, exitCode } = await execa('node', [CLI_PATH, 'scan', SIMPLE_PROJECT, '--json', '--output', outputPath]);
-      
+      const { stdout, stderr, exitCode } = await execa('node', [
+        CLI_PATH,
+        'scan',
+        SIMPLE_PROJECT,
+        '--json',
+        '--output',
+        outputPath,
+      ]);
+
       expect(exitCode).toBe(0);
       expect(stdout.trim()).toBe('');
       expect(stderr).toContain(`Output written to ${outputPath}`);
-      
+
       const fileContent = await fs.readFile(outputPath, 'utf-8');
       const parsed = JSON.parse(fileContent);
       expect(parsed.totalFiles).toBe(8);
@@ -78,15 +102,22 @@ describe('CLI Integration Tests', () => {
     });
 
     it('should generate a static HTML export with --html', async () => {
-      const { stderr, exitCode } = await execa('node', [CLI_PATH, 'scan', SIMPLE_PROJECT, '--html', '--depth', '3']);
-      
+      const { stderr, exitCode } = await execa('node', [
+        CLI_PATH,
+        'scan',
+        SIMPLE_PROJECT,
+        '--html',
+        '--depth',
+        '3',
+      ]);
+
       expect(exitCode).toBe(0);
       const outputDir = path.join(SIMPLE_PROJECT, '.depxray');
       const indexPath = path.join(outputDir, 'index.html');
       const graphDataPath = path.join(outputDir, 'graph-data.json');
       const indexHtml = await fs.readFile(indexPath, 'utf-8');
       const graphData = JSON.parse(await fs.readFile(graphDataPath, 'utf-8'));
-      
+
       expect(stderr).toContain(`Static export written to ${indexPath}`);
       expect(indexHtml).toContain('window.__GRAPH_DATA_SET__ =');
       expect(indexHtml).toContain('window.__DEPXRAY_INITIAL_DEPTH__ = "3"');
@@ -98,8 +129,15 @@ describe('CLI Integration Tests', () => {
     });
 
     it('should respect --ignore flag for structure JSON', async () => {
-      const { stdout, exitCode } = await execa('node', [CLI_PATH, 'scan', SIMPLE_PROJECT, '--json', '--ignore', 'pages']);
-      
+      const { stdout, exitCode } = await execa('node', [
+        CLI_PATH,
+        'scan',
+        SIMPLE_PROJECT,
+        '--json',
+        '--ignore',
+        'pages',
+      ]);
+
       expect(exitCode).toBe(0);
       const parsed = JSON.parse(stdout);
       expect(parsed.nodes.some((node: any) => node.relativePath.includes('pages'))).toBe(false);
@@ -185,9 +223,9 @@ describe('CLI Integration Tests', () => {
       expect(exitCode).toBe(0);
       const parsed = JSON.parse(stdout);
       expect(parsed.version).toBe('2.1.0');
-      expect(parsed.runs[0].results.some((result: any) => (
-        result.ruleId === 'depxray/unresolved-import'
-      ))).toBe(true);
+      expect(
+        parsed.runs[0].results.some((result: any) => result.ruleId === 'depxray/unresolved-import'),
+      ).toBe(true);
     });
 
     it('should write Mermaid output to file', async () => {
@@ -227,9 +265,11 @@ describe('CLI Integration Tests', () => {
       expect(exitCode).toBe(0);
       const parsed = JSON.parse(stdout);
       expect(parsed.orphanFiles).toContain('src/standalone.ts');
-      expect(parsed.nodes.some((node: any) => (
-        node.relativePath === 'src/standalone.ts' && node.isOrphan
-      ))).toBe(true);
+      expect(
+        parsed.nodes.some(
+          (node: any) => node.relativePath === 'src/standalone.ts' && node.isOrphan,
+        ),
+      ).toBe(true);
       expect(stderr).toContain('Orphan files');
       expect(stderr).toContain('src/standalone.ts');
     });
@@ -264,10 +304,7 @@ describe('CLI Integration Tests', () => {
       );
       await fs.writeFile(
         path.join(TEMP_DIR, 'src/feature.ts'),
-        [
-          'export const usedValue = "used";',
-          'export const unusedValue = "unused";',
-        ].join('\n'),
+        ['export const usedValue = "used";', 'export const unusedValue = "unused";'].join('\n'),
         'utf-8',
       );
 
@@ -286,10 +323,13 @@ describe('CLI Integration Tests', () => {
       const parsed = JSON.parse(stdout);
       expect(parsed.unresolvedImports).toHaveLength(1);
       expect(parsed.unresolvedImports[0].importSpecifier).toBe('./missing-module');
-      expect(parsed.nodes.some((node: any) => (
-        node.relativePath === 'src/feature.ts'
-        && node.unusedExports?.some((issue: any) => issue.name === 'unusedValue')
-      ))).toBe(true);
+      expect(
+        parsed.nodes.some(
+          (node: any) =>
+            node.relativePath === 'src/feature.ts' &&
+            node.unusedExports?.some((issue: any) => issue.name === 'unusedValue'),
+        ),
+      ).toBe(true);
       expect(stderr).toContain('Unused exports');
       expect(stderr).toContain('unusedValue');
       expect(stderr).toContain('Unresolved imports');
@@ -373,23 +413,26 @@ describe('CLI Integration Tests', () => {
       const packagePath = path.join(TEMP_DIR, 'package.json');
       await fs.writeFile(
         packagePath,
-        JSON.stringify({
-          dependencies: {
-            react: '^18.0.0',
-            lodash: '^4.17.21',
+        JSON.stringify(
+          {
+            dependencies: {
+              react: '^18.0.0',
+              lodash: '^4.17.21',
+            },
+            devDependencies: {
+              vitest: '^1.0.0',
+            },
           },
-          devDependencies: {
-            vitest: '^1.0.0',
-          },
-        }, null, 2),
+          null,
+          2,
+        ),
         'utf-8',
       );
       await fs.writeFile(
         path.join(TEMP_DIR, 'src/index.ts'),
-        [
-          "import React from 'react';",
-          'export const value = React.createElement("div");',
-        ].join('\n'),
+        ["import React from 'react';", 'export const value = React.createElement("div");'].join(
+          '\n',
+        ),
         'utf-8',
       );
 
@@ -405,14 +448,7 @@ describe('CLI Integration Tests', () => {
       expect(dryRun.stderr).toContain('remove unused dependency: vitest');
       expect(await fs.readFile(packagePath, 'utf-8')).toContain('lodash');
 
-      const applied = await execa('node', [
-        CLI_PATH,
-        'scan',
-        TEMP_DIR,
-        '--fix',
-        '--deps',
-        '--yes',
-      ]);
+      const applied = await execa('node', [CLI_PATH, 'scan', TEMP_DIR, '--fix', '--deps', '--yes']);
       expect(applied.stderr).toContain('Autofix applied');
       const packageJson = JSON.parse(await fs.readFile(packagePath, 'utf-8'));
       expect(packageJson.dependencies).toEqual({ react: '^18.0.0' });
@@ -459,24 +495,24 @@ describe('CLI Integration Tests', () => {
 
       expect(exitCode).toBe(0);
       const parsed = JSON.parse(stdout);
-      expect(parsed.nodes.some((node: any) => (
-        node.relativePath === 'packages/app/src/index.ts' && node.workspace === '@repo/app'
-      ))).toBe(true);
-      expect(parsed.nodes.some((node: any) => (
-        node.relativePath === 'packages/lib/src/index.ts' && node.workspace === '@repo/lib'
-      ))).toBe(true);
+      expect(
+        parsed.nodes.some(
+          (node: any) =>
+            node.relativePath === 'packages/app/src/index.ts' && node.workspace === '@repo/app',
+        ),
+      ).toBe(true);
+      expect(
+        parsed.nodes.some(
+          (node: any) =>
+            node.relativePath === 'packages/lib/src/index.ts' && node.workspace === '@repo/lib',
+        ),
+      ).toBe(true);
       expect(parsed.edges.some((edge: any) => edge.isCrossPackage)).toBe(true);
     });
 
     it('should reject --deps with structure JSON output', async () => {
       try {
-        await execa('node', [
-          CLI_PATH,
-          'scan',
-          SIMPLE_PROJECT,
-          '--deps',
-          '--json',
-        ]);
+        await execa('node', [CLI_PATH, 'scan', SIMPLE_PROJECT, '--deps', '--json']);
         expect.fail('Should have thrown an error');
       } catch (err: any) {
         expect(err.exitCode).toBe(1);
@@ -486,18 +522,13 @@ describe('CLI Integration Tests', () => {
 
     it('should reject graph export formats outside dependency JSON output', async () => {
       try {
-        await execa('node', [
-          CLI_PATH,
-          'scan',
-          SIMPLE_PROJECT,
-          '--json',
-          '--format',
-          'mermaid',
-        ]);
+        await execa('node', [CLI_PATH, 'scan', SIMPLE_PROJECT, '--json', '--format', 'mermaid']);
         expect.fail('Should have thrown an error');
       } catch (err: any) {
         expect(err.exitCode).toBe(1);
-        expect(err.stderr).toContain('--format mermaid|dot|sarif is only supported with --mode dependencies');
+        expect(err.stderr).toContain(
+          '--format mermaid|dot|sarif is only supported with --mode dependencies',
+        );
       }
     });
 
@@ -571,12 +602,7 @@ describe('CLI Integration Tests', () => {
         'utf-8',
       );
 
-      const { stdout, exitCode } = await execa('node', [
-        CLI_PATH,
-        'scan',
-        projectDir,
-        '--json',
-      ]);
+      const { stdout, exitCode } = await execa('node', [CLI_PATH, 'scan', projectDir, '--json']);
 
       expect(exitCode).toBe(0);
       const parsed = JSON.parse(stdout);
@@ -594,12 +620,7 @@ describe('CLI Integration Tests', () => {
         'utf-8',
       );
 
-      const { stdout, exitCode } = await execa('node', [
-        CLI_PATH,
-        'scan',
-        projectDir,
-        '--json',
-      ]);
+      const { stdout, exitCode } = await execa('node', [CLI_PATH, 'scan', projectDir, '--json']);
 
       expect(exitCode).toBe(0);
       const parsed = JSON.parse(stdout);
@@ -629,26 +650,19 @@ describe('CLI Integration Tests', () => {
         'module.exports = { mode: "dependencies", plugins: ["./depxray-plugin.mjs"] };\n',
         'utf-8',
       );
-      await fs.writeFile(
-        path.join(TEMP_DIR, 'src/index.ts'),
-        'export const value = 1;\n',
-        'utf-8',
-      );
+      await fs.writeFile(path.join(TEMP_DIR, 'src/index.ts'), 'export const value = 1;\n', 'utf-8');
 
-      const { stdout, exitCode } = await execa('node', [
-        CLI_PATH,
-        'scan',
-        TEMP_DIR,
-        '--json',
-      ]);
+      const { stdout, exitCode } = await execa('node', [CLI_PATH, 'scan', TEMP_DIR, '--json']);
 
       expect(exitCode).toBe(0);
       const parsed = JSON.parse(stdout);
       expect(parsed.pluginData.custom.files).toBeGreaterThanOrEqual(1);
-      expect(parsed.nodes.some((node: any) => (
-        node.relativePath === 'src/index.ts' &&
-        node.pluginData.customNode === 'src/index.ts'
-      ))).toBe(true);
+      expect(
+        parsed.nodes.some(
+          (node: any) =>
+            node.relativePath === 'src/index.ts' && node.pluginData.customNode === 'src/index.ts',
+        ),
+      ).toBe(true);
     });
 
     it('should let CLI flags override depxray config', async () => {
@@ -673,19 +687,13 @@ describe('CLI Integration Tests', () => {
       expect(exitCode).toBe(0);
       expect(JSON.parse(stdout).mode).toBe('structure');
     });
-
   });
 
   describe('init command', () => {
     it('should create a default depxray.config.js', async () => {
       await fs.mkdir(TEMP_DIR, { recursive: true });
 
-      const { stderr, exitCode } = await execa('node', [
-        CLI_PATH,
-        'init',
-        TEMP_DIR,
-        '--defaults',
-      ]);
+      const { stderr, exitCode } = await execa('node', [CLI_PATH, 'init', TEMP_DIR, '--defaults']);
 
       expect(exitCode).toBe(0);
       const configPath = path.join(TEMP_DIR, 'depxray.config.js');
@@ -698,7 +706,11 @@ describe('CLI Integration Tests', () => {
 
     it('should not overwrite an existing config without --force', async () => {
       await fs.mkdir(TEMP_DIR, { recursive: true });
-      await fs.writeFile(path.join(TEMP_DIR, 'depxray.config.js'), 'module.exports = {};\n', 'utf-8');
+      await fs.writeFile(
+        path.join(TEMP_DIR, 'depxray.config.js'),
+        'module.exports = {};\n',
+        'utf-8',
+      );
 
       try {
         await execa('node', [CLI_PATH, 'init', TEMP_DIR, '--defaults']);
@@ -713,8 +725,14 @@ describe('CLI Integration Tests', () => {
   describe('inspect command', () => {
     it('should inspect a file and output text', async () => {
       const fileToInspect = 'src/App.tsx';
-      const { stdout, exitCode } = await execa('node', [CLI_PATH, 'inspect', fileToInspect, '--dir', SIMPLE_PROJECT]);
-      
+      const { stdout, exitCode } = await execa('node', [
+        CLI_PATH,
+        'inspect',
+        fileToInspect,
+        '--dir',
+        SIMPLE_PROJECT,
+      ]);
+
       expect(exitCode).toBe(0);
       expect(stdout).toContain(fileToInspect);
       expect(stdout).toContain('This file imports:');
@@ -723,8 +741,16 @@ describe('CLI Integration Tests', () => {
 
     it('should inspect a file and output JSON', async () => {
       const fileToInspect = 'src/App.tsx';
-      const { stdout, exitCode } = await execa('node', [CLI_PATH, 'inspect', fileToInspect, '--dir', SIMPLE_PROJECT, '--format', 'json']);
-      
+      const { stdout, exitCode } = await execa('node', [
+        CLI_PATH,
+        'inspect',
+        fileToInspect,
+        '--dir',
+        SIMPLE_PROJECT,
+        '--format',
+        'json',
+      ]);
+
       expect(exitCode).toBe(0);
       const parsed = JSON.parse(stdout);
       expect(parsed.file).toBe(fileToInspect);
@@ -805,11 +831,7 @@ describe('CLI Integration Tests', () => {
         'utf-8',
       );
 
-      const { stdout, exitCode } = await execa('node', [
-        CLI_PATH,
-        'report',
-        projectDir,
-      ]);
+      const { stdout, exitCode } = await execa('node', [CLI_PATH, 'report', projectDir]);
 
       expect(exitCode).toBe(0);
       expect(stdout).toContain('## Plugin Section');
@@ -843,10 +865,7 @@ describe('CLI Integration Tests', () => {
         afterPath,
         JSON.stringify({
           projectRoot: '/project',
-          nodes: [
-            { relativePath: 'src/App.ts' },
-            { relativePath: 'src/New.ts' },
-          ],
+          nodes: [{ relativePath: 'src/App.ts' }, { relativePath: 'src/New.ts' }],
           edges: [
             {
               source: '/project/src/App.ts',
@@ -883,27 +902,23 @@ describe('CLI Integration Tests', () => {
       const repoDir = path.join(TEMP_DIR, 'repo');
       await fs.mkdir(path.join(repoDir, 'src'), { recursive: true });
       await fs.writeFile(path.join(repoDir, 'package.json'), '{}\n', 'utf-8');
-      await fs.writeFile(
-        path.join(repoDir, 'src/index.ts'),
-        'export const value = 1;\n',
-        'utf-8',
-      );
+      await fs.writeFile(path.join(repoDir, 'src/index.ts'), 'export const value = 1;\n', 'utf-8');
       await execa('git', ['init'], { cwd: repoDir });
       await execa('git', ['add', '.'], { cwd: repoDir });
-      await execa('git', [
-        '-c',
-        'user.name=depxray',
-        '-c',
-        'user.email=depxray@example.com',
-        'commit',
-        '-m',
-        'initial',
-      ], { cwd: repoDir });
-      await fs.writeFile(
-        path.join(repoDir, 'src/new.ts'),
-        'export const next = 2;\n',
-        'utf-8',
+      await execa(
+        'git',
+        [
+          '-c',
+          'user.name=depxray',
+          '-c',
+          'user.email=depxray@example.com',
+          'commit',
+          '-m',
+          'initial',
+        ],
+        { cwd: repoDir },
       );
+      await fs.writeFile(path.join(repoDir, 'src/new.ts'), 'export const next = 2;\n', 'utf-8');
 
       const { stdout, exitCode } = await execa('node', [
         CLI_PATH,
@@ -934,51 +949,25 @@ describe('CLI Integration Tests', () => {
         'utf-8',
       );
 
-      const entryPoints = await execa('node', [
-        CLI_PATH,
-        'entry-points',
-        TEMP_DIR,
-        '--json',
-      ]);
-      expect(JSON.parse(entryPoints.stdout).entryPoints.map((item: any) => item.file)).toContain('src/index.ts');
-
-      const tree = await execa('node', [
-        CLI_PATH,
-        'tree',
+      const entryPoints = await execa('node', [CLI_PATH, 'entry-points', TEMP_DIR, '--json']);
+      expect(JSON.parse(entryPoints.stdout).entryPoints.map((item: any) => item.file)).toContain(
         'src/index.ts',
-        TEMP_DIR,
-        '--json',
-      ]);
+      );
+
+      const tree = await execa('node', [CLI_PATH, 'tree', 'src/index.ts', TEMP_DIR, '--json']);
       expect(JSON.parse(tree.stdout).imports[0].file).toBe('src/helper.ts');
 
-      const trace = await execa('node', [
-        CLI_PATH,
-        'trace',
-        'src/helper.ts',
-        TEMP_DIR,
-        '--json',
-      ]);
+      const trace = await execa('node', [CLI_PATH, 'trace', 'src/helper.ts', TEMP_DIR, '--json']);
       expect(JSON.parse(trace.stdout).entryPoints).toEqual(['src/index.ts']);
 
-      const impact = await execa('node', [
-        CLI_PATH,
-        'impact',
-        'src/helper.ts',
-        TEMP_DIR,
-        '--json',
-      ]);
+      const impact = await execa('node', [CLI_PATH, 'impact', 'src/helper.ts', TEMP_DIR, '--json']);
       const impactJson = JSON.parse(impact.stdout);
       expect(impactJson.target.file).toBe('src/helper.ts');
       expect(impactJson.affectedFiles.map((item: any) => item.file)).toEqual(['src/index.ts']);
       expect(impactJson.directDependentCount).toBe(1);
 
       try {
-        await execa('node', [
-          CLI_PATH,
-          'check',
-          TEMP_DIR,
-          '--json',
-        ]);
+        await execa('node', [CLI_PATH, 'check', TEMP_DIR, '--json']);
         expect.fail('Should have thrown an error');
       } catch (err: any) {
         expect(err.exitCode).toBe(1);
@@ -996,13 +985,19 @@ describe('CLI Integration Tests', () => {
       );
       await execa('git', ['init'], { cwd: repoDir });
       await execa('git', ['add', '.'], { cwd: repoDir });
-      await execa('git', [
-        '-c', 'user.name=depxray-test',
-        '-c', 'user.email=depxray@example.com',
-        'commit',
-        '-m',
-        'baseline',
-      ], { cwd: repoDir });
+      await execa(
+        'git',
+        [
+          '-c',
+          'user.name=depxray-test',
+          '-c',
+          'user.email=depxray@example.com',
+          'commit',
+          '-m',
+          'baseline',
+        ],
+        { cwd: repoDir },
+      );
 
       const inherited = await execa('node', [
         CLI_PATH,
@@ -1017,14 +1012,7 @@ describe('CLI Integration Tests', () => {
 
       await fs.appendFile(path.join(repoDir, 'src/index.ts'), "import './new-missing';\n");
       try {
-        await execa('node', [
-          CLI_PATH,
-          'check',
-          repoDir,
-          '--base',
-          'HEAD',
-          '--json',
-        ]);
+        await execa('node', [CLI_PATH, 'check', repoDir, '--base', 'HEAD', '--json']);
         expect.fail('Should have failed for the newly introduced import.');
       } catch (error: any) {
         expect(error.exitCode).toBe(1);
@@ -1048,7 +1036,7 @@ describe('CLI Integration Tests', () => {
 
     it('should show help output', async () => {
       const { stdout, exitCode } = await execa('node', [CLI_PATH, '--help']);
-      
+
       expect(exitCode).toBe(0);
       expect(stdout).toContain('Usage: depxray');
       expect(stdout).toContain('scan [options]');
@@ -1066,13 +1054,7 @@ describe('CLI Integration Tests', () => {
 
     it('should reject watch mode with JSON output', async () => {
       try {
-        await execa('node', [
-          CLI_PATH,
-          'scan',
-          SIMPLE_PROJECT,
-          '--json',
-          '--watch',
-        ]);
+        await execa('node', [CLI_PATH, 'scan', SIMPLE_PROJECT, '--json', '--watch']);
         expect.fail('Should have thrown an error');
       } catch (err: any) {
         expect(err.exitCode).toBe(1);

@@ -85,11 +85,7 @@ function circularKey(circular: SnapshotCircular): string {
   return (circular.chain ?? []).join(' -> ');
 }
 
-function difference<T>(
-  before: T[],
-  after: T[],
-  key: (value: T) => string,
-): T[] {
+function difference<T>(before: T[], after: T[], key: (value: T) => string): T[] {
   const beforeKeys = new Set(before.map(key));
   return after.filter((value) => !beforeKeys.has(key(value)));
 }

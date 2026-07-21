@@ -37,11 +37,7 @@ export function scanProject(options: ScanOptions): Promise<ScanResult> {
     scanSessions.delete(oldestRoot);
   }
 
-  const {
-    rootDir: _rootDir,
-    analysisCache: _analysisCache,
-    ...overrides
-  } = options;
+  const { rootDir: _rootDir, analysisCache: _analysisCache, ...overrides } = options;
   return session.scan(overrides);
 }
 
@@ -50,9 +46,7 @@ export function resolveRootDir(rootDir: string): string {
 }
 
 export function resolveProjectPath(rootDir: string, targetPath: string): string {
-  return path.isAbsolute(targetPath)
-    ? path.resolve(targetPath)
-    : path.resolve(rootDir, targetPath);
+  return path.isAbsolute(targetPath) ? path.resolve(targetPath) : path.resolve(rootDir, targetPath);
 }
 
 export function assertPathInsideRoot(rootDir: string, targetPath: string): void {

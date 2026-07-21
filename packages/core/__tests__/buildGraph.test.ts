@@ -1,6 +1,5 @@
 import { describe, it, expect } from 'vitest';
 import packageJson from '../package.json';
-import * as path from 'path';
 import { buildGraph } from '../src/buildGraph.js';
 import type { ResolvedImport, ScanMetadata } from '../src/types.js';
 
@@ -18,10 +17,7 @@ function makeMeta(): ScanMetadata {
   };
 }
 
-function makeResolved(
-  source: string,
-  resolvedPath: string | null,
-): ResolvedImport {
+function makeResolved(source: string, resolvedPath: string | null): ResolvedImport {
   return {
     raw: {
       source: source,
@@ -99,9 +95,7 @@ describe('buildGraph', () => {
       makeResolved('./Button', buttonPath),
       makeResolved('./utils', utilsPath),
     ]);
-    fileImports.set(buttonPath, [
-      makeResolved('./utils', utilsPath),
-    ]);
+    fileImports.set(buttonPath, [makeResolved('./utils', utilsPath)]);
     fileImports.set(utilsPath, []);
 
     const graph = buildGraph(fileImports, ROOT_DIR, makeMeta());
@@ -130,9 +124,7 @@ describe('buildGraph', () => {
     const fileImports = new Map<string, ResolvedImport[]>();
     // Only App.tsx is scanned, but it imports SharedLib.tsx which
     // wasn't in our initial file list
-    fileImports.set(appPath, [
-      makeResolved('./SharedLib', externalLocalPath),
-    ]);
+    fileImports.set(appPath, [makeResolved('./SharedLib', externalLocalPath)]);
 
     const graph = buildGraph(fileImports, ROOT_DIR, makeMeta());
 
@@ -158,12 +150,8 @@ describe('buildGraph', () => {
 
   it('should initialize isCircular to false', () => {
     const fileImports = new Map<string, ResolvedImport[]>();
-    fileImports.set(`${ROOT_DIR}/src/A.ts`, [
-      makeResolved('./B', `${ROOT_DIR}/src/B.ts`),
-    ]);
-    fileImports.set(`${ROOT_DIR}/src/B.ts`, [
-      makeResolved('./A', `${ROOT_DIR}/src/A.ts`),
-    ]);
+    fileImports.set(`${ROOT_DIR}/src/A.ts`, [makeResolved('./B', `${ROOT_DIR}/src/B.ts`)]);
+    fileImports.set(`${ROOT_DIR}/src/B.ts`, [makeResolved('./A', `${ROOT_DIR}/src/A.ts`)]);
 
     const graph = buildGraph(fileImports, ROOT_DIR, makeMeta());
 

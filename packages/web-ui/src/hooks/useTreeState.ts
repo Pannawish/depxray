@@ -20,10 +20,7 @@ function buildDefaultCollapsedIds(data: ExplorerGraphData | null, mode: GraphMod
   );
 }
 
-function collectAncestorIds(
-  nodeId: string,
-  parentById: Map<string, string>,
-): string[] {
+function collectAncestorIds(nodeId: string, parentById: Map<string, string>): string[] {
   const ancestors: string[] = [];
   let currentParentId = parentById.get(nodeId);
 
@@ -35,10 +32,7 @@ function collectAncestorIds(
   return ancestors;
 }
 
-function collectDependencyNeighborIds(
-  nodeId: string,
-  edges: ExplorerGraphEdge[],
-): string[] {
+function collectDependencyNeighborIds(nodeId: string, edges: ExplorerGraphEdge[]): string[] {
   const neighborIds = new Set<string>();
 
   for (const edge of edges) {
@@ -115,22 +109,25 @@ export function useTreeState(
     }
   }
 
-  const filteredEdges = mode === 'dependencies'
-    ? graphData.edges.filter((edge) => (
-      (dependencyFilters.showTypeOnlyEdges || !edge.isTypeOnly) &&
-      (dependencyFilters.showDynamicEdges || !edge.isDynamic)
-    ))
-    : graphData.edges;
+  const filteredEdges =
+    mode === 'dependencies'
+      ? graphData.edges.filter(
+          (edge) =>
+            (dependencyFilters.showTypeOnlyEdges || !edge.isTypeOnly) &&
+            (dependencyFilters.showDynamicEdges || !edge.isDynamic),
+        )
+      : graphData.edges;
 
   const matchedNodeIds = normalizedSearch
     ? new Set(
-      graphData.nodes
-        .filter((node) => (
-          node.label.toLowerCase().includes(normalizedSearch) ||
-          node.relativePath.toLowerCase().includes(normalizedSearch)
-        ))
-        .map((node) => node.id),
-    )
+        graphData.nodes
+          .filter(
+            (node) =>
+              node.label.toLowerCase().includes(normalizedSearch) ||
+              node.relativePath.toLowerCase().includes(normalizedSearch),
+          )
+          .map((node) => node.id),
+      )
     : new Set<string>();
 
   const emphasizedNodeIds = new Set<string>(matchedNodeIds);
@@ -147,30 +144,29 @@ export function useTreeState(
     }
   }
 
-  const circularNodeIds = mode === 'dependencies'
-    ? new Set(
-      graphData.nodes
-        .filter((node) => node.isCircular)
-        .map((node) => node.id),
-    )
-    : new Set<string>();
-  const orphanNodeIds = mode === 'dependencies'
-    ? new Set(
-      graphData.nodes
-        .filter((node) => node.isOrphan)
-        .map((node) => node.id),
-    )
-    : new Set<string>();
+  const circularNodeIds =
+    mode === 'dependencies'
+      ? new Set(graphData.nodes.filter((node) => node.isCircular).map((node) => node.id))
+      : new Set<string>();
+  const orphanNodeIds =
+    mode === 'dependencies'
+      ? new Set(graphData.nodes.filter((node) => node.isOrphan).map((node) => node.id))
+      : new Set<string>();
 
   const visibleNodes = graphData.nodes
-    .filter((node) => (
-      node.depth <= maxDepth &&
-      (mode === 'structure'
-        ? isVisible(node, parentById, collapsedIds, maxDepth) || emphasizedNodeIds.has(node.id)
-        : true) &&
-      (!dependencyFilters.circularOnly || circularNodeIds.has(node.id) || emphasizedNodeIds.has(node.id)) &&
-      (!dependencyFilters.orphanOnly || orphanNodeIds.has(node.id) || emphasizedNodeIds.has(node.id))
-    ))
+    .filter(
+      (node) =>
+        node.depth <= maxDepth &&
+        (mode === 'structure'
+          ? isVisible(node, parentById, collapsedIds, maxDepth) || emphasizedNodeIds.has(node.id)
+          : true) &&
+        (!dependencyFilters.circularOnly ||
+          circularNodeIds.has(node.id) ||
+          emphasizedNodeIds.has(node.id)) &&
+        (!dependencyFilters.orphanOnly ||
+          orphanNodeIds.has(node.id) ||
+          emphasizedNodeIds.has(node.id)),
+    )
     .map((node) => ({
       ...node,
       collapsed: mode === 'structure' && collapsedIds.has(node.id),
@@ -178,21 +174,16 @@ export function useTreeState(
     }));
 
   const visibleNodeIds = new Set(visibleNodes.map((node) => node.id));
-  const visibleEdges = filteredEdges.filter((edge) => (
-    visibleNodeIds.has(edge.source) && visibleNodeIds.has(edge.target)
-  ));
+  const visibleEdges = filteredEdges.filter(
+    (edge) => visibleNodeIds.has(edge.source) && visibleNodeIds.has(edge.target),
+  );
 
   const visibleMatchedNodeIds = normalizedSearch
-    ? new Set(
-      visibleNodes
-        .filter((node) => matchedNodeIds.has(node.id))
-        .map((node) => node.id),
-    )
+    ? new Set(visibleNodes.filter((node) => matchedNodeIds.has(node.id)).map((node) => node.id))
     : visibleNodeIds;
 
-  const firstMatchedVisibleNodeId = visibleNodes.find((node) => (
-    visibleMatchedNodeIds.has(node.id)
-  ))?.id ?? null;
+  const firstMatchedVisibleNodeId =
+    visibleNodes.find((node) => visibleMatchedNodeIds.has(node.id))?.id ?? null;
 
   function toggleCollapsed(nodeId: string) {
     if (mode !== 'structure') {
@@ -222,11 +213,13 @@ export function useTreeState(
       return;
     }
 
-    setCollapsedIds(new Set(
-      graphData.nodes
-        .filter((node) => node.kind === 'directory' && node.childCount > 0 && node.depth > 0)
-        .map((node) => node.id),
-    ));
+    setCollapsedIds(
+      new Set(
+        graphData.nodes
+          .filter((node) => node.kind === 'directory' && node.childCount > 0 && node.depth > 0)
+          .map((node) => node.id),
+      ),
+    );
   }
 
   function resetCollapsed() {

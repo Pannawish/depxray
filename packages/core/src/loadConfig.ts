@@ -5,11 +5,7 @@ import type { DepxrayConfig } from './types.js';
 
 type ConfigRecord = Record<string, unknown>;
 
-const CONFIG_FILES = [
-  'depxray.config.js',
-  'depxray.config.mjs',
-  '.depxrayrc.json',
-] as const;
+const CONFIG_FILES = ['depxray.config.js', 'depxray.config.mjs', '.depxrayrc.json'] as const;
 
 async function pathExists(filePath: string): Promise<boolean> {
   try {
@@ -38,8 +34,13 @@ function readStringArray(
     return undefined;
   }
 
-  if (!Array.isArray(value) || value.some((item) => typeof item !== 'string' || item.length === 0)) {
-    throw new Error(`Invalid depxray config in ${source}: ${key} must be an array of non-empty strings.`);
+  if (
+    !Array.isArray(value) ||
+    value.some((item) => typeof item !== 'string' || item.length === 0)
+  ) {
+    throw new Error(
+      `Invalid depxray config in ${source}: ${key} must be an array of non-empty strings.`,
+    );
   }
 
   return value;
@@ -69,7 +70,9 @@ function readMode(record: ConfigRecord, source: string): DepxrayConfig['mode'] {
   }
 
   if (value !== 'structure' && value !== 'dependencies') {
-    throw new Error(`Invalid depxray config in ${source}: mode must be "structure" or "dependencies".`);
+    throw new Error(
+      `Invalid depxray config in ${source}: mode must be "structure" or "dependencies".`,
+    );
   }
 
   return value;
@@ -82,7 +85,9 @@ function readPort(record: ConfigRecord, source: string): number | undefined {
   }
 
   if (!Number.isInteger(value) || (value as number) < 1 || (value as number) > 65535) {
-    throw new Error(`Invalid depxray config in ${source}: port must be an integer between 1 and 65535.`);
+    throw new Error(
+      `Invalid depxray config in ${source}: port must be an integer between 1 and 65535.`,
+    );
   }
 
   return value as number;
@@ -126,48 +131,63 @@ function readRules(record: ConfigRecord, source: string): DepxrayConfig['rules']
 
     if (hasGlobalRule) {
       if (typeof rule.from !== 'string' || rule.from.length === 0) {
-        throw new Error(`Invalid depxray config in ${source}: rules[${index}].from must be a non-empty string.`);
+        throw new Error(
+          `Invalid depxray config in ${source}: rules[${index}].from must be a non-empty string.`,
+        );
       }
       if (typeof rule.to !== 'string' || rule.to.length === 0) {
-        throw new Error(`Invalid depxray config in ${source}: rules[${index}].to must be a non-empty string.`);
+        throw new Error(
+          `Invalid depxray config in ${source}: rules[${index}].to must be a non-empty string.`,
+        );
       }
     }
 
     if (hasScopedRule) {
       if (
         !Array.isArray(rule.entryPoints) ||
-        rule.entryPoints.some((entryPoint) => typeof entryPoint !== 'string' || entryPoint.length === 0)
+        rule.entryPoints.some(
+          (entryPoint) => typeof entryPoint !== 'string' || entryPoint.length === 0,
+        )
       ) {
-        throw new Error(`Invalid depxray config in ${source}: rules[${index}].entryPoints must be an array of non-empty strings.`);
+        throw new Error(
+          `Invalid depxray config in ${source}: rules[${index}].entryPoints must be an array of non-empty strings.`,
+        );
       }
       if (!rule.deny || typeof rule.deny !== 'object' || Array.isArray(rule.deny)) {
-        throw new Error(`Invalid depxray config in ${source}: rules[${index}].deny must be an object.`);
+        throw new Error(
+          `Invalid depxray config in ${source}: rules[${index}].deny must be an object.`,
+        );
       }
       const deny = rule.deny as ConfigRecord;
       for (const key of ['files', 'modules'] as const) {
         const value = deny[key];
         if (
           value !== undefined &&
-          (!Array.isArray(value) || value.some((item) => typeof item !== 'string' || item.length === 0))
+          (!Array.isArray(value) ||
+            value.some((item) => typeof item !== 'string' || item.length === 0))
         ) {
-          throw new Error(`Invalid depxray config in ${source}: rules[${index}].deny.${key} must be an array of non-empty strings.`);
+          throw new Error(
+            `Invalid depxray config in ${source}: rules[${index}].deny.${key} must be an array of non-empty strings.`,
+          );
         }
       }
     }
 
     if (!hasGlobalRule && !hasScopedRule) {
-      throw new Error(`Invalid depxray config in ${source}: rules[${index}] must define from/to or entryPoints/deny.`);
+      throw new Error(
+        `Invalid depxray config in ${source}: rules[${index}] must define from/to or entryPoints/deny.`,
+      );
     }
 
-    if (
-      rule.severity !== undefined &&
-      rule.severity !== 'error' &&
-      rule.severity !== 'warning'
-    ) {
-      throw new Error(`Invalid depxray config in ${source}: rules[${index}].severity must be "error" or "warning".`);
+    if (rule.severity !== undefined && rule.severity !== 'error' && rule.severity !== 'warning') {
+      throw new Error(
+        `Invalid depxray config in ${source}: rules[${index}].severity must be "error" or "warning".`,
+      );
     }
     if (rule.message !== undefined && typeof rule.message !== 'string') {
-      throw new Error(`Invalid depxray config in ${source}: rules[${index}].message must be a string.`);
+      throw new Error(
+        `Invalid depxray config in ${source}: rules[${index}].message must be a string.`,
+      );
     }
 
     return {
@@ -195,17 +215,20 @@ function readImportConventions(
   }
 
   const config = value as ConfigRecord;
-  if (
-    config.prefer !== undefined &&
-    config.prefer !== 'relative' &&
-    config.prefer !== 'absolute'
-  ) {
-    throw new Error(`Invalid depxray config in ${source}: importConventions.prefer must be "relative" or "absolute".`);
+  if (config.prefer !== undefined && config.prefer !== 'relative' && config.prefer !== 'absolute') {
+    throw new Error(
+      `Invalid depxray config in ${source}: importConventions.prefer must be "relative" or "absolute".`,
+    );
   }
 
   for (const key of ['aliasPrefix', 'root'] as const) {
-    if (config[key] !== undefined && (typeof config[key] !== 'string' || config[key].length === 0)) {
-      throw new Error(`Invalid depxray config in ${source}: importConventions.${key} must be a non-empty string.`);
+    if (
+      config[key] !== undefined &&
+      (typeof config[key] !== 'string' || config[key].length === 0)
+    ) {
+      throw new Error(
+        `Invalid depxray config in ${source}: importConventions.${key} must be a non-empty string.`,
+      );
     }
   }
 
@@ -229,23 +252,31 @@ function readPlugins(record: ConfigRecord, source: string): DepxrayConfig['plugi
   return value.map((item, index) => {
     if (typeof item === 'string') {
       if (item.length === 0) {
-        throw new Error(`Invalid depxray config in ${source}: plugins[${index}] must be a non-empty string or plugin object.`);
+        throw new Error(
+          `Invalid depxray config in ${source}: plugins[${index}] must be a non-empty string or plugin object.`,
+        );
       }
       return item;
     }
 
     if (!item || typeof item !== 'object' || Array.isArray(item)) {
-      throw new Error(`Invalid depxray config in ${source}: plugins[${index}] must be a non-empty string or plugin object.`);
+      throw new Error(
+        `Invalid depxray config in ${source}: plugins[${index}] must be a non-empty string or plugin object.`,
+      );
     }
 
     const plugin = item as ConfigRecord;
     if (plugin.name !== undefined && typeof plugin.name !== 'string') {
-      throw new Error(`Invalid depxray config in ${source}: plugins[${index}].name must be a string.`);
+      throw new Error(
+        `Invalid depxray config in ${source}: plugins[${index}].name must be a string.`,
+      );
     }
 
     for (const hookName of ['afterScan', 'afterBuildGraph', 'onReport'] as const) {
       if (plugin[hookName] !== undefined && typeof plugin[hookName] !== 'function') {
-        throw new Error(`Invalid depxray config in ${source}: plugins[${index}].${hookName} must be a function.`);
+        throw new Error(
+          `Invalid depxray config in ${source}: plugins[${index}].${hookName} must be a function.`,
+        );
       }
     }
 

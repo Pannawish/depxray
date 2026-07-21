@@ -57,10 +57,7 @@ describe('loadConfig', () => {
   });
 
   it('loads .depxrayrc.json', async () => {
-    await writeFile(
-      '.depxrayrc.json',
-      JSON.stringify({ mode: 'structure', ignore: ['dist'] }),
-    );
+    await writeFile('.depxrayrc.json', JSON.stringify({ mode: 'structure', ignore: ['dist'] }));
 
     const config = await loadConfig(tempDir);
     expect(config.mode).toBe('structure');
@@ -97,18 +94,12 @@ describe('loadConfig', () => {
     await writeFile(
       '.depxrayrc.json',
       JSON.stringify({
-        plugins: [
-          '@depxray/plugin-complexity',
-          './depxray-plugin.mjs',
-        ],
+        plugins: ['@depxray/plugin-complexity', './depxray-plugin.mjs'],
       }),
     );
 
     const config = await loadConfig(tempDir);
-    expect(config.plugins).toEqual([
-      '@depxray/plugin-complexity',
-      './depxray-plugin.mjs',
-    ]);
+    expect(config.plugins).toEqual(['@depxray/plugin-complexity', './depxray-plugin.mjs']);
   });
 
   it('loads the depxray key from package.json', async () => {

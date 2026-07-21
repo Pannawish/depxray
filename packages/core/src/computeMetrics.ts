@@ -30,10 +30,7 @@ function getParserPlugins(filePath: string): ParserPlugin[] {
 }
 
 function countLoc(sourceCode: string): number {
-  return sourceCode
-    .split(/\r?\n/)
-    .filter((line) => line.trim().length > 0)
-    .length;
+  return sourceCode.split(/\r?\n/).filter((line) => line.trim().length > 0).length;
 }
 
 /**
@@ -53,7 +50,7 @@ export function computeFileMetrics(
   let exportCount = 0;
 
   traverse(ast, {
-    IfStatement(path) {
+    IfStatement() {
       decisionPoints += 1;
     },
     ForStatement() {

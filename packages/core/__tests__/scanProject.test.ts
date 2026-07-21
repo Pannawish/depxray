@@ -44,16 +44,12 @@ describe('scanProject — integration', () => {
     });
 
     // The @utils/helpers import from App.tsx should be resolved
-    const appNode = result.graph.nodes.find((n) =>
-      n.relativePath.endsWith('App.tsx'),
-    )!;
+    const appNode = result.graph.nodes.find((n) => n.relativePath.endsWith('App.tsx'))!;
     expect(appNode).toBeDefined();
     expect(appNode.outDegree).toBeGreaterThanOrEqual(3);
 
     // Check that helpers.ts has inbound edges (from App and Header)
-    const helpersNode = result.graph.nodes.find((n) =>
-      n.relativePath.endsWith('helpers.ts'),
-    )!;
+    const helpersNode = result.graph.nodes.find((n) => n.relativePath.endsWith('helpers.ts'))!;
     expect(helpersNode).toBeDefined();
     expect(helpersNode.inDegree).toBeGreaterThanOrEqual(1);
   });
@@ -106,10 +102,7 @@ describe('scanProject — integration', () => {
       entryPointPatterns: [],
     });
 
-    expect(result.orphanFiles).toEqual([
-      'src/App.tsx',
-      'src/components/index.ts',
-    ]);
+    expect(result.orphanFiles).toEqual(['src/App.tsx', 'src/components/index.ts']);
   });
 
   // ─── Circular project ────────────────────────────────────────────────
@@ -136,9 +129,7 @@ describe('scanProject — integration', () => {
     expect(circularNodes.length).toBeGreaterThanOrEqual(4);
 
     // standalone.ts should NOT be circular
-    const standaloneNode = result.graph.nodes.find((n) =>
-      n.relativePath.includes('standalone'),
-    );
+    const standaloneNode = result.graph.nodes.find((n) => n.relativePath.includes('standalone'));
     expect(standaloneNode).toBeDefined();
     expect(standaloneNode!.isCircular).toBe(false);
   });
@@ -177,18 +168,14 @@ describe('scanProject — integration', () => {
 
     // Dashboard.tsx may still appear as a node (because App.tsx imports it),
     // but it should NOT have been scanned for its own imports (outDegree = 0).
-    const dashboardNode = result.graph.nodes.find((n) =>
-      n.relativePath.includes('Dashboard'),
-    );
+    const dashboardNode = result.graph.nodes.find((n) => n.relativePath.includes('Dashboard'));
     if (dashboardNode) {
       expect(dashboardNode.outDegree).toBe(0);
     }
 
     // The ignored directory's files should not be in the scan count
     // (totalFiles counts scanned files, not import targets)
-    const scannedCount = result.graph.nodes.filter(
-      (n) => !n.relativePath.includes('pages'),
-    ).length;
+    const scannedCount = result.graph.nodes.filter((n) => !n.relativePath.includes('pages')).length;
     expect(scannedCount).toBe(6); // 7 total minus Dashboard
   });
 
@@ -237,10 +224,7 @@ describe('scanProject — integration', () => {
     );
     await fs.writeFile(
       path.join(projectDir, 'src/widgets.ts'),
-      [
-        'export const starUsed = "used";',
-        'export const starUnused = "unused";',
-      ].join('\n'),
+      ['export const starUsed = "used";', 'export const starUnused = "unused";'].join('\n'),
       'utf-8',
     );
     await fs.writeFile(
@@ -255,9 +239,7 @@ describe('scanProject — integration', () => {
         entryPointPatterns: ['src/index.ts', 'src/public-api.ts'],
       });
 
-      const byRelativePath = new Map(
-        result.graph.nodes.map((node) => [node.relativePath, node]),
-      );
+      const byRelativePath = new Map(result.graph.nodes.map((node) => [node.relativePath, node]));
 
       expect(byRelativePath.get('src/index.ts')?.unusedExports ?? []).toEqual([]);
       expect(byRelativePath.get('src/public-api.ts')?.unusedExports ?? []).toEqual([]);
@@ -468,18 +450,27 @@ describe('scanProject — integration', () => {
 
     try {
       const result = await scanProject({ rootDir: projectDir });
-      expect(result.graph.edges.some((edge) => (
-        edge.importSpecifier === '@repo/lib/button' &&
-        edge.target.endsWith('packages/lib/src/Button.ts')
-      ))).toBe(true);
-      expect(result.graph.edges.some((edge) => (
-        edge.importSpecifier === '@repo/lib/feature/card' &&
-        edge.target.endsWith('packages/lib/src/features/card.ts')
-      ))).toBe(true);
-      expect(result.graph.edges.some((edge) => (
-        edge.importSpecifier === '#internal/value' &&
-        edge.target.endsWith('packages/lib/src/internal/value.ts')
-      ))).toBe(true);
+      expect(
+        result.graph.edges.some(
+          (edge) =>
+            edge.importSpecifier === '@repo/lib/button' &&
+            edge.target.endsWith('packages/lib/src/Button.ts'),
+        ),
+      ).toBe(true);
+      expect(
+        result.graph.edges.some(
+          (edge) =>
+            edge.importSpecifier === '@repo/lib/feature/card' &&
+            edge.target.endsWith('packages/lib/src/features/card.ts'),
+        ),
+      ).toBe(true);
+      expect(
+        result.graph.edges.some(
+          (edge) =>
+            edge.importSpecifier === '#internal/value' &&
+            edge.target.endsWith('packages/lib/src/internal/value.ts'),
+        ),
+      ).toBe(true);
     } finally {
       await fs.rm(projectDir, { recursive: true, force: true });
     }
@@ -561,12 +552,12 @@ describe('scanProject — integration', () => {
 
     try {
       const result = await scanProject({ rootDir: projectDir });
-      const appNode = result.graph.nodes.find((node) => (
-        node.relativePath === 'packages/app/src/index.ts'
-      ));
-      const libNode = result.graph.nodes.find((node) => (
-        node.relativePath === 'packages/lib/src/index.ts'
-      ));
+      const appNode = result.graph.nodes.find(
+        (node) => node.relativePath === 'packages/app/src/index.ts',
+      );
+      const libNode = result.graph.nodes.find(
+        (node) => node.relativePath === 'packages/lib/src/index.ts',
+      );
       const crossPackageEdge = result.graph.edges.find((edge) => edge.isCrossPackage);
 
       expect(appNode?.workspace).toBe('@repo/app');
@@ -619,9 +610,7 @@ describe('scanProject — integration', () => {
 
     expect(result.graph.metadata.scannedAt).toBeTruthy();
     expect(result.graph.metadata.scanDurationMs).toBeGreaterThan(0);
-    expect(result.graph.metadata.projectRoot).toBe(
-      path.resolve(SIMPLE_PROJECT),
-    );
+    expect(result.graph.metadata.projectRoot).toBe(path.resolve(SIMPLE_PROJECT));
     expect(result.graph.metadata.depxrayVersion).toBe(packageJson.version);
   });
 });

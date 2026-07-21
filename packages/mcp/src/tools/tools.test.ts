@@ -99,16 +99,14 @@ describe('MCP tool handlers', () => {
     const projectDir = createTempProject('depxray-unused-exports-');
 
     try {
-      writeText(path.join(projectDir, 'src/index.ts'), [
-        "import { used } from './util';",
-        'export const entryValue = used;',
-        '',
-      ].join('\n'));
-      writeText(path.join(projectDir, 'src/util.ts'), [
-        'export const used = 1;',
-        'export const unused = 2;',
-        '',
-      ].join('\n'));
+      writeText(
+        path.join(projectDir, 'src/index.ts'),
+        ["import { used } from './util';", 'export const entryValue = used;', ''].join('\n'),
+      );
+      writeText(
+        path.join(projectDir, 'src/util.ts'),
+        ['export const used = 1;', 'export const unused = 2;', ''].join('\n'),
+      );
 
       const result = await findUnusedExportsTool({ rootDir: projectDir });
       expect(result.count).toBeGreaterThan(0);
@@ -204,7 +202,10 @@ describe('MCP tool handlers', () => {
     const projectDir = createTempProject('depxray-diff-graphs-');
 
     try {
-      writeText(path.join(projectDir, 'package.json'), '{"name":"depxray-diff-test","type":"module"}\n');
+      writeText(
+        path.join(projectDir, 'package.json'),
+        '{"name":"depxray-diff-test","type":"module"}\n',
+      );
       writeText(path.join(projectDir, 'src/index.ts'), 'export const value = 1;\n');
       execFileSync('git', ['init'], { cwd: projectDir, stdio: 'pipe' });
       execFileSync('git', ['add', '.'], { cwd: projectDir, stdio: 'pipe' });
@@ -225,11 +226,10 @@ describe('MCP tool handlers', () => {
       );
 
       writeText(path.join(projectDir, 'src/helper.ts'), 'export const helper = 2;\n');
-      writeText(path.join(projectDir, 'src/index.ts'), [
-        "import { helper } from './helper';",
-        'export const value = helper;',
-        '',
-      ].join('\n'));
+      writeText(
+        path.join(projectDir, 'src/index.ts'),
+        ["import { helper } from './helper';", 'export const value = helper;', ''].join('\n'),
+      );
 
       const result = await diffGraphsTool({
         rootDir: projectDir,

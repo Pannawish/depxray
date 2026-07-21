@@ -1,11 +1,6 @@
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
-import {
-  assertPathInsideRoot,
-  resolveProjectPath,
-  resolveRootDir,
-  scanProject,
-} from './shared.js';
+import { assertPathInsideRoot, resolveProjectPath, resolveRootDir, scanProject } from './shared.js';
 
 export interface InspectFileInput {
   filePath: string;

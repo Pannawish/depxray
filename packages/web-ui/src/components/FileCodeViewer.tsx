@@ -39,9 +39,15 @@ export function FileCodeViewer({
     }
 
     // Check if we are in static-export mode where live fetch is unavailable
-    if (window.__GRAPH_DATA_SET__ && !window.location.origin.includes('127.0.0.1') && !window.location.origin.includes('localhost')) {
+    if (
+      window.__GRAPH_DATA_SET__ &&
+      !window.location.origin.includes('127.0.0.1') &&
+      !window.location.origin.includes('localhost')
+    ) {
       setCode('');
-      setError('Code preview is only available in live CLI server mode, not in static HTML exports.');
+      setError(
+        'Code preview is only available in live CLI server mode, not in static HTML exports.',
+      );
       return;
     }
 
@@ -54,7 +60,11 @@ export function FileCodeViewer({
       try {
         const response = await fetch(`/api/file?path=${encodeURIComponent(fileNode.relativePath)}`);
         if (!response.ok) {
-          throw new Error(response.status === 404 ? 'File not found on disk' : `Server responded with ${response.status}`);
+          throw new Error(
+            response.status === 404
+              ? 'File not found on disk'
+              : `Server responded with ${response.status}`,
+          );
         }
         const text = await response.text();
         if (active) {
@@ -81,11 +91,11 @@ export function FileCodeViewer({
   if (!node) {
     return (
       <section className="code-viewer-panel empty-state">
-        <div 
-          className="panel-header draggable" 
+        <div
+          className="panel-header draggable"
           draggable
           onDragStart={onDragStart}
-          onDragOver={(e) => e.preventDefault()} 
+          onDragOver={(e) => e.preventDefault()}
           onDrop={onDrop}
           style={{ cursor: 'grab' }}
         >
@@ -97,7 +107,7 @@ export function FileCodeViewer({
             </div>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <button 
+            <button
               className="swap-layout-btn"
               onClick={onSwapVertical}
               title="Swap vertical layout with Details Panel"
@@ -105,7 +115,7 @@ export function FileCodeViewer({
             >
               ⇅
             </button>
-            <button 
+            <button
               className="swap-layout-btn"
               onClick={onSwapHorizontal}
               title="Swap horizontal column with Project Tree"
@@ -116,7 +126,9 @@ export function FileCodeViewer({
           </div>
         </div>
         <div className="code-viewer-content empty">
-          <p className="empty-copy">Select a file in the project explorer to view its source code and trace imports.</p>
+          <p className="empty-copy">
+            Select a file in the project explorer to view its source code and trace imports.
+          </p>
         </div>
       </section>
     );
@@ -129,23 +141,25 @@ export function FileCodeViewer({
 
   // Parse lines and build lookup for outgoing imports
   const lines = code.split(/\r?\n/);
-  
+
   // Highlighting map: line index -> edge
-  const importLineMap = new Map<number, typeof outgoing[0]>();
+  const importLineMap = new Map<number, (typeof outgoing)[0]>();
   lines.forEach((line, index) => {
     const trimmed = line.trim();
     if (!trimmed.startsWith('import ') && !trimmed.includes('import(')) return;
 
     // Find if any outgoing edge has its import specifier mentioned on this line
-    const match = outgoing.find(edge => {
+    const match = outgoing.find((edge) => {
       if (!edge.importSpecifier) return false;
       const spec = edge.importSpecifier;
       // Match inside quotes or backticks to avoid substring collisions
-      return line.includes(`'${spec}'`) || 
-             line.includes(`"${spec}"`) || 
-             line.includes(`\`${spec}\``) ||
-             // Fallback to substring if specifier matches closely
-             line.includes(spec);
+      return (
+        line.includes(`'${spec}'`) ||
+        line.includes(`"${spec}"`) ||
+        line.includes(`\`${spec}\``) ||
+        // Fallback to substring if specifier matches closely
+        line.includes(spec)
+      );
     });
 
     if (match) {
@@ -155,11 +169,11 @@ export function FileCodeViewer({
 
   return (
     <section className="code-viewer-panel">
-      <div 
-        className="panel-header inline draggable" 
+      <div
+        className="panel-header inline draggable"
         draggable
         onDragStart={onDragStart}
-        onDragOver={(e) => e.preventDefault()} 
+        onDragOver={(e) => e.preventDefault()}
         onDrop={onDrop}
         style={{ cursor: 'grab' }}
       >
@@ -170,14 +184,14 @@ export function FileCodeViewer({
             <h2>{node.label}</h2>
           </div>
         </div>
-        
+
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <span className="code-viewer-stats">
             {node.kind === 'directory'
               ? `${index.childrenByParentId.get(node.id)?.length || 0} items`
               : `${outgoing.length} imports • ${incoming.length} dependents`}
           </span>
-          <button 
+          <button
             className="swap-layout-btn"
             onClick={onSwapVertical}
             title="Swap vertical layout with Details Panel"
@@ -185,7 +199,7 @@ export function FileCodeViewer({
           >
             ⇅
           </button>
-          <button 
+          <button
             className="swap-layout-btn"
             onClick={onSwapHorizontal}
             title="Swap horizontal column with Project Tree"
@@ -198,7 +212,7 @@ export function FileCodeViewer({
 
       {eligibleTabs.length > 1 && (
         <div className="code-tabs-bar">
-          {eligibleTabs.map(tabId => {
+          {eligibleTabs.map((tabId) => {
             const tabNode = index.nodeById.get(tabId) ?? index.structureNodeById.get(tabId);
             if (!tabNode) return null;
             const isActive = tabId === activeTabId;
@@ -232,11 +246,11 @@ export function FileCodeViewer({
               <div className="dependents-bar">
                 <span className="bar-label">Imported by:</span>
                 <div className="dependents-list">
-                  {incoming.map(edge => {
+                  {incoming.map((edge) => {
                     const srcNode = index.structureNodeById.get(edge.source);
                     if (!srcNode) return null;
                     return (
-                      <button 
+                      <button
                         key={edge.source}
                         className="dependent-badge"
                         onClick={() => onSelectNode(edge.source)}
@@ -274,18 +288,20 @@ export function FileCodeViewer({
                     const isImport = importLineMap.has(lineIdx);
                     const matchingEdge = importLineMap.get(lineIdx);
                     const isExport = /^[ \t]*export\b/.test(line);
-                    
+
                     let lineClass = 'code-line';
                     if (isImport) lineClass += ' highlight-import';
                     if (isExport) lineClass += ' highlight-export';
 
-                    const targetNode = matchingEdge ? index.structureNodeById.get(matchingEdge.target) : null;
+                    const targetNode = matchingEdge
+                      ? index.structureNodeById.get(matchingEdge.target)
+                      : null;
 
                     return (
                       <div key={lineIdx} className={lineClass}>
                         <span className="line-num">{lineIdx + 1}</span>
                         <span className="line-content">{line || ' '}</span>
-                        
+
                         {/* Navigation badge for imports */}
                         {isImport && targetNode && (
                           <button
@@ -298,11 +314,7 @@ export function FileCodeViewer({
                         )}
 
                         {/* Badge for exports */}
-                        {isExport && (
-                          <span className="code-export-badge">
-                            Export
-                          </span>
-                        )}
+                        {isExport && <span className="code-export-badge">Export</span>}
                       </div>
                     );
                   })}

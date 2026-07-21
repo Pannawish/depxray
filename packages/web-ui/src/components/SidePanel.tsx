@@ -21,9 +21,7 @@ export function SidePanel({ node, mode, projectRoot, error }: SidePanelProps) {
       <aside className="side-panel">
         <p className="eyebrow">Node details</p>
         <h2>Select a file or folder</h2>
-        <p className="muted">
-          Click a node to inspect its path, size, and hierarchy details.
-        </p>
+        <p className="muted">Click a node to inspect its path, size, and hierarchy details.</p>
         {error ? <p className="panel-warning">Using sample data: {error}</p> : null}
       </aside>
     );

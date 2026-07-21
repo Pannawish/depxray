@@ -1,12 +1,5 @@
-import {
-  type UnusedExport,
-} from '@depxray/core';
-import {
-  assertPathInsideRoot,
-  resolveProjectPath,
-  resolveRootDir,
-  scanProject,
-} from './shared.js';
+import { type UnusedExport } from '@depxray/core';
+import { assertPathInsideRoot, resolveProjectPath, resolveRootDir, scanProject } from './shared.js';
 
 export interface FindUnusedExportsInput {
   rootDir: string;
@@ -24,9 +17,7 @@ export interface UnusedExportEntry {
 export async function findUnusedExportsTool(input: FindUnusedExportsInput) {
   const rootDir = resolveRootDir(input.rootDir);
   const result = await scanProject({ rootDir, detectCircular: false });
-  const targetPath = input.filePath
-    ? resolveProjectPath(rootDir, input.filePath)
-    : null;
+  const targetPath = input.filePath ? resolveProjectPath(rootDir, input.filePath) : null;
   if (targetPath) {
     assertPathInsideRoot(rootDir, targetPath);
   }

@@ -22,10 +22,7 @@ export {
   assertExplorerGraphSet,
   GRAPH_PAYLOAD_SCHEMA_VERSION,
 } from './graphContract.js';
-export {
-  createDependencyGraphPayload,
-  createStructureGraphPayload,
-} from './graphPayload.js';
+export { createDependencyGraphPayload, createStructureGraphPayload } from './graphPayload.js';
 export type { HealthScoreResult } from './computeHealthScore.js';
 export type { DependencyChainResult } from './findDependencyChain.js';
 export type {

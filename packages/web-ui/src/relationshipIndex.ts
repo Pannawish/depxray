@@ -108,11 +108,7 @@ function mergeNode(
   };
 }
 
-function pushMapValue<TKey, TValue>(
-  map: Map<TKey, TValue[]>,
-  key: TKey,
-  value: TValue,
-) {
+function pushMapValue<TKey, TValue>(map: Map<TKey, TValue[]>, key: TKey, value: TValue) {
   const current = map.get(key);
   if (current) {
     current.push(value);
@@ -156,9 +152,7 @@ function collectDescendants(
   return { descendants, files };
 }
 
-export function buildRelationshipIndex(
-  dataSet: ExplorerGraphSet | null,
-): FileRelationshipIndex {
+export function buildRelationshipIndex(dataSet: ExplorerGraphSet | null): FileRelationshipIndex {
   const structureGraph = dataSet?.graphs.structure ?? null;
   const dependencyGraph = dataSet?.graphs.dependencies ?? null;
   const structureNodeById = new Map<string, ExplorerGraphNode>();
@@ -221,9 +215,10 @@ export function buildRelationshipIndex(
     pushMapValue(importedByTargetId, edge.target, edge);
   }
 
-  const rootId = structureGraph?.nodes.find((node) => node.depth === 0)?.id
-    ?? structureGraph?.nodes.find((node) => node.relativePath === '.')?.id
-    ?? null;
+  const rootId =
+    structureGraph?.nodes.find((node) => node.depth === 0)?.id ??
+    structureGraph?.nodes.find((node) => node.relativePath === '.')?.id ??
+    null;
 
   if (rootId) {
     collectDescendants(rootId, childrenByParentId, descendantsById, filesByFolderId);
@@ -240,7 +235,8 @@ export function buildRelationshipIndex(
 
   return {
     rootId,
-    projectRoot: dataSet?.projectRoot ?? structureGraph?.projectRoot ?? dependencyGraph?.projectRoot ?? '',
+    projectRoot:
+      dataSet?.projectRoot ?? structureGraph?.projectRoot ?? dependencyGraph?.projectRoot ?? '',
     structureGraph,
     dependencyGraph,
     nodeById,
@@ -264,16 +260,14 @@ export function filterDependencyEdges(
   edges: ExplorerGraphEdge[],
   filters: DependencyFilters = EMPTY_FILTERS,
 ): ExplorerGraphEdge[] {
-  return edges.filter((edge) => (
-    (filters.showTypeOnlyEdges || !edge.isTypeOnly) &&
-    (filters.showDynamicEdges || !edge.isDynamic)
-  ));
+  return edges.filter(
+    (edge) =>
+      (filters.showTypeOnlyEdges || !edge.isTypeOnly) &&
+      (filters.showDynamicEdges || !edge.isDynamic),
+  );
 }
 
-export function getAncestorIds(
-  nodeId: string,
-  index: FileRelationshipIndex,
-): string[] {
+export function getAncestorIds(nodeId: string, index: FileRelationshipIndex): string[] {
   const ancestors: string[] = [];
   let currentParentId = index.parentById.get(nodeId);
 
@@ -306,15 +300,15 @@ export function getFolderSummary(
     totalFiles: fileIds.size,
     directChildren: index.childrenByParentId.get(folderId)?.length ?? 0,
     descendants: index.descendantsById.get(folderId)?.length ?? 0,
-    internalImports: filteredEdges.filter((edge) => (
-      fileIds.has(edge.source) && fileIds.has(edge.target)
-    )),
-    incomingExternal: filteredEdges.filter((edge) => (
-      !fileIds.has(edge.source) && fileIds.has(edge.target)
-    )),
-    outgoingExternal: filteredEdges.filter((edge) => (
-      fileIds.has(edge.source) && !fileIds.has(edge.target)
-    )),
+    internalImports: filteredEdges.filter(
+      (edge) => fileIds.has(edge.source) && fileIds.has(edge.target),
+    ),
+    incomingExternal: filteredEdges.filter(
+      (edge) => !fileIds.has(edge.source) && fileIds.has(edge.target),
+    ),
+    outgoingExternal: filteredEdges.filter(
+      (edge) => fileIds.has(edge.source) && !fileIds.has(edge.target),
+    ),
     circularFiles,
     orphanFiles,
   };
@@ -354,10 +348,9 @@ function riskFactorsForNode(
 
 function riskFromFactors(factors: string[]): ImpactRiskLevel {
   const hasComplexity = factors.some((factor) => factor.startsWith('complexity '));
-  const hasImpact = factors.some((factor) => (
-    factor.endsWith('transitive dependents') ||
-    factor.endsWith('incoming imports')
-  ));
+  const hasImpact = factors.some(
+    (factor) => factor.endsWith('transitive dependents') || factor.endsWith('incoming imports'),
+  );
 
   if ((hasComplexity && hasImpact) || factors.includes('circular dependency')) {
     return 'high';
@@ -375,9 +368,10 @@ function isHighImpactComplexFile(
   targetNodeId: string,
   affectedCount: number,
 ): boolean {
-  const isHighImpact = file.node.id === targetNodeId
-    ? affectedCount >= HIGH_IMPACT_DEPENDENT_THRESHOLD
-    : (file.node.inDegree ?? 0) >= HIGH_INBOUND_THRESHOLD;
+  const isHighImpact =
+    file.node.id === targetNodeId
+      ? affectedCount >= HIGH_IMPACT_DEPENDENT_THRESHOLD
+      : (file.node.inDegree ?? 0) >= HIGH_INBOUND_THRESHOLD;
 
   return isHighImpact && nodeComplexity(file.node) >= HIGH_COMPLEXITY_THRESHOLD;
 }
@@ -472,12 +466,14 @@ export function getImpactSummary(
   };
   const affectedFiles = affected
     .map((item) => toFile(item.node, item.distance, item.pathIds))
-    .sort((a, b) => a.distance - b.distance || a.node.relativePath.localeCompare(b.node.relativePath));
+    .sort(
+      (a, b) => a.distance - b.distance || a.node.relativePath.localeCompare(b.node.relativePath),
+    );
   const targetFile = toFile(target, 0, [target.id]);
   const directDependents = affectedFiles.filter((item) => item.distance === 1);
-  const highImpactComplexFiles = [targetFile, ...affectedFiles].filter((item) => (
-    isHighImpactComplexFile(item, target.id, affectedCount)
-  ));
+  const highImpactComplexFiles = [targetFile, ...affectedFiles].filter((item) =>
+    isHighImpactComplexFile(item, target.id, affectedCount),
+  );
   const impactEdgeIds = new Set<string>();
   for (const item of affected) {
     for (const edgeId of item.edgeIds) {
@@ -497,6 +493,11 @@ export function getImpactSummary(
     affectedCount,
     directDependentCount: directDependents.length,
     maxDistance: affectedFiles.reduce((max, item) => Math.max(max, item.distance), 0),
-    risk: overallImpactRisk(targetFile, affectedCount, directDependents.length, highImpactComplexFiles.length),
+    risk: overallImpactRisk(
+      targetFile,
+      affectedCount,
+      directDependents.length,
+      highImpactComplexFiles.length,
+    ),
   };
 }

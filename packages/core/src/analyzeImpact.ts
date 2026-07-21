@@ -23,11 +23,12 @@ function resolveTargetNode(graph: DependencyGraph, filePath: string): GraphNode 
     ? path.resolve(filePath)
     : path.resolve(graph.rootDir, filePath);
 
-  const node = graph.nodes.find((item) => (
-    item.id === absoluteInput ||
-    path.resolve(graph.rootDir, item.relativePath) === absoluteInput ||
-    normalizeRelative(item.relativePath) === normalizedInput
-  ));
+  const node = graph.nodes.find(
+    (item) =>
+      item.id === absoluteInput ||
+      path.resolve(graph.rootDir, item.relativePath) === absoluteInput ||
+      normalizeRelative(item.relativePath) === normalizedInput,
+  );
 
   if (!node) {
     throw new Error(`File not found in dependency graph: ${filePath}`);
@@ -84,10 +85,9 @@ function getRiskFactors(
 
 function fileRisk(factors: string[]): ImpactRiskLevel {
   const hasComplexity = factors.some((factor) => factor.startsWith('complexity '));
-  const hasImpact = factors.some((factor) => (
-    factor.endsWith('transitive dependents') ||
-    factor.endsWith('incoming imports')
-  ));
+  const hasImpact = factors.some(
+    (factor) => factor.endsWith('transitive dependents') || factor.endsWith('incoming imports'),
+  );
 
   if ((hasComplexity && hasImpact) || factors.includes('circular dependency')) {
     return 'high';
@@ -190,31 +190,20 @@ export function analyzeImpact(
   }
 
   const affectedCount = affected.length;
-  const target = toSummary(
-    targetNode,
-    0,
-    [targetNode.id],
-    nodesById,
-    affectedCount,
-    thresholds,
-  );
+  const target = toSummary(targetNode, 0, [targetNode.id], nodesById, affectedCount, thresholds);
   const affectedFiles = affected
-    .map((item) => toSummary(
-      item.node,
-      item.distance,
-      item.pathIds,
-      nodesById,
-      affectedCount,
-      thresholds,
-    ))
+    .map((item) =>
+      toSummary(item.node, item.distance, item.pathIds, nodesById, affectedCount, thresholds),
+    )
     .sort((a, b) => a.distance - b.distance || a.file.localeCompare(b.file));
   const directDependents = affectedFiles.filter((item) => item.distance === 1);
   const candidates = [target, ...affectedFiles];
   const highImpactComplexFiles = candidates.filter((item) => {
     const complexity = item.metrics?.cyclomaticComplexity ?? 0;
-    const isHighImpact = item.distance === 0
-      ? affectedCount >= thresholds.impactThreshold
-      : item.inDegree >= thresholds.inboundThreshold;
+    const isHighImpact =
+      item.distance === 0
+        ? affectedCount >= thresholds.impactThreshold
+        : item.inDegree >= thresholds.inboundThreshold;
 
     return isHighImpact && complexity >= thresholds.complexityThreshold;
   });
@@ -227,7 +216,12 @@ export function analyzeImpact(
     affectedCount,
     maxDistance: affectedFiles.reduce((max, item) => Math.max(max, item.distance), 0),
     highImpactComplexFiles,
-    risk: overallRisk(target, affectedCount, directDependents.length, highImpactComplexFiles.length),
+    risk: overallRisk(
+      target,
+      affectedCount,
+      directDependents.length,
+      highImpactComplexFiles.length,
+    ),
     thresholds,
   };
 }

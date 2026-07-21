@@ -15,10 +15,7 @@ import { DEFAULT_EXTENSIONS, DEFAULT_IGNORE_PATTERNS } from './types.js';
 /**
  * Check if a directory name should be ignored during traversal.
  */
-function shouldIgnoreDir(
-  dirName: string,
-  ignorePatterns: string[],
-): boolean {
+function shouldIgnoreDir(dirName: string, ignorePatterns: string[]): boolean {
   return ignorePatterns.some((pattern) => {
     // Simple name matching (no glob support yet — keep it straightforward)
     return dirName === pattern || dirName.startsWith(pattern);
@@ -28,10 +25,7 @@ function shouldIgnoreDir(
 /**
  * Check if a file matches the target extensions.
  */
-function hasTargetExtension(
-  filePath: string,
-  extensions: string[],
-): boolean {
+function hasTargetExtension(filePath: string, extensions: string[]): boolean {
   return extensions.some((ext) => filePath.endsWith(ext));
 }
 

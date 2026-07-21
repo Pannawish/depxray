@@ -37,7 +37,12 @@ const FRAMEWORK_ENTRY_PATTERNS: Array<{
   },
   {
     packages: ['@sveltejs/kit'],
-    patterns: ['**/src/routes/**/+page.*', '**/src/routes/**/+layout.*', '**/src/routes/**/+server.*', '**/src/routes/**/+error.*'],
+    patterns: [
+      '**/src/routes/**/+page.*',
+      '**/src/routes/**/+layout.*',
+      '**/src/routes/**/+server.*',
+      '**/src/routes/**/+error.*',
+    ],
   },
   {
     packages: ['astro'],
@@ -45,7 +50,13 @@ const FRAMEWORK_ENTRY_PATTERNS: Array<{
   },
   {
     packages: ['gatsby'],
-    patterns: ['**/src/pages/**/*.*', '**/gatsby-node.*', '**/gatsby-config.*', '**/gatsby-browser.*', '**/gatsby-ssr.*'],
+    patterns: [
+      '**/src/pages/**/*.*',
+      '**/gatsby-node.*',
+      '**/gatsby-config.*',
+      '**/gatsby-browser.*',
+      '**/gatsby-ssr.*',
+    ],
   },
   {
     packages: ['nuxt'],
@@ -59,7 +70,9 @@ const FRAMEWORK_ENTRY_PATTERNS: Array<{
 
 async function readManifest(packageDir: string): Promise<PackageManifest | null> {
   try {
-    return JSON.parse(await fs.readFile(path.join(packageDir, 'package.json'), 'utf-8')) as PackageManifest;
+    return JSON.parse(
+      await fs.readFile(path.join(packageDir, 'package.json'), 'utf-8'),
+    ) as PackageManifest;
   } catch {
     return null;
   }

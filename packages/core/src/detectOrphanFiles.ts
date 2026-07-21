@@ -2,10 +2,7 @@
 // detectOrphanFiles - Find dependency graph nodes with no incoming imports
 // ============================================================================
 
-import type {
-  DependencyGraph,
-  OrphanDetectionOptions,
-} from './types.js';
+import type { DependencyGraph, OrphanDetectionOptions } from './types.js';
 import { DEFAULT_ENTRY_POINT_PATTERNS } from './types.js';
 
 function escapeRegExpChar(char: string): string {
@@ -54,10 +51,7 @@ function globToRegExp(pattern: string): RegExp {
   return new RegExp(source);
 }
 
-export function matchesAnyPattern(
-  relativePath: string,
-  patterns: string[],
-): boolean {
+export function matchesAnyPattern(relativePath: string, patterns: string[]): boolean {
   const normalizedPath = relativePath.replaceAll('\\', '/');
   return patterns.some((pattern) => globToRegExp(pattern).test(normalizedPath));
 }

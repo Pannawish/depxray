@@ -16,11 +16,7 @@ export function SearchBox({ value, onChange, onClear }: SearchBoxProps) {
           onChange={(event) => onChange(event.target.value)}
         />
         {value ? (
-          <button
-            className="search-clear-button"
-            onClick={onClear}
-            type="button"
-          >
+          <button className="search-clear-button" onClick={onClear} type="button">
             Clear
           </button>
         ) : null}

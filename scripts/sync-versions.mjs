@@ -33,7 +33,7 @@ async function packageExists(packageDir) {
 async function expandWorkspacePattern(pattern) {
   if (!pattern.includes('*')) {
     const absoluteDir = path.resolve(repoRoot, pattern);
-    return await packageExists(absoluteDir) ? [absoluteDir] : [];
+    return (await packageExists(absoluteDir)) ? [absoluteDir] : [];
   }
 
   const wildcardIndex = pattern.indexOf('*');
@@ -60,7 +60,7 @@ async function expandWorkspacePattern(pattern) {
 async function getWorkspacePackageDirs(rootPackage) {
   const workspacePatterns = Array.isArray(rootPackage.workspaces)
     ? rootPackage.workspaces
-    : rootPackage.workspaces?.packages ?? [];
+    : (rootPackage.workspaces?.packages ?? []);
   const expanded = await Promise.all(workspacePatterns.map(expandWorkspacePattern));
   return [...new Set(expanded.flat())].sort((a, b) => a.localeCompare(b));
 }
@@ -148,9 +148,9 @@ const nestedPackagePaths = removeNestedWorkspacePackages(lockfile, workspaceEntr
 await Promise.all([
   ...workspaceEntries.map((entry) => writeJson(entry.packagePath, entry.packageJson)),
   writeJson(lockfilePath, lockfile),
-  ...nestedPackagePaths.map((nestedPackagePath) => (
-    fs.rm(nestedPackagePath, { recursive: true, force: true })
-  )),
+  ...nestedPackagePaths.map((nestedPackagePath) =>
+    fs.rm(nestedPackagePath, { recursive: true, force: true }),
+  ),
 ]);
 
 process.stdout.write(`Synced workspace package versions to ${version}\n`);

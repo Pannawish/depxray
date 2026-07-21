@@ -104,9 +104,7 @@ export function attachRuleViolations(
       const key = `${source}->${target}->${edge.importSpecifier}`;
       const ruleViolations = violationsByEdge.get(key);
 
-      return ruleViolations
-        ? { ...edge, ruleViolations }
-        : edge;
+      return ruleViolations ? { ...edge, ruleViolations } : edge;
     }),
   };
 }

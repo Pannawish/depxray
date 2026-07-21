@@ -32,18 +32,16 @@ describe('detectWorkspaces', () => {
 
     try {
       const workspaces = await detectWorkspaces(TEMP_DIR);
-      expect(workspaces.map((workspace) => workspace.name)).toEqual([
-        '@repo/app',
-        '@repo/lib',
-      ]);
+      expect(workspaces.map((workspace) => workspace.name)).toEqual(['@repo/app', '@repo/lib']);
       expect(
-        getWorkspaceForPath(
-          path.join(TEMP_DIR, 'packages/app/src/index.ts'),
-          workspaces,
-        )?.name,
+        getWorkspaceForPath(path.join(TEMP_DIR, 'packages/app/src/index.ts'), workspaces)?.name,
       ).toBe('@repo/app');
-      expect(createWorkspaceAliases(workspaces).map((alias) => alias.prefix)).toContain('@repo/lib');
-      expect(createWorkspaceAliases(workspaces).map((alias) => alias.prefix)).toContain('@repo/lib/');
+      expect(createWorkspaceAliases(workspaces).map((alias) => alias.prefix)).toContain(
+        '@repo/lib',
+      );
+      expect(createWorkspaceAliases(workspaces).map((alias) => alias.prefix)).toContain(
+        '@repo/lib/',
+      );
     } finally {
       await fs.rm(TEMP_DIR, { recursive: true, force: true });
     }

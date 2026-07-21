@@ -1,10 +1,5 @@
 import type { HealthScoreResult } from './computeHealthScore.js';
-import type {
-  ScanError,
-  ScanResult,
-  StructureGraphEdge,
-  StructureGraphNode,
-} from './types.js';
+import type { ScanError, ScanResult, StructureGraphEdge, StructureGraphNode } from './types.js';
 
 export const GRAPH_PAYLOAD_SCHEMA_VERSION = '1.0.0';
 

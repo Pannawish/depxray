@@ -93,7 +93,9 @@ export function createDependencyGraphPayload(
     ...(result.dependencyIssues ? { dependencyIssues: result.dependencyIssues } : {}),
     ...(result.ruleValidation ? { ruleValidation: result.ruleValidation } : {}),
     ...(result.devDepsInProd ? { devDepsInProd: result.devDepsInProd } : {}),
-    ...(result.importConventionViolations ? { importConventionViolations: result.importConventionViolations } : {}),
+    ...(result.importConventionViolations
+      ? { importConventionViolations: result.importConventionViolations }
+      : {}),
     healthScore: computeHealthScore(result),
     ...(result.pluginData ? { pluginData: result.pluginData } : {}),
     generatedBy: options.generatedBy,

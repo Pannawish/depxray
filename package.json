@@ -11,14 +11,31 @@
   ],
   "scripts": {
     "version:sync": "node ./scripts/sync-versions.mjs",
-    "typecheck": "npm run build --workspace @depxray/core && npm run typecheck --workspace depxray --workspace @depxray/web-ui --workspace @depxray/mcp",
-    "build": "npm run version:sync && npm run typecheck && npm run build --workspace @depxray/core && npm run build --workspace @depxray/web-ui && npm run build --workspace @depxray/mcp && npm run build --workspace depxray",
-    "test": "npm run test --workspaces --if-present",
+    "build:core": "npm run build --workspace @depxray/core",
+    "typecheck:dependents": "npm run typecheck --workspace depxray --workspace @depxray/web-ui --workspace @depxray/mcp",
+    "typecheck": "npm run build:core && npm run typecheck:dependents",
+    "build:dependents": "npm run build --workspace @depxray/web-ui --workspace @depxray/mcp --workspace depxray",
+    "build": "npm run version:sync && npm run build:core && npm run typecheck:dependents && npm run build:dependents",
+    "test:unit": "npm run test --workspaces --if-present",
+    "test": "npm run build && npm run test:unit",
+    "lint": "eslint packages scripts *.js *.mjs --max-warnings 0",
+    "format": "prettier --write \"packages/**/*.{ts,tsx,mts,cts}\" \"scripts/**/*.mjs\" \"*.{js,mjs}\"",
+    "format:check": "prettier --check \"packages/**/*.{ts,tsx,mts,cts}\" \"scripts/**/*.mjs\" \"*.{js,mjs}\"",
+    "verify": "npm run lint && npm run format:check && npm run build && npm run test:unit",
+    "analyze:self": "node ./packages/cli/dist/index.js scan . --mode dependencies --json --output .depxray/self-scan.json",
     "clean": "npm run clean --workspaces --if-present"
   },
   "engines": {
     "node": ">=18.0.0"
   },
   "author": "Pannawish Kriengyakul",
-  "license": "MIT"
+  "license": "MIT",
+  "devDependencies": {
+    "@eslint/js": "^9.39.2",
+    "eslint": "^9.39.2",
+    "eslint-plugin-react-hooks": "^6.1.1",
+    "globals": "^16.4.0",
+    "prettier": "^3.6.2",
+    "typescript-eslint": "^8.46.1"
+  }
 }

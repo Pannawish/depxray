@@ -59,7 +59,9 @@ export function Toolbar({
           {dependencyMode ? 'Dependency graph mode' : 'Local structure graph'}
         </p>
         <h1>Depxray</h1>
-        <p className="toolbar-hint">Press <kbd>F</kbd> to fit the view and <kbd>Esc</kbd> to deselect.</p>
+        <p className="toolbar-hint">
+          Press <kbd>F</kbd> to fit the view and <kbd>Esc</kbd> to deselect.
+        </p>
       </div>
 
       <div className="toolbar-stats">
@@ -78,10 +80,9 @@ export function Toolbar({
           {availableModes.map((availableMode) => (
             <button
               key={availableMode}
-              className={[
-                'toolbar-chip-button',
-                activeMode === availableMode ? 'active' : '',
-              ].filter(Boolean).join(' ')}
+              className={['toolbar-chip-button', activeMode === availableMode ? 'active' : '']
+                .filter(Boolean)
+                .join(' ')}
               onClick={() => onModeChange(availableMode)}
               type="button"
             >
@@ -96,9 +97,7 @@ export function Toolbar({
             value={String(depthFilter)}
             onChange={(event) => {
               const value = event.target.value;
-              onDepthChange(
-                value === 'all' ? 'all' : Number(value) as DepthFilter,
-              );
+              onDepthChange(value === 'all' ? 'all' : (Number(value) as DepthFilter));
             }}
           >
             <option value="1">1</option>
@@ -109,11 +108,7 @@ export function Toolbar({
           </select>
         </label>
 
-        <SearchBox
-          value={searchTerm}
-          onChange={onSearchChange}
-          onClear={onClearSearch}
-        />
+        <SearchBox value={searchTerm} onChange={onSearchChange} onClear={onClearSearch} />
 
         {dependencyMode ? (
           <div className="toolbar-filter-group">
@@ -205,10 +200,18 @@ export function Toolbar({
 
       {dependencyMode ? (
         <div className="toolbar-legend">
-          <span><i className="legend-swatch standard" /> Standard import</span>
-          <span><i className="legend-swatch type-only" /> Type-only import</span>
-          <span><i className="legend-swatch dynamic" /> Dynamic import</span>
-          <span><i className="legend-swatch circular" /> Circular participant</span>
+          <span>
+            <i className="legend-swatch standard" /> Standard import
+          </span>
+          <span>
+            <i className="legend-swatch type-only" /> Type-only import
+          </span>
+          <span>
+            <i className="legend-swatch dynamic" /> Dynamic import
+          </span>
+          <span>
+            <i className="legend-swatch circular" /> Circular participant
+          </span>
         </div>
       ) : null}
     </header>

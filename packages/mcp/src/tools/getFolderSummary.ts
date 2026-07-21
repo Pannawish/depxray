@@ -1,7 +1,5 @@
 import * as path from 'node:path';
-import {
-  scanFileTree,
-} from '@depxray/core';
+import { scanFileTree } from '@depxray/core';
 import {
   assertPathInsideRoot,
   flattenTree,
@@ -49,15 +47,15 @@ export async function getFolderSummaryTool(input: GetFolderSummaryInput) {
   const orphanFiles = result.graph.nodes
     .filter((node) => fileIds.has(node.id) && result.orphanFiles.includes(node.relativePath))
     .map((node) => node.relativePath);
-  const internalImports = result.graph.edges.filter((edge) => (
-    fileIds.has(edge.source) && fileIds.has(edge.target)
-  ));
-  const incomingExternal = result.graph.edges.filter((edge) => (
-    !fileIds.has(edge.source) && fileIds.has(edge.target)
-  ));
-  const outgoingExternal = result.graph.edges.filter((edge) => (
-    fileIds.has(edge.source) && !fileIds.has(edge.target)
-  ));
+  const internalImports = result.graph.edges.filter(
+    (edge) => fileIds.has(edge.source) && fileIds.has(edge.target),
+  );
+  const incomingExternal = result.graph.edges.filter(
+    (edge) => !fileIds.has(edge.source) && fileIds.has(edge.target),
+  );
+  const outgoingExternal = result.graph.edges.filter(
+    (edge) => fileIds.has(edge.source) && !fileIds.has(edge.target),
+  );
 
   return {
     folder: folderNode.relativePath,

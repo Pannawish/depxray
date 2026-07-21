@@ -21,11 +21,9 @@ describe('MCP protocol', () => {
     await client.connect(clientTransport);
 
     const tools = await client.listTools();
-    expect(tools.tools.map((tool) => tool.name)).toEqual(expect.arrayContaining([
-      'scan_project',
-      'inspect_file',
-      'suggest_cleanup',
-    ]));
+    expect(tools.tools.map((tool) => tool.name)).toEqual(
+      expect.arrayContaining(['scan_project', 'inspect_file', 'suggest_cleanup']),
+    );
 
     const response = await client.callTool({
       name: 'scan_project',

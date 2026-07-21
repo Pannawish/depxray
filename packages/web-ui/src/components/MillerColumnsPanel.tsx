@@ -35,7 +35,9 @@ export function MillerColumnsPanel({
           <h2>No file selected</h2>
         </div>
         <div className="miller-content empty">
-          <p className="empty-copy">Select a file in the project tree to explore its dependency chains.</p>
+          <p className="empty-copy">
+            Select a file in the project tree to explore its dependency chains.
+          </p>
         </div>
       </section>
     );
@@ -88,7 +90,7 @@ export function MillerColumnsPanel({
           </button>
         </div>
       </div>
-      
+
       {/* Columns List Container */}
       <div className="miller-columns-container" ref={containerRef}>
         {chain.map((chainId, colIndex) => {
@@ -97,9 +99,9 @@ export function MillerColumnsPanel({
 
           const isImports = millerMode === 'imports';
           const relations = isImports
-            ? (index.importsBySourceId.get(chainId) || [])
-            : (index.importedByTargetId.get(chainId) || []);
-          
+            ? index.importsBySourceId.get(chainId) || []
+            : index.importedByTargetId.get(chainId) || [];
+
           return (
             <div key={`${chainId}-${colIndex}`} className="miller-column">
               <div className="miller-column-header">
@@ -108,26 +110,24 @@ export function MillerColumnsPanel({
                   {relations.length} {isImports ? 'imports' : 'dependents'}
                 </span>
               </div>
-              
+
               <div className="miller-column-list">
                 {relations.length === 0 ? (
-                  <div className="miller-empty">
-                    {isImports ? 'No imports' : 'No dependents'}
-                  </div>
+                  <div className="miller-empty">{isImports ? 'No imports' : 'No dependents'}</div>
                 ) : (
-                  relations.map(edge => {
+                  relations.map((edge) => {
                     const targetId = isImports ? edge.target : edge.source;
                     const depNode = index.structureNodeById.get(targetId);
                     if (!depNode) return null;
-                    
+
                     const isSelected = chain[colIndex + 1] === targetId;
                     const childRelations = isImports
-                      ? (index.importsBySourceId.get(targetId) || [])
-                      : (index.importedByTargetId.get(targetId) || []);
+                      ? index.importsBySourceId.get(targetId) || []
+                      : index.importedByTargetId.get(targetId) || [];
                     const hasChildren = childRelations.length > 0;
 
                     return (
-                      <button 
+                      <button
                         key={targetId}
                         className={`miller-item ${isSelected ? 'selected' : ''}`}
                         onClick={() => handleItemClick(colIndex, targetId)}
@@ -136,9 +136,7 @@ export function MillerColumnsPanel({
                         <div className="miller-item-labels">
                           <span className="miller-item-name">{depNode.label}</span>
                         </div>
-                        {hasChildren && (
-                          <span className="miller-item-chevron">›</span>
-                        )}
+                        {hasChildren && <span className="miller-item-chevron">›</span>}
                       </button>
                     );
                   })

@@ -78,10 +78,6 @@ describe('detectOrphanFiles', () => {
       detectOrphanFiles(makeGraph(), {
         entryPointPatterns: ['src/unused.ts'],
       }),
-    ).toEqual([
-      'src/App.tsx',
-      'src/Button.test.tsx',
-      'src/index.ts',
-    ]);
+    ).toEqual(['src/App.tsx', 'src/Button.test.tsx', 'src/index.ts']);
   });
 });

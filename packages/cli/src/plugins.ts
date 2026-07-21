@@ -1,10 +1,6 @@
 import * as path from 'node:path';
 import { pathToFileURL } from 'node:url';
-import {
-  BUILT_IN_PLUGINS,
-  type DepxrayPlugin,
-  type DepxrayPluginReference,
-} from '@depxray/core';
+import { BUILT_IN_PLUGINS, type DepxrayPlugin, type DepxrayPluginReference } from '@depxray/core';
 
 const HOOK_NAMES = ['afterScan', 'afterBuildGraph', 'onReport'] as const;
 
@@ -18,14 +14,13 @@ function isPlugin(value: unknown): value is DepxrayPlugin {
 }
 
 function normalizePlugin(value: unknown, specifier: string): DepxrayPlugin {
-  const candidate = (
+  const candidate =
     value &&
     typeof value === 'object' &&
     'default' in value &&
     isPlugin((value as { default?: unknown }).default)
-  )
-    ? (value as { default: unknown }).default
-    : value;
+      ? (value as { default: unknown }).default
+      : value;
 
   if (isPlugin(candidate)) {
     const plugin = candidate;
@@ -51,9 +46,10 @@ async function loadPluginModule(specifier: string, rootDir: string): Promise<Dep
     return builtIn;
   }
 
-  const importTarget = specifier.startsWith('.') || specifier.startsWith('/')
-    ? pathToFileURL(path.resolve(rootDir, specifier)).href
-    : specifier;
+  const importTarget =
+    specifier.startsWith('.') || specifier.startsWith('/')
+      ? pathToFileURL(path.resolve(rootDir, specifier)).href
+      : specifier;
   const module = await import(importTarget);
   return normalizePlugin(module, specifier);
 }

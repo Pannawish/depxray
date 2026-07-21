@@ -650,6 +650,17 @@ npm run build --workspace @depxray/mcp
 npm run build --workspace depxray
 ```
 
+Repository quality and self-analysis commands:
+
+```bash
+npm run verify
+npm run analyze:self
+npm run test:e2e --workspace @depxray/web-ui
+```
+
+See [docs/maintainability.md](./docs/maintainability.md) for module boundaries and contribution
+guidance.
+
 Develop the browser UI with Vite:
 
 ```bash

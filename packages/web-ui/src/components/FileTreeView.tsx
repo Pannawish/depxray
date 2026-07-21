@@ -42,11 +42,11 @@ export function FileTreeView({
   if (!rows.length) {
     return (
       <section className="tree-panel">
-        <div 
-          className="panel-header draggable" 
+        <div
+          className="panel-header draggable"
           draggable
           onDragStart={onDragStart}
-          onDragOver={(e) => e.preventDefault()} 
+          onDragOver={(e) => e.preventDefault()}
           onDrop={onDrop}
           style={{ cursor: 'grab' }}
         >
@@ -57,7 +57,7 @@ export function FileTreeView({
               <h2>No matching files</h2>
             </div>
           </div>
-          <button 
+          <button
             className="swap-layout-btn"
             onClick={onSwap}
             title="Swap columns horizontally"
@@ -72,11 +72,11 @@ export function FileTreeView({
 
   return (
     <section className="tree-panel">
-      <div 
-        className="panel-header draggable" 
+      <div
+        className="panel-header draggable"
         draggable
         onDragStart={onDragStart}
-        onDragOver={(e) => e.preventDefault()} 
+        onDragOver={(e) => e.preventDefault()}
         onDrop={onDrop}
         style={{ cursor: 'grab' }}
       >
@@ -87,7 +87,7 @@ export function FileTreeView({
             <h2>{rows.length.toLocaleString()} visible paths</h2>
           </div>
         </div>
-        <button 
+        <button
           className="swap-layout-btn"
           onClick={onSwap}
           title="Swap columns horizontally"
@@ -100,6 +100,8 @@ export function FileTreeView({
       <div className="tree-rows" role="tree">
         {rows.map((row) => (
           <button
+            aria-expanded={row.hasChildren ? row.expanded : undefined}
+            aria-selected={selectedNodeId === row.node.id}
             className={[
               'tree-row',
               selectedNodeId === row.node.id ? 'selected' : '',
@@ -108,7 +110,9 @@ export function FileTreeView({
               row.orphan ? 'orphan' : '',
               row.unusedExports ? 'unused-exports' : '',
               row.unresolvedImports ? 'unresolved-imports' : '',
-            ].filter(Boolean).join(' ')}
+            ]
+              .filter(Boolean)
+              .join(' ')}
             key={row.node.id}
             onClick={() => onSelectNode(row.node.id)}
             role="treeitem"
@@ -116,6 +120,7 @@ export function FileTreeView({
             type="button"
           >
             <span
+              aria-label={row.expanded ? `Collapse ${row.node.label}` : `Expand ${row.node.label}`}
               className="tree-toggle"
               onClick={(event) => {
                 if (!row.hasChildren) {
@@ -125,6 +130,17 @@ export function FileTreeView({
                 event.stopPropagation();
                 onToggleFolder(row.node.id);
               }}
+              onKeyDown={(event) => {
+                if (!row.hasChildren || (event.key !== 'Enter' && event.key !== ' ')) {
+                  return;
+                }
+
+                event.preventDefault();
+                event.stopPropagation();
+                onToggleFolder(row.node.id);
+              }}
+              role={row.hasChildren ? 'button' : undefined}
+              tabIndex={row.hasChildren ? 0 : undefined}
             >
               {getNodeIcon(row.node, row.expanded)}
             </span>
@@ -134,13 +150,19 @@ export function FileTreeView({
             ) : (
               <span className="tree-meta-group">
                 {row.orphan ? (
-                  <span className="tree-meta orphan-badge" title="No incoming imports">orphan</span>
+                  <span className="tree-meta orphan-badge" title="No incoming imports">
+                    orphan
+                  </span>
                 ) : null}
                 {row.unusedExports ? (
-                  <span className="tree-meta unused-badge" title="File has unused exports">unused</span>
+                  <span className="tree-meta unused-badge" title="File has unused exports">
+                    unused
+                  </span>
                 ) : null}
                 {row.unresolvedImports ? (
-                  <span className="tree-meta unresolved-badge" title="File has unresolved imports">warn</span>
+                  <span className="tree-meta unresolved-badge" title="File has unresolved imports">
+                    warn
+                  </span>
                 ) : null}
                 <span className="tree-meta">{row.node.extension ?? 'file'}</span>
               </span>

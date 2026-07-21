@@ -52,19 +52,19 @@ function mergeReportOptionsWithConfig(
     ...rawOptions,
     ignore: cliOptionWasProvided(getOptionSource, 'ignore')
       ? rawOptions.ignore
-      : config.ignore ?? rawOptions.ignore,
+      : (config.ignore ?? rawOptions.ignore),
     circular: cliOptionWasProvided(getOptionSource, 'circular')
       ? rawOptions.circular
-      : config.circular ?? rawOptions.circular,
+      : (config.circular ?? rawOptions.circular),
     aliases: cliOptionWasProvided(getOptionSource, 'aliases')
       ? rawOptions.aliases
-      : config.aliases ?? rawOptions.aliases,
+      : (config.aliases ?? rawOptions.aliases),
     extensions: cliOptionWasProvided(getOptionSource, 'extensions')
       ? rawOptions.extensions
-      : config.extensions ?? rawOptions.extensions,
+      : (config.extensions ?? rawOptions.extensions),
     entryPoints: cliOptionWasProvided(getOptionSource, 'entryPoints')
       ? rawOptions.entryPoints
-      : config.entryPoints ?? rawOptions.entryPoints,
+      : (config.entryPoints ?? rawOptions.entryPoints),
     prodEntryPoints: config.prodEntryPoints ?? rawOptions.prodEntryPoints,
     devEntryPoints: config.devEntryPoints ?? rawOptions.devEntryPoints,
     ignoreTypeImports: config.ignoreTypeImports ?? rawOptions.ignoreTypeImports,
@@ -99,11 +99,7 @@ function formatPercent(value: number): string {
   return `${formatNumber(value * 100)}%`;
 }
 
-function topByDegree(
-  nodes: GraphNode[],
-  key: 'inDegree' | 'outDegree',
-  limit = 10,
-): GraphNode[] {
+function topByDegree(nodes: GraphNode[], key: 'inDegree' | 'outDegree', limit = 10): GraphNode[] {
   return [...nodes]
     .filter((node) => node[key] > 0)
     .sort((a, b) => b[key] - a[key] || a.relativePath.localeCompare(b.relativePath))
@@ -113,11 +109,12 @@ function topByDegree(
 function topByComplexity(nodes: GraphNode[], limit = 10): GraphNode[] {
   return [...nodes]
     .filter((node) => (node.metrics?.cyclomaticComplexity ?? 0) > 1)
-    .sort((a, b) => (
-      (b.metrics?.cyclomaticComplexity ?? 0) - (a.metrics?.cyclomaticComplexity ?? 0)
-      || (b.metrics?.loc ?? 0) - (a.metrics?.loc ?? 0)
-      || a.relativePath.localeCompare(b.relativePath)
-    ))
+    .sort(
+      (a, b) =>
+        (b.metrics?.cyclomaticComplexity ?? 0) - (a.metrics?.cyclomaticComplexity ?? 0) ||
+        (b.metrics?.loc ?? 0) - (a.metrics?.loc ?? 0) ||
+        a.relativePath.localeCompare(b.relativePath),
+    )
     .slice(0, limit);
 }
 
@@ -182,10 +179,11 @@ function addBulletList(lines: string[], items: string[]): void {
 function addUnusedExportsTable(lines: string[], nodes: GraphNode[]): void {
   const filesWithUnusedExports = nodes
     .filter((node) => (node.unusedExports?.length ?? 0) > 0)
-    .sort((a, b) => (
-      (b.unusedExports?.length ?? 0) - (a.unusedExports?.length ?? 0)
-      || a.relativePath.localeCompare(b.relativePath)
-    ));
+    .sort(
+      (a, b) =>
+        (b.unusedExports?.length ?? 0) - (a.unusedExports?.length ?? 0) ||
+        a.relativePath.localeCompare(b.relativePath),
+    );
 
   if (filesWithUnusedExports.length === 0) {
     lines.push('_None_');
@@ -197,9 +195,10 @@ function addUnusedExportsTable(lines: string[], nodes: GraphNode[]): void {
   lines.push('| --- | --- |');
   for (const node of filesWithUnusedExports) {
     const exportsText = (node.unusedExports ?? [])
-      .map((unusedExport) => (
-        `${unusedExport.name} (${unusedExport.kind}${unusedExport.isTypeOnly ? ', type-only' : ''}, line ${unusedExport.line})`
-      ))
+      .map(
+        (unusedExport) =>
+          `${unusedExport.name} (${unusedExport.kind}${unusedExport.isTypeOnly ? ', type-only' : ''}, line ${unusedExport.line})`,
+      )
       .join('<br>');
     lines.push(
       `| \`${escapeMarkdownTableCell(node.relativePath)}\` | ${escapeMarkdownTableCell(exportsText)} |`,
@@ -208,7 +207,10 @@ function addUnusedExportsTable(lines: string[], nodes: GraphNode[]): void {
   lines.push('');
 }
 
-function addUnresolvedImportsTable(lines: string[], unresolvedImports: ScanResult['unresolvedImports']): void {
+function addUnresolvedImportsTable(
+  lines: string[],
+  unresolvedImports: ScanResult['unresolvedImports'],
+): void {
   if (unresolvedImports.length === 0) {
     lines.push('_None_');
     lines.push('');
@@ -225,10 +227,7 @@ function addUnresolvedImportsTable(lines: string[], unresolvedImports: ScanResul
   lines.push('');
 }
 
-export function generateMarkdownReport(
-  result: ScanResult,
-  reportData?: ReportHookData,
-): string {
+export function generateMarkdownReport(result: ScanResult, reportData?: ReportHookData): string {
   const nodes = result.graph.nodes;
   const mostImported = topByDegree(nodes, 'inDegree');
   const mostImporting = topByDegree(nodes, 'outDegree');
@@ -253,10 +252,14 @@ export function generateMarkdownReport(
   lines.push(`| Imports | ${result.totalImports} |`);
   lines.push(`| Circular chains | ${result.circularCount} |`);
   lines.push(`| Orphan files | ${result.orphanFiles.length} |`);
-  lines.push(`| Files with unused exports | ${nodes.filter((node) => (node.unusedExports?.length ?? 0) > 0).length} |`);
+  lines.push(
+    `| Files with unused exports | ${nodes.filter((node) => (node.unusedExports?.length ?? 0) > 0).length} |`,
+  );
   lines.push(`| Unresolved imports | ${result.unresolvedImports.length} |`);
   lines.push(`| DevDeps in production | ${result.devDepsInProd?.length ?? 0} |`);
-  lines.push(`| Import convention violations | ${result.importConventionViolations?.length ?? 0} |`);
+  lines.push(
+    `| Import convention violations | ${result.importConventionViolations?.length ?? 0} |`,
+  );
   lines.push(`| Total LOC | ${totalLoc} |`);
   lines.push(`| Scan duration | ${formatNumber(result.durationMs)} ms |`);
   lines.push('');
@@ -287,7 +290,9 @@ export function generateMarkdownReport(
     lines.push('| File | Line | Module | Entry Point |');
     lines.push('| --- | ---: | --- | --- |');
     for (const finding of result.devDepsInProd) {
-      lines.push(`| \`${escapeMarkdownTableCell(finding.file)}\` | ${finding.line} | \`${escapeMarkdownTableCell(finding.module)}\` | \`${escapeMarkdownTableCell(finding.entryPoint)}\` |`);
+      lines.push(
+        `| \`${escapeMarkdownTableCell(finding.file)}\` | ${finding.line} | \`${escapeMarkdownTableCell(finding.module)}\` | \`${escapeMarkdownTableCell(finding.entryPoint)}\` |`,
+      );
     }
     lines.push('');
   } else {
@@ -300,7 +305,9 @@ export function generateMarkdownReport(
     lines.push('| File | Line | Current | Suggested |');
     lines.push('| --- | ---: | --- | --- |');
     for (const violation of result.importConventionViolations) {
-      lines.push(`| \`${escapeMarkdownTableCell(violation.file)}\` | ${violation.line} | \`${escapeMarkdownTableCell(violation.importSpecifier)}\` | \`${escapeMarkdownTableCell(violation.suggestedSpecifier)}\` |`);
+      lines.push(
+        `| \`${escapeMarkdownTableCell(violation.file)}\` | ${violation.line} | \`${escapeMarkdownTableCell(violation.importSpecifier)}\` | \`${escapeMarkdownTableCell(violation.suggestedSpecifier)}\` |`,
+      );
     }
     lines.push('');
   } else {
@@ -333,10 +340,8 @@ export function createReportCommand(): Command {
         await verifyDirectory(rootDir);
 
         const config = await loadConfig(rootDir);
-        const options = mergeReportOptionsWithConfig(
-          rawOptions,
-          config,
-          (name) => command.getOptionValueSource(name),
+        const options = mergeReportOptionsWithConfig(rawOptions, config, (name) =>
+          command.getOptionValueSource(name),
         );
         options.plugins = await loadPlugins(config.plugins, rootDir);
 
@@ -355,7 +360,7 @@ export function createReportCommand(): Command {
           importConventions: options.importConventions,
           plugins: options.plugins,
         });
-        const reportData = await runReportHooks(
+        const reportData = (await runReportHooks(
           {
             result,
             sections: [],
@@ -363,7 +368,7 @@ export function createReportCommand(): Command {
           } satisfies ReportHookData,
           options.plugins,
           { rootDir },
-        ) as ReportHookData;
+        )) as ReportHookData;
         const report = generateMarkdownReport(result, reportData);
 
         if (options.output) {

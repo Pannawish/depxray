@@ -31,7 +31,12 @@ function ChartRow({
   return (
     <button className="dashboard-chart-row" onClick={onSelect} type="button">
       <span className="dashboard-chart-label">{label}</span>
-      <svg className="dashboard-bar" viewBox="0 0 100 10" preserveAspectRatio="none" aria-hidden="true">
+      <svg
+        className="dashboard-bar"
+        viewBox="0 0 100 10"
+        preserveAspectRatio="none"
+        aria-hidden="true"
+      >
         <rect x="0" y="1" width="100" height="8" rx="2" fill="#e2e8f0" />
         <rect x="0" y="1" width={width} height="8" rx="2" fill="#0f766e" />
       </svg>
@@ -50,11 +55,7 @@ function nodeIdForFile(index: FileRelationshipIndex, file: string): string | nul
   return null;
 }
 
-export function DashboardView({
-  index,
-  healthScore,
-  onSelectNode,
-}: DashboardViewProps) {
+export function DashboardView({ index, healthScore, onSelectNode }: DashboardViewProps) {
   if (!healthScore) {
     return (
       <section className="dashboard-panel empty-state">

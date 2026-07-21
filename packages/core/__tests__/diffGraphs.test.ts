@@ -16,9 +16,7 @@ describe('diffGraphs', () => {
           importSpecifier: './old',
         },
       ],
-      circularDependencies: [
-        { description: 'src/App.ts -> src/old.ts -> src/App.ts' },
-      ],
+      circularDependencies: [{ description: 'src/App.ts -> src/old.ts -> src/App.ts' }],
     };
     const after = {
       projectRoot: '/project',
@@ -33,9 +31,7 @@ describe('diffGraphs', () => {
           importSpecifier: './new',
         },
       ],
-      circularDependencies: [
-        { description: 'src/App.ts -> src/new.ts -> src/App.ts' },
-      ],
+      circularDependencies: [{ description: 'src/App.ts -> src/new.ts -> src/App.ts' }],
     };
 
     expect(diffGraphs(before, after)).toEqual({

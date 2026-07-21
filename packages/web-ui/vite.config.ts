@@ -1,15 +1,9 @@
-import { defineConfig } from 'vite';
+import { configDefaults, defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
-import * as path from 'node:path';
 
 export default defineConfig({
   base: './',
   plugins: [react()],
-  resolve: {
-    alias: {
-      '@depxray/core/graph-contract': path.resolve(__dirname, '../core/src/graphContract.ts'),
-    },
-  },
   build: {
     outDir: 'dist',
     rollupOptions: {
@@ -19,5 +13,8 @@ export default defineConfig({
         assetFileNames: 'assets/[name].[ext]',
       },
     },
+  },
+  test: {
+    exclude: [...configDefaults.exclude, 'e2e/**'],
   },
 });

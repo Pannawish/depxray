@@ -44,11 +44,12 @@ function sortNodes(nodes: ExplorerGraphNode[]): ExplorerGraphNode[] {
 }
 
 function sortEdges(edges: ExplorerGraphEdge[]): ExplorerGraphEdge[] {
-  return [...edges].sort((a, b) => (
-    a.source.localeCompare(b.source) ||
-    a.target.localeCompare(b.target) ||
-    a.id.localeCompare(b.id)
-  ));
+  return [...edges].sort(
+    (a, b) =>
+      a.source.localeCompare(b.source) ||
+      a.target.localeCompare(b.target) ||
+      a.id.localeCompare(b.id),
+  );
 }
 
 function collectDistances(
@@ -127,10 +128,18 @@ export function getFileNeighborhoodGraph(
   }
 
   const importDistances = collectDistances(nodeId, importsBySource, (edge) => edge.target, depth);
-  const dependentDistances = collectDistances(nodeId, dependentsByTarget, (edge) => edge.source, depth);
+  const dependentDistances = collectDistances(
+    nodeId,
+    dependentsByTarget,
+    (edge) => edge.source,
+    depth,
+  );
   const visibleNodeIds = new Set([...importDistances.keys(), ...dependentDistances.keys()]);
   const nodes = Array.from(visibleNodeIds)
-    .map((visibleNodeId) => index.nodeById.get(visibleNodeId) ?? index.dependencyNodeById.get(visibleNodeId))
+    .map(
+      (visibleNodeId) =>
+        index.nodeById.get(visibleNodeId) ?? index.dependencyNodeById.get(visibleNodeId),
+    )
     .filter((node): node is ExplorerGraphNode => Boolean(node))
     .map((node) => ({
       ...node,
@@ -301,12 +310,14 @@ export function getFolderBoundaryGraph(
   }
 
   const focusMembers = Array.from(fileIds);
-  const nodes: ExplorerGraphNode[] = [{
-    ...folder,
-    scopeRole: 'focus',
-    memberNodeIds: focusMembers,
-    memberCount: focusMembers.length,
-  }];
+  const nodes: ExplorerGraphNode[] = [
+    {
+      ...folder,
+      scopeRole: 'focus',
+      memberNodeIds: focusMembers,
+      memberCount: focusMembers.length,
+    },
+  ];
 
   for (const [bucketId, members] of membersByBucket) {
     const node = index.nodeById.get(bucketId) ?? index.structureNodeById.get(bucketId);

@@ -23,25 +23,15 @@ export async function withGitSnapshot<T>(
 
   try {
     await fs.mkdir(extractedRoot);
-    const gitRoot = path.resolve((await run('git', [
-      '-C', repositoryRoot,
-      'rev-parse',
-      '--show-toplevel',
-    ])).trim());
+    const gitRoot = path.resolve(
+      (await run('git', ['-C', repositoryRoot, 'rev-parse', '--show-toplevel'])).trim(),
+    );
     const repositorySubdirectory = path.relative(gitRoot, repositoryRoot);
-    const archiveArgs = [
-      '-C', gitRoot,
-      'archive',
-      '--format=tar',
-      '--output', archivePath,
-      ref,
-    ];
+    const archiveArgs = ['-C', gitRoot, 'archive', '--format=tar', '--output', archivePath, ref];
     if (repositorySubdirectory) {
       archiveArgs.push('--', repositorySubdirectory);
     }
-    await run('git', [
-      ...archiveArgs,
-    ]);
+    await run('git', [...archiveArgs]);
     await run('tar', ['-xf', archivePath, '-C', extractedRoot]);
     const snapshotRoot = repositorySubdirectory
       ? path.join(extractedRoot, repositorySubdirectory)

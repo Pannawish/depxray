@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import * as path from 'path';
 import { resolveImport } from '../src/resolveImports.js';
 import { loadAliases } from '../src/configLoader.js';
-import type { RawImportInfo, AliasMapping } from '../src/types.js';
+import type { RawImportInfo } from '../src/types.js';
 
 const FIXTURES_DIR = path.resolve(__dirname, 'fixtures');
 const SIMPLE_PROJECT = path.join(FIXTURES_DIR, 'simple-project');
@@ -29,9 +29,7 @@ describe('resolveImport', () => {
     const raw = makeRawImport('./components/Header');
     const result = resolveImport(raw, importingFile, aliases);
 
-    expect(result.resolvedPath).toBe(
-      path.join(SRC_DIR, 'components', 'Header.tsx'),
-    );
+    expect(result.resolvedPath).toBe(path.join(SRC_DIR, 'components', 'Header.tsx'));
   });
 
   it('should resolve relative .ts import', () => {
@@ -40,6 +38,14 @@ describe('resolveImport', () => {
     const result = resolveImport(raw, importingFile, aliases);
 
     expect(result.resolvedPath).toBe(path.join(SRC_DIR, 'types.ts'));
+  });
+
+  it('maps emitted .js specifiers back to TypeScript source files', () => {
+    const importingFile = path.join(SRC_DIR, 'App.tsx');
+    const raw = makeRawImport('./components/Header.js');
+    const result = resolveImport(raw, importingFile, aliases);
+
+    expect(result.resolvedPath).toBe(path.join(SRC_DIR, 'components', 'Header.tsx'));
   });
 
   it('should resolve parent-relative import (..)', () => {
@@ -56,9 +62,7 @@ describe('resolveImport', () => {
     const result = resolveImport(raw, importingFile, aliases);
 
     // Should resolve to components/index.ts
-    expect(result.resolvedPath).toBe(
-      path.join(SRC_DIR, 'components', 'index.ts'),
-    );
+    expect(result.resolvedPath).toBe(path.join(SRC_DIR, 'components', 'index.ts'));
   });
 
   // ─── Alias imports ──────────────────────────────────────────────────
@@ -68,9 +72,7 @@ describe('resolveImport', () => {
     const raw = makeRawImport('@utils/helpers');
     const result = resolveImport(raw, importingFile, aliases);
 
-    expect(result.resolvedPath).toBe(
-      path.join(SRC_DIR, 'utils', 'helpers.ts'),
-    );
+    expect(result.resolvedPath).toBe(path.join(SRC_DIR, 'utils', 'helpers.ts'));
   });
 
   it('should resolve @components/ alias', () => {
@@ -78,9 +80,7 @@ describe('resolveImport', () => {
     const raw = makeRawImport('@components/Header');
     const result = resolveImport(raw, importingFile, aliases);
 
-    expect(result.resolvedPath).toBe(
-      path.join(SRC_DIR, 'components', 'Header.tsx'),
-    );
+    expect(result.resolvedPath).toBe(path.join(SRC_DIR, 'components', 'Header.tsx'));
   });
 
   // ─── External packages ─────────────────────────────────────────────

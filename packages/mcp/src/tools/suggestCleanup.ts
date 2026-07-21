@@ -78,7 +78,9 @@ export async function suggestCleanupTool(input: SuggestCleanupInput) {
       confidence: 'high',
       reason: `Import "${unresolved.importSpecifier}" does not resolve to any file.`,
       evidence: [`Static resolution failed at line ${unresolved.line}.`],
-      caveats: ['A runtime loader, bundler plugin, or non-code asset resolver may handle this specifier.'],
+      caveats: [
+        'A runtime loader, bundler plugin, or non-code asset resolver may handle this specifier.',
+      ],
     });
   }
 
@@ -91,7 +93,9 @@ export async function suggestCleanupTool(input: SuggestCleanupInput) {
       confidence: 'low',
       reason: `Package "${unusedDependency}" has no static imports in scanned source files.`,
       evidence: ['No parsed import or require references this package.'],
-      caveats: ['CLI tools, config files, plugins, scripts, and runtime string-based loading may still use this package.'],
+      caveats: [
+        'CLI tools, config files, plugins, scripts, and runtime string-based loading may still use this package.',
+      ],
     });
   }
 
@@ -118,12 +122,13 @@ export async function suggestCleanupTool(input: SuggestCleanupInput) {
     medium: 1,
     low: 2,
   };
-  suggestions.sort((a, b) => (
-    impactOrder[a.impact] - impactOrder[b.impact] ||
-    confidenceOrder[a.confidence] - confidenceOrder[b.confidence] ||
-    a.file.localeCompare(b.file) ||
-    a.detail.localeCompare(b.detail)
-  ));
+  suggestions.sort(
+    (a, b) =>
+      impactOrder[a.impact] - impactOrder[b.impact] ||
+      confidenceOrder[a.confidence] - confidenceOrder[b.confidence] ||
+      a.file.localeCompare(b.file) ||
+      a.detail.localeCompare(b.detail),
+  );
 
   return {
     count: Math.min(suggestions.length, maxSuggestions),
