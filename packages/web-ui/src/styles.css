@@ -670,6 +670,7 @@ button {
   border-radius: 5px;
   background: transparent;
   cursor: pointer;
+  font-weight: 400;
   text-align: left;
 }
 
@@ -691,7 +692,7 @@ button {
 }
 
 .tree-row.matched .tree-label {
-  font-weight: 800;
+  font-weight: 400;
 }
 
 .tree-row.orphan:not(.selected) {
@@ -707,6 +708,7 @@ button {
 
 .tree-label {
   overflow: hidden;
+  font-weight: 400;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
